@@ -56,7 +56,7 @@ else
         <p class="mt-3 text-sm text-red-600 dark:text-red-400" role="alert">@error</p>
     }
 
-    <section class="mt-5 flex flex-col gap-3">
+    <section class="mt-5 flex flex-col gap-2">
         @if (workout.Exercises.Count == 0 && !picking)
         {
             <div class="flex flex-col items-center gap-3 rounded-xl border border-dashed border-gray-300 px-4 py-8 text-center text-gray-500 dark:border-gray-700 dark:text-gray-400" data-testid="no-exercises">
@@ -74,6 +74,8 @@ else
                                Exercise="exercises.GetValueOrDefault(entry.ExerciseId)"
                                LastTime="WorkoutEditing.LastTime(workouts, workout, entry.ExerciseId)"
                                Index="index" Count="workout.Exercises.Count"
+                               Active="activeEntry == index"
+                               OnActivate="() => activeEntry = index"
                                OnChange="next => SaveAsync(WorkoutEditing.ReplaceEntry(workout, index, next))"
                                OnRemove="() => SaveAsync(WorkoutEditing.RemoveEntry(workout, index))"
                                OnMove="offset => SaveAsync(WorkoutEditing.MoveEntry(workout, index, offset))" />
@@ -122,6 +124,7 @@ else
     private List<Workout> workouts = [];
     private Dictionary<Guid, Exercise> exercises = [];
     private bool picking;
+    private int? activeEntry;
     private bool busy;
     private bool confirmingDelete;
     private string? error;

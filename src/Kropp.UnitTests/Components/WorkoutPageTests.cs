@@ -40,8 +40,84 @@ public class WorkoutPageTests : ClientTestContext
         page.WaitForElement("[data-testid=set-next]").Click();
 
         page.WaitForAssertion(() => page.FindAll("[data-testid=set-done]").Count.ShouldBe(2));
-        page.FindAll("[data-testid=set-done]")[0].TextContent.ShouldContain("8 × 22,5");
+        page.FindAll("[data-testid=set-done]")[0].TextContent.ShouldContain("8\u202F×\u202F22,5");
         (await ReloadAsync(workout.Id)).Exercises.Single().Sets.ShouldBe([new SetResult { Reps = 8, WeightKg = 22.5m }, new SetResult { Reps = 8, WeightKg = 22.5m }]);
+    }
+
+    [Fact]
+    public async Task A_card_shows_no_input_fields_until_something_is_tapped()
+    {
+        var workout = await SeedAsync(new Workout
+        {
+            Id = Guid.NewGuid(), Date = new DateOnly(2026, 9, 23),
+            Exercises = [new WorkoutExercise { ExerciseId = Bench.Id, TargetSets = 3, TargetReps = 8, TargetWeightKg = 22.5m, Settings = "45 grader", Comment = "tungt" }],
+        });
+        var page = Render<WorkoutPage>(p => p.Add(x => x.Id, workout.Id));
+
+        var card = page.WaitForElement("[data-testid=exercise-entry]");
+        card.QuerySelectorAll("input").ShouldBeEmpty();
+        page.Find("[data-testid=target]").TextContent.Trim().ShouldBe("3 × 8 @ 22,5 kg");
+        page.Find("[data-testid=context]").TextContent.ShouldBe("Sitthöjd 11 · 45 grader · \u201dtungt\u201d");
+        page.FindAll("[data-testid=set-next]").Count.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task Tapping_the_target_opens_its_fields_and_a_change_is_saved()
+    {
+        var workout = await SeedAsync(new Workout
+        {
+            Id = Guid.NewGuid(), Date = new DateOnly(2026, 9, 23),
+            Exercises = [new WorkoutExercise { ExerciseId = Bench.Id, TargetSets = 3, TargetReps = 8, TargetWeightKg = 20 }],
+        });
+        var page = Render<WorkoutPage>(p => p.Add(x => x.Id, workout.Id));
+
+        page.WaitForElement("[data-testid=target]").Click();
+        page.FindAll("[data-testid=target-editor] input")[2].Change("25");
+        page.Find("[data-testid=target-editor] button").Click();
+
+        page.WaitForAssertion(() => page.Find("[data-testid=target]").TextContent.Trim().ShouldBe("3 × 8 @ 25 kg"));
+        page.FindAll("[data-testid=target-editor]").ShouldBeEmpty();
+        (await ReloadAsync(workout.Id)).Exercises.Single().TargetWeightKg.ShouldBe(25);
+    }
+
+    [Fact]
+    public async Task Only_one_card_has_an_open_panel_at_a_time()
+    {
+        var workout = await SeedAsync(new Workout
+        {
+            Id = Guid.NewGuid(), Date = new DateOnly(2026, 9, 23),
+            Exercises = [new WorkoutExercise { ExerciseId = Bench.Id, TargetSets = 3, TargetReps = 8 }, new WorkoutExercise { ExerciseId = Bench.Id, Order = 1, TargetSets = 2, TargetReps = 10 }],
+        });
+        var page = Render<WorkoutPage>(p => p.Add(x => x.Id, workout.Id));
+
+        page.WaitForElements("[data-testid=target]")[0].Click();
+        page.FindAll("[data-testid=target]")[1].Click();
+
+        page.FindAll("[data-testid=target-editor]").Count.ShouldBe(1);
+        page.FindAll("[data-testid=exercise-entry]")[1].QuerySelector("[data-testid=target-editor]").ShouldNotBeNull();
+    }
+
+    [Fact]
+    public async Task The_menu_moves_and_removes_an_exercise()
+    {
+        var other = new Exercise { Id = Guid.NewGuid(), Name = "Vader", Kind = ExerciseKind.Bodyweight };
+        await Repository.SaveAsync(other.Id, other);
+        var workout = await SeedAsync(new Workout
+        {
+            Id = Guid.NewGuid(), Date = new DateOnly(2026, 9, 23),
+            Exercises = [new WorkoutExercise { ExerciseId = Bench.Id }, new WorkoutExercise { ExerciseId = other.Id, Order = 1 }],
+        });
+        var page = Render<WorkoutPage>(p => p.Add(x => x.Id, workout.Id));
+
+        page.WaitForElements("[data-testid=more]")[1].Click();
+        page.Find("[data-testid=menu]").QuerySelectorAll("button").Single(b => b.TextContent.Trim() == "Flytta upp").Click();
+        page.WaitForAssertion(() => page.FindAll("[data-testid=exercise-entry] h3").Select(h => h.TextContent).ShouldBe(["Vader", "Bröst maskin"]));
+
+        page.FindAll("[data-testid=more]")[0].Click();
+        page.Find("[data-testid=menu]").QuerySelectorAll("button").Single(b => b.TextContent.Trim() == "Ta bort övningen").Click();
+
+        page.WaitForAssertion(() => page.FindAll("[data-testid=exercise-entry] h3").Select(h => h.TextContent).ShouldBe(["Bröst maskin"]));
+        (await ReloadAsync(workout.Id)).Exercises.Single().ExerciseId.ShouldBe(Bench.Id);
     }
 
     [Fact]
@@ -57,7 +133,7 @@ public class WorkoutPageTests : ClientTestContext
         page.WaitForElement("[data-testid=set-done]").Click();
         page.Find("[data-testid=set-editor] input").Change("6");
 
-        page.WaitForAssertion(() => page.Find("[data-testid=set-done]").TextContent.ShouldContain("6 × 60"));
+        page.WaitForAssertion(() => page.Find("[data-testid=set-done]").TextContent.ShouldContain("6\u202F×\u202F60"));
         (await ReloadAsync(workout.Id)).Exercises.Single().Sets.Single().Reps.ShouldBe(6);
     }
 
@@ -77,7 +153,7 @@ public class WorkoutPageTests : ClientTestContext
 
         var page = Render<WorkoutPage>(p => p.Add(x => x.Id, today.Id));
 
-        page.WaitForAssertion(() => page.Find("[data-testid=last-time]").TextContent.ShouldBe("Förra gången: 8, 8, 10 × 60 kg"));
+        page.WaitForAssertion(() => page.Find("[data-testid=context]").TextContent.ShouldStartWith("Förra gången: 8, 8, 10 × 60 kg"));
     }
 
     [Fact]

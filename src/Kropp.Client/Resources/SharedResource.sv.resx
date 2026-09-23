@@ -68,4 +68,8 @@
   <data name="Entry.Comment" xml:space="preserve"><value>Kommentar</value></data>
   <data name="Entry.CommentPlaceholder" xml:space="preserve"><value>t.ex. trött i sista setet</value></data>
   <data name="Home.ExerciseCountOne" xml:space="preserve"><value>1 övning</value></data>
+  <data name="Entry.More" xml:space="preserve"><value>Mer</value></data>
+  <data name="Entry.EditNotes" xml:space="preserve"><value>Inställning och kommentar</value></data>
+  <data name="Entry.ExtraSet" xml:space="preserve"><value>Extra set</value></data>
+  <data name="Entry.SetTarget" xml:space="preserve"><value>Sätt mål</value></data>
 </root>
