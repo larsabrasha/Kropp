@@ -42,7 +42,9 @@ async function onActivate(event) {
 
 async function onFetch(event) {
     const url = new URL(event.request.url);
-    if (event.request.method === 'GET' && url.origin === self.origin && url.pathname.startsWith(base + 'exercises/')) {
+    // Not navigations: /exercises/{id} is also a page of the app, which must get index.html.
+    if (event.request.method === 'GET' && event.request.mode !== 'navigate'
+        && url.origin === self.origin && url.pathname.startsWith(base + 'exercises/')) {
         // Cache first, filled on use. Kept across app versions (it is not an offline-cache-* cache),
         // since an illustration's path never changes its content.
         const cache = await caches.open(illustrationCache);
