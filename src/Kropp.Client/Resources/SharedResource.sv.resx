@@ -115,4 +115,5 @@
   <data name="Settings.SessionsPerWeek" xml:space="preserve"><value>Pass per vecka</value></data>
   <data name="Settings.Effect" xml:space="preserve"><value>Nästa pass föreslås {0} dagar efter det senaste, och på måndag när veckan är full.</value></data>
   <data name="Settings.EffectOneDay" xml:space="preserve"><value>Nästa pass föreslås dagen efter det senaste, och på måndag när veckan är full.</value></data>
+  <data name="Next.ChangeDay" xml:space="preserve"><value>Ändra dag</value></data>
 </root>
