@@ -73,4 +73,5 @@
   <data name="Entry.ExtraSet" xml:space="preserve"><value>Extra set</value></data>
   <data name="Entry.SetTarget" xml:space="preserve"><value>Set target</value></data>
   <data name="Entry.SetDone" xml:space="preserve"><value>Set {0} done: {1}</value></data>
+  <data name="Workout.AddDetails" xml:space="preserve"><value>Add number and note</value></data>
 </root>

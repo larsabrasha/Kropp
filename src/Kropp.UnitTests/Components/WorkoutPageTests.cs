@@ -215,6 +215,26 @@ public class WorkoutPageTests : ClientTestContext
     }
 
     [Fact]
+    public async Task The_details_are_text_until_tapped_and_then_editable()
+    {
+        var workout = await SeedAsync(new Workout { Id = Guid.NewGuid(), Date = new DateOnly(2026, 9, 21), SessionNumber = 101 });
+        var page = Render<WorkoutPage>(p => p.Add(x => x.Id, workout.Id));
+
+        var details = page.WaitForElement("[data-testid=details]");
+        details.TextContent.ShouldContain("Måndag 21 september 2026", Case.Insensitive);
+        details.TextContent.ShouldContain("Nr 101");
+        page.FindAll("input[type=date]").ShouldBeEmpty();
+
+        details.QuerySelector("h1 button")!.Click();
+        page.Find("[data-testid=details-editor] input[type=text]").Change("Ben och bröst");
+        page.Find("[data-testid=details-editor] button").Click();
+
+        page.WaitForAssertion(() => page.Find("[data-testid=details]").TextContent.ShouldContain("Nr 101 · Ben och bröst"));
+        page.FindAll("[data-testid=details-editor]").ShouldBeEmpty();
+        (await ReloadAsync(workout.Id)).Note.ShouldBe("Ben och bröst");
+    }
+
+    [Fact]
     public async Task Marking_the_workout_done_saves_the_status()
     {
         var workout = await SeedAsync(new Workout { Id = Guid.NewGuid(), Date = new DateOnly(2026, 9, 23) });
