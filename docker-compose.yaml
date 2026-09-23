@@ -1,0 +1,51 @@
+# Kropp at home: Postgres, the migrations, and the API, which also serves the app. HTTPS comes
+# from a reverse proxy in front (Caddy on the router); service workers need it, so the phone
+# always uses the proxy's address, at home and at the gym alike.
+#
+# Copy .env.example to .env, fill it in, then:  docker compose up -d
+# See the README, "Köra hemma".
+
+name: kropp
+
+services:
+  db:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: kropp
+      POSTGRES_USER: kropp
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kropp -d kropp"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Runs once and exits. The API starts only after it succeeds, so it never meets an old schema.
+  migrations:
+    image: ghcr.io/larsabrasha/kropp:${KROPP_TAG:-latest}
+    working_dir: /migrations
+    entrypoint: ["dotnet", "Kropp.MigrationService.dll"]
+    environment:
+      ConnectionStrings__kroppdb: Host=db;Database=kropp;Username=kropp;Password=${POSTGRES_PASSWORD}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  api:
+    image: ghcr.io/larsabrasha/kropp:${KROPP_TAG:-latest}
+    restart: unless-stopped
+    environment:
+      ConnectionStrings__kroppdb: Host=db;Database=kropp;Username=kropp;Password=${POSTGRES_PASSWORD}
+    # Plain HTTP for the reverse proxy. The API has no sign-in: anything that reaches this port
+    # reaches the data, so bind it to the one interface the proxy uses (KROPP_LISTEN in .env).
+    ports:
+      - ${KROPP_LISTEN:-8080}:8080
+    depends_on:
+      migrations:
+        condition: service_completed_successfully
+
+volumes:
+  db-data:

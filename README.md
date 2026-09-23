@@ -107,13 +107,66 @@ stämplar med nuvarande tid, för när själva importen var fel. `--server URL` 
 Reglerna för hur kolumner och kommentarer tolkas finns i `ExerciseCatalog` och `CommentParser`,
 och testerna i `NumbersImportTests` visar dem med påhittade rader.
 
+## Köra hemma
+
+GitHub Actions bygger en image när testerna går igenom på `main`:
+`ghcr.io/larsabrasha/kropp:latest` och `:sha-<commit>`. En tagg `v1.2.3` ger även `:1.2.3`.
+Imagen finns för både amd64 och arm64. Den innehåller API:t och migreringarna, så de kommer
+alltid från samma commit.
+
+`docker-compose.yaml` startar tre tjänster:
+
+| Tjänst | Vad |
+| --- | --- |
+| `db` | Postgres 17 med en beständig volym |
+| `migrations` | Kör migreringarna och avslutar. API:t startar först när den lyckats. |
+| `api` | API:t, som även serverar appen, över vanlig HTTP på port 8080 |
+
+HTTPS kommer från Caddy på routern (OPNsense). På servern behövs `docker-compose.yaml` och en `.env`:
+
+```shell
+cp .env.example .env      # fyll i POSTGRES_PASSWORD och KROPP_LISTEN
+docker compose up -d
+```
+
+Sätt `KROPP_LISTEN` till serverns adress i hemnätet, till exempel `192.168.1.10:8080`. Annars
+lyssnar API:t på alla nätkort, även Docker-maskinens Tailscale-adress.
+
+I Caddy läggs en domän till med serverns adress som upstream. Som Caddyfile:
+
+```
+kropp.example.se {
+    reverse_proxy 192.168.1.10:8080
+}
+```
+
+Uppdatera med `docker compose pull && docker compose up -d`.
+
+Om paketet på GitHub är privat måste servern logga in först: `docker login ghcr.io` med en token
+som har `read:packages`. Paketet innehåller inga data, så det går också bra att göra det publikt.
+
+Säkerhetskopiera databasen, till exempel varje natt:
+
+```shell
+docker compose exec -T db pg_dump -U kropp kropp | gzip > kropp-$(date +%F).sql.gz
+```
+
+Den gamla träningsloggen importeras mot servern med `--server https://kropp.example.se`.
+
 ## På telefonen
 
-Service workers kräver HTTPS, utom på `localhost`. För att köra på iPhone behövs alltså en
-HTTPS-adress, till exempel `tailscale serve` på en dator hemma. Öppna adressen i Safari och välj
-**Dela → Lägg till på hemskärmen**.
+Service workers kräver HTTPS, utom på `localhost`. Använd därför Caddys adress. Öppna den i
+Safari och välj **Dela → Lägg till på hemskärmen**.
 
-Det finns ingen inloggning än. Lägg därför inte API:t öppet mot internet.
+Använd samma adress hemma och på gymmet. Telefonens lagring hör till adressen, så en annan
+adress (till exempel serverns IP-nummer hemma) ger en tom app med egen utkorg.
+
+Hemma når telefonen Caddy direkt, utan Tailscale: en host override i OPNsense (Unbound) pekar
+namnet på routern. Borta går samma namn via Tailscale: split DNS i Tailscale skickar domänen
+till OPNsense, och routern är subnet router för hemnätet. Då är det samma adress på båda vägarna.
+
+Det finns ingen inloggning än. Lägg därför inte API:t öppet mot internet. Porten 8080 når alla
+i hemnätet, utan HTTPS och utan inloggning.
 
 ## Övningsbilder
 
