@@ -17,7 +17,7 @@
   <data name="Home.LoadFailed" xml:space="preserve"><value>Passen kunde inte läsas från enheten.</value></data>
   <data name="Workout.Status.Planned" xml:space="preserve"><value>Planerat</value></data>
   <data name="Workout.Status.Done" xml:space="preserve"><value>Genomfört</value></data>
-  <data name="Workout.Status.Skipped" xml:space="preserve"><value>Inte gjort</value></data>
+  <data name="Workout.Status.InProgress" xml:space="preserve"><value>Påbörjat</value></data>
   <data name="Sync.Offline" xml:space="preserve"><value>Offline</value></data>
   <data name="Sync.Syncing" xml:space="preserve"><value>Synkar…</value></data>
   <data name="Sync.Failed" xml:space="preserve"><value>Kunde inte synka</value></data>
@@ -37,7 +37,6 @@
   <data name="Workout.Status" xml:space="preserve"><value>Status</value></data>
   <data name="Workout.NoExercises" xml:space="preserve"><value>Inga övningar än. Lägg till den första nedan.</value></data>
   <data name="Workout.AddExercise" xml:space="preserve"><value>Lägg till övning</value></data>
-  <data name="Workout.CopyAsPlan" xml:space="preserve"><value>Kopiera som ny plan</value></data>
   <data name="Workout.Delete" xml:space="preserve"><value>Ta bort passet</value></data>
   <data name="Workout.DeleteConfirm" xml:space="preserve"><value>Ta bort passet på alla enheter?</value></data>
   <data name="Exercise.Unknown" xml:space="preserve"><value>Okänd övning</value></data>
@@ -53,7 +52,7 @@
   <data name="Entry.LastTime" xml:space="preserve"><value>Förra gången: {0}</value></data>
   <data name="Entry.MoveUp" xml:space="preserve"><value>Flytta upp</value></data>
   <data name="Entry.MoveDown" xml:space="preserve"><value>Flytta ner</value></data>
-  <data name="Entry.Remove" xml:space="preserve"><value>Ta bort övningen</value></data>
+  <data name="Entry.Remove" xml:space="preserve"><value>Radera övning</value></data>
   <data name="Entry.Sets" xml:space="preserve"><value>Set</value></data>
   <data name="Entry.Reps" xml:space="preserve"><value>Rep</value></data>
   <data name="Entry.Kg" xml:space="preserve"><value>kg</value></data>
@@ -62,18 +61,18 @@
   <data name="Entry.Km" xml:space="preserve"><value>km</value></data>
   <data name="Entry.Pulse" xml:space="preserve"><value>Snittpuls</value></data>
   <data name="Entry.SetN" xml:space="preserve"><value>Set {0}</value></data>
-  <data name="Entry.RemoveSet" xml:space="preserve"><value>Ta bort set</value></data>
+  <data name="Entry.RemoveSet" xml:space="preserve"><value>Radera set</value></data>
   <data name="Entry.Settings" xml:space="preserve"><value>Inställning</value></data>
   <data name="Entry.SettingsPlaceholder" xml:space="preserve"><value>t.ex. 45 grader</value></data>
   <data name="Entry.Comment" xml:space="preserve"><value>Kommentar</value></data>
   <data name="Entry.CommentPlaceholder" xml:space="preserve"><value>t.ex. trött i sista setet</value></data>
   <data name="Home.ExerciseCountOne" xml:space="preserve"><value>1 övning</value></data>
-  <data name="Entry.More" xml:space="preserve"><value>Mer</value></data>
-  <data name="Entry.EditNotes" xml:space="preserve"><value>Inställning och kommentar</value></data>
   <data name="Entry.ExtraSet" xml:space="preserve"><value>Extra set</value></data>
   <data name="Entry.SetTarget" xml:space="preserve"><value>Sätt mål</value></data>
+  <data name="Entry.Finish" xml:space="preserve"><value>Klar</value></data>
+  <data name="Entry.CardioDone" xml:space="preserve"><value>Klar: {0}</value></data>
+  <data name="Entry.ClearResult" xml:space="preserve"><value>Radera resultat</value></data>
   <data name="Entry.SetDone" xml:space="preserve"><value>Set {0} klart: {1}</value></data>
-  <data name="Workout.AddDetails" xml:space="preserve"><value>Lägg till nummer och anteckning</value></data>
   <data name="Entry.Drag" xml:space="preserve"><value>Dra för att flytta</value></data>
   <data name="Illustration.Show" xml:space="preserve"><value>Bild för {0}</value></data>
   <data name="Illustration.Change" xml:space="preserve"><value>Byt bild</value></data>
@@ -83,7 +82,6 @@
   <data name="Illustration.Credit" xml:space="preserve"><value>Bilder:</value></data>
   <data name="Stepper.Decrease" xml:space="preserve"><value>Minska {0}</value></data>
   <data name="Stepper.Increase" xml:space="preserve"><value>Öka {0}</value></data>
-  <data name="Entry.WeightStep" xml:space="preserve"><value>Steg</value></data>
   <data name="BodyArea.Legs" xml:space="preserve"><value>Ben</value></data>
   <data name="BodyArea.Chest" xml:space="preserve"><value>Bröst</value></data>
   <data name="BodyArea.Back" xml:space="preserve"><value>Rygg</value></data>
@@ -99,7 +97,7 @@
   <data name="Next.Open" xml:space="preserve"><value>Öppna</value></data>
   <data name="Next.Plan" xml:space="preserve"><value>Planera</value></data>
   <data name="Next.Templates" xml:space="preserve"><value>Mallar</value></data>
-  <data name="Next.NoTemplates" xml:space="preserve"><value>Inga mallar än. Öppna ett pass du brukar göra och välj ”Spara som mall”.</value></data>
+  <data name="Next.NoTemplates" xml:space="preserve"><value>Inga mallar än. Skapa en med ”Ny mall” under Inställningar → Mallar.</value></data>
   <data name="Next.Blank" xml:space="preserve"><value>Nytt tomt pass</value></data>
   <data name="Next.ManageTemplates" xml:space="preserve"><value>Mallar</value></data>
   <data name="Next.Today" xml:space="preserve"><value>I dag</value></data>
@@ -108,8 +106,6 @@
   <data name="Templates.Help" xml:space="preserve"><value>Standardpass att planera från. Nästa föreslås på startsidan.</value></data>
   <data name="Templates.Name" xml:space="preserve"><value>Namn</value></data>
   <data name="Templates.Delete" xml:space="preserve"><value>Ta bort</value></data>
-  <data name="Workout.SaveAsTemplate" xml:space="preserve"><value>Spara som mall</value></data>
-  <data name="Workout.TemplateSaved" xml:space="preserve"><value>Sparad som ”{0}”</value></data>
   <data name="Settings.Heading" xml:space="preserve"><value>Inställningar</value></data>
   <data name="Settings.Planning" xml:space="preserve"><value>Planering</value></data>
   <data name="Settings.SessionsPerWeek" xml:space="preserve"><value>Pass per vecka</value></data>
@@ -124,4 +120,39 @@
   <data name="Next.PlanNext" xml:space="preserve"><value>Planera nästa pass</value></data>
   <data name="Home.MoreWeeks" xml:space="preserve"><value>Visa fler veckor ({0} äldre)</value></data>
   <data name="Next.Empty" xml:space="preserve"><value>Tomt pass</value></data>
+  <data name="Exercises.Heading" xml:space="preserve"><value>Övningar</value></data>
+  <data name="Exercises.Help" xml:space="preserve"><value>Namn, kategorier och bild för varje övning. En ändring gäller i alla pass.</value></data>
+  <data name="Exercises.Search" xml:space="preserve"><value>Sök övning</value></data>
+  <data name="Exercises.Empty" xml:space="preserve"><value>Inga övningar än. Lägg till en i ett pass.</value></data>
+  <data name="Exercises.NoMatches" xml:space="preserve"><value>Ingen övning matchar.</value></data>
+  <data name="Exercises.NotFound" xml:space="preserve"><value>Övningen finns inte, eller har tagits bort.</value></data>
+  <data name="Exercises.Name" xml:space="preserve"><value>Namn</value></data>
+  <data name="Exercises.NameRequired" xml:space="preserve"><value>Övningen behöver ett namn.</value></data>
+  <data name="Exercises.NameTooLong" xml:space="preserve"><value>Namnet får vara högst {0} tecken.</value></data>
+  <data name="Exercises.SettingsNote" xml:space="preserve"><value>Fast inställning</value></data>
+  <data name="Exercises.SettingsNotePlaceholder" xml:space="preserve"><value>t.ex. Sitthöjd 11</value></data>
+  <data name="Exercises.Picture" xml:space="preserve"><value>Bild</value></data>
+  <data name="Exercises.Archived" xml:space="preserve"><value>Dölj när jag lägger till övningar. Pass som har den behåller den.</value></data>
+  <data name="Exercises.Hidden" xml:space="preserve"><value>Dold</value></data>
+  <data name="Exercises.UsedIn" xml:space="preserve"><value>Används i {0} pass</value></data>
+  <data name="Exercises.UsedInOne" xml:space="preserve"><value>Används i 1 pass</value></data>
+  <data name="Exercises.UsedInNone" xml:space="preserve"><value>Inte använd i något pass än</value></data>
+  <data name="Entry.EditExercise" xml:space="preserve"><value>Ändra övningen</value></data>
+  <data name="Common.Back" xml:space="preserve"><value>Tillbaka</value></data>
+  <data name="Exercises.WeightStep" xml:space="preserve"><value>Viktsteg för − och +</value></data>
+  <data name="Templates.New" xml:space="preserve"><value>Ny mall</value></data>
+  <data name="Entry.CardioFinishAt" xml:space="preserve"><value>Klar med {0}</value></data>
+  <data name="Entry.SkipRest" xml:space="preserve"><value>Hoppa över resten</value></data>
+  <data name="Entry.SkipExercise" xml:space="preserve"><value>Hoppa över övningen</value></data>
+  <data name="Entry.Unskip" xml:space="preserve"><value>Ångra hoppa över</value></data>
+  <data name="Entry.SetSkipped" xml:space="preserve"><value>Set {0} överhoppat</value></data>
+  <data name="Entry.Skipped" xml:space="preserve"><value>Överhoppad</value></data>
+  <data name="Entry.Edit" xml:space="preserve"><value>Ändra</value></data>
+  <data name="Exercises.TimeOnly" xml:space="preserve"><value>Mäter bara tid, inte avstånd eller puls</value></data>
+  <data name="Entry.AgoToday" xml:space="preserve"><value>i dag</value></data>
+  <data name="Entry.AgoYesterday" xml:space="preserve"><value>i går</value></data>
+  <data name="Entry.AgoDays" xml:space="preserve"><value>{0} dagar sedan</value></data>
+  <data name="Entry.LastComment" xml:space="preserve"><value>Kommentar förra gången</value></data>
+  <data name="Exercises.Kind" xml:space="preserve"><value>Typ</value></data>
+  <data name="Exercises.KindHelp" xml:space="preserve"><value>Gamla pass visas efter den nya typen.</value></data>
 </root>

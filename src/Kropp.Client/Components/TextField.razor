@@ -1,7 +1,15 @@
 <label class="flex min-w-0 flex-col gap-1 text-xs text-gray-600 dark:text-gray-400">
     <span>@Label</span>
-    <input type="text" value="@Value" maxlength="2000" placeholder="@Placeholder" @onchange="OnChanged"
-           class="w-full min-w-0 rounded-lg border border-gray-300 bg-white px-3 py-2 text-base text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100" />
+    @if (Multiline)
+    {
+        <textarea rows="3" value="@Value" maxlength="2000" placeholder="@Placeholder" @onchange="OnChanged"
+                  class="w-full min-w-0 resize-y rounded-lg border border-gray-300 bg-white px-3 py-2 text-base text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"></textarea>
+    }
+    else
+    {
+        <input type="text" value="@Value" maxlength="2000" placeholder="@Placeholder" @onchange="OnChanged"
+               class="w-full min-w-0 rounded-lg border border-gray-300 bg-white px-3 py-2 text-base text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100" />
+    }
 </label>
 
 @code {
@@ -9,6 +17,9 @@
     [Parameter] public string? Value { get; set; }
     [Parameter] public string? Placeholder { get; set; }
     [Parameter] public EventCallback<string?> Changed { get; set; }
+
+    /// <summary>Several lines, for a comment rather than a short setting.</summary>
+    [Parameter] public bool Multiline { get; set; }
 
     private Task OnChanged(ChangeEventArgs e)
     {

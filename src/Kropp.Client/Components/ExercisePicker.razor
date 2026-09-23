@@ -1,4 +1,4 @@
-<div class="rounded-xl border border-blue-300 p-4 dark:border-blue-800" data-testid="exercise-picker">
+<div class="rounded-xl border border-blue-300 bg-white p-4 dark:border-blue-800 dark:bg-gray-900" data-testid="exercise-picker">
     <label class="flex flex-col gap-1 text-sm">
         <span>@L["Picker.Search"]</span>
         <input type="search" value="@query" @oninput="e => query = e.Value?.ToString() ?? string.Empty" @ref="searchInput"
@@ -46,7 +46,7 @@
                 </select>
             </label>
             <button type="button" @onclick="CreateAsync" data-testid="create-exercise" disabled="@(newCategories.Count == 0)"
-                    class="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 disabled:opacity-50">
+                    class="rounded-lg bg-accent-600 px-4 py-2 font-medium text-white hover:bg-accent-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 disabled:opacity-50">
                 @L["Picker.Create", query.Trim()]
             </button>
         </div>

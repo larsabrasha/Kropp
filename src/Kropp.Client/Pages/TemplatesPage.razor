@@ -2,6 +2,7 @@
 @implements IDisposable
 @inject LocalRepository Repository
 @inject SyncEngine Engine
+@inject NavigationManager Navigation
 @inject ILogger<TemplatesPage> Logger
 
 <PageTitle>@L["App.Title"]</PageTitle>
@@ -12,6 +13,11 @@
 </a>
 <h1 class="text-xl font-semibold">@L["Templates.Heading"]</h1>
 <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">@L["Templates.Help"]</p>
+
+<button type="button" @onclick="CreateAsync" disabled="@creating" data-testid="new-template"
+        class="mt-4 w-full rounded-xl border-2 border-dashed border-blue-300 px-4 py-4 font-medium text-blue-700 hover:bg-blue-50 focus-visible:outline-2 focus-visible:outline-blue-500 disabled:opacity-60 dark:border-blue-800 dark:text-blue-300 dark:hover:bg-blue-950">
+    @(creating ? L["Common.Loading"] : "+ " + L["Templates.New"])
+</button>
 
 @if (error is not null)
 {
@@ -35,7 +41,7 @@ else
         @foreach (var template in templates)
         {
             <li @key="template.Id">
-                <a href="templates/@template.Id" class="flex items-center gap-3 rounded-xl border border-gray-200 p-3 hover:bg-gray-50 focus-visible:outline-2 focus-visible:outline-blue-500 dark:border-gray-800 dark:hover:bg-gray-900">
+                <a href="templates/@template.Id" class="flex items-center gap-3 rounded-xl border border-gray-200 bg-white p-3 hover:bg-gray-50 focus-visible:outline-2 focus-visible:outline-blue-500 dark:border-gray-800 dark:bg-gray-900 dark:hover:bg-gray-800">
                     <PlanIcon Slug="@ExerciseCategories.IconFor(new Workout { Id = template.Id, Date = default, Exercises = template.Exercises }, exercises)" />
                     <span class="min-w-0 flex-1">
                         <span class="block truncate font-semibold">@template.Name</span>
@@ -54,6 +60,7 @@ else
     private List<WorkoutTemplate>? templates;
     private Dictionary<Guid, Exercise> exercises = [];
     private string? error;
+    private bool creating;
 
     protected override async Task OnInitializedAsync()
     {
@@ -73,6 +80,29 @@ else
             Logger.LogError(ex, "Could not read templates");
             templates = [];
             error = L["Home.LoadFailed"];
+        }
+    }
+
+    /// <summary>An empty template named "Ny mall", opened at once to add exercises and a name.</summary>
+    private async Task CreateAsync()
+    {
+        if (creating)
+            return;
+        creating = true;
+        try
+        {
+            var template = new WorkoutTemplate { Id = Guid.NewGuid(), Name = L["Templates.New"] };
+            await Repository.SaveAsync(template.Id, template);
+            Navigation.NavigateTo($"templates/{template.Id}");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Could not create template");
+            error = L["Home.SaveFailed"];
+        }
+        finally
+        {
+            creating = false;
         }
     }
 

@@ -87,4 +87,18 @@ public class AggregateValidatorTests
         AggregateValidator.Validate(new SyncChange(AggregateTypes.Exercise, Guid.Parse("11111111-1111-1111-1111-111111111111"), Now, false,
             """{"id":"11111111-1111-1111-1111-111111111111","name":"  "}"""))
             .ShouldNotBeNull();
+
+    [Fact]
+    public void A_negative_cardio_target_is_refused()
+    {
+        var workout = ValidWorkout();
+        workout.Exercises[0] = workout.Exercises[0] with { TargetDurationMinutes = -1 };
+        AggregateValidator.Validate(WorkoutChange(workout)).ShouldNotBeNull();
+    }
+
+    [Fact]
+    public void An_exercise_of_an_unknown_kind_is_refused() =>
+        AggregateValidator.Validate(new SyncChange(AggregateTypes.Exercise, Guid.Parse("11111111-1111-1111-1111-111111111111"), Now, false,
+            """{"id":"11111111-1111-1111-1111-111111111111","name":"Sit ups","kind":7}"""))
+            .ShouldNotBeNull();
 }

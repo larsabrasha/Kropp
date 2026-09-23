@@ -1,0 +1,118 @@
+@page "/exercises"
+@implements IDisposable
+@inject LocalRepository Repository
+@inject SyncEngine Engine
+@inject ILogger<ExercisesPage> Logger
+
+<PageTitle>@L["App.Title"]</PageTitle>
+
+<a href="settings" class="mb-1 inline-flex items-center gap-1 rounded-lg py-2 pr-2 text-sm text-blue-700 hover:underline dark:text-blue-300">
+    <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M15 18l-6-6 6-6" /></svg>
+    @L["Settings.Heading"]
+</a>
+<h1 class="text-xl font-semibold">@L["Exercises.Heading"]</h1>
+<p class="mt-1 text-sm text-gray-500 dark:text-gray-400">@L["Exercises.Help"]</p>
+
+@if (error is not null)
+{
+    <p class="mt-3 text-sm text-red-600 dark:text-red-400" role="alert">@error</p>
+}
+
+@if (exercises is null)
+{
+    <p class="mt-4 text-sm text-gray-500 dark:text-gray-400">@L["Common.Loading"]</p>
+}
+else if (exercises.Count == 0)
+{
+    <div class="mt-4 flex flex-col items-center gap-3 rounded-xl border border-dashed border-gray-300 px-4 py-10 text-center text-gray-500 dark:border-gray-700 dark:text-gray-400" data-testid="exercises-empty">
+        <svg class="size-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11" /></svg>
+        <p>@L["Exercises.Empty"]</p>
+    </div>
+}
+else
+{
+    <input type="search" value="@query" @oninput="e => query = e.Value?.ToString() ?? string.Empty"
+           placeholder="@L["Exercises.Search"]" aria-label="@L["Exercises.Search"]" autocomplete="off" maxlength="200" data-testid="exercise-search"
+           class="mt-4 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-base dark:border-gray-700 dark:bg-gray-900" />
+
+    @if (Matches.Count == 0)
+    {
+        <div class="mt-3 flex flex-col items-center gap-3 rounded-xl border border-dashed border-gray-300 px-4 py-8 text-center text-gray-500 dark:border-gray-700 dark:text-gray-400" data-testid="exercises-no-match">
+            <svg class="size-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M20 20l-4-4" /></svg>
+            <p>@L["Exercises.NoMatches"]</p>
+        </div>
+    }
+    else
+    {
+        <ul class="mt-3 flex flex-col gap-2" data-testid="exercises">
+            @foreach (var exercise in Matches)
+            {
+                var slug = ExerciseIllustrations.SlugFor(exercise);
+                <li @key="exercise.Id">
+                    <a href="exercises/@exercise.Id" class="flex items-center gap-3 rounded-xl border border-gray-200 bg-white p-3 hover:bg-gray-50 focus-visible:outline-2 focus-visible:outline-blue-500 dark:border-gray-800 dark:bg-gray-900 dark:hover:bg-gray-800 @(exercise.IsArchived ? "opacity-60" : "")">
+                        <span class="size-10 shrink-0 overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800" aria-hidden="true">
+                            @if (slug is not null)
+                            {
+                                <img src="@ExerciseIllustrations.Picture(slug)" alt="" loading="lazy" class="illustration size-full object-contain p-0.5" />
+                            }
+                        </span>
+                        <span class="min-w-0 flex-1">
+                            <span class="block truncate font-semibold">@exercise.Name</span>
+                            <span class="block truncate text-sm text-gray-500 dark:text-gray-400">@Summary(exercise)</span>
+                        </span>
+                        <svg class="size-5 shrink-0 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
+                    </a>
+                </li>
+            }
+        </ul>
+    }
+}
+
+@code {
+    private List<Exercise>? exercises;
+    private string query = string.Empty;
+    private string? error;
+
+    // Hidden exercises last: they are kept for history, not for picking.
+    private List<Exercise> Matches => [.. (exercises ?? [])
+        .Where(e => e.Name.Contains(query.Trim(), StringComparison.CurrentCultureIgnoreCase))
+        .OrderBy(e => e.IsArchived)
+        .ThenBy(e => e.Name, StringComparer.CurrentCultureIgnoreCase)];
+
+    private string Summary(Exercise exercise)
+    {
+        var parts = new List<string> { L[$"Exercise.Kind.{exercise.Kind}"] };
+        parts.AddRange(ExerciseCategories.For(exercise).Select(a => L[$"BodyArea.{a}"].Value));
+        if (exercise.IsArchived)
+            parts.Add(L["Exercises.Hidden"]);
+        return string.Join(" · ", parts);
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Engine.DataChanged += OnRemoteChange;
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        try
+        {
+            exercises = [.. await Repository.GetAllAsync<Exercise>()];
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Could not read exercises");
+            exercises = [];
+            error = L["Home.LoadFailed"];
+        }
+    }
+
+    private void OnRemoteChange() => _ = InvokeAsync(async () =>
+    {
+        await LoadAsync();
+        StateHasChanged();
+    });
+
+    public void Dispose() => Engine.DataChanged -= OnRemoteChange;
+}

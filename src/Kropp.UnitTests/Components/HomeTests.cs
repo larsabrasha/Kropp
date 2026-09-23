@@ -66,7 +66,7 @@ public class HomeTests : ClientTestContext
             link.QuerySelector("[data-testid=workout-icon]")!.GetAttribute("src").ShouldBe(Kropp.Client.Components.ExerciseIllustrations.Picture("squat"));
             link.TextContent.ShouldNotContain("Nr 101");
             link.TextContent.ShouldContain("2 övningar");
-            link.TextContent.ShouldContain("Genomfört");
+            link.TextContent.ShouldContain("Påbörjat");
         });
     }
 
@@ -221,4 +221,22 @@ public class HomeTests : ClientTestContext
         (second.Date, second.TemplateId, second.SessionNumber).ShouldBe((new DateOnly(2026, 9, 25), (Guid?)template.Id, (int?)103));
     }
 
+
+    [Fact]
+    public async Task The_chosen_template_is_filled_and_never_bolder()
+    {
+        var a = new WorkoutTemplate { Id = Guid.NewGuid(), Name = "Ben och bröst" };
+        var b = new WorkoutTemplate { Id = Guid.NewGuid(), Name = "Rygg" };
+        await Repository.SaveAsync(a.Id, a);
+        await Repository.SaveAsync(b.Id, b);
+        var home = Render<Home>();
+
+        home.WaitForElements("[data-testid=template-choices] button").Count.ShouldBe(3);
+        foreach (var chip in home.FindAll("[data-testid=template-choices] button"))
+        {
+            chip.ClassList.ShouldNotContain("font-medium");
+            chip.ClassList.ShouldNotContain("font-semibold");
+        }
+        home.FindAll("[data-testid=template-choices] button[aria-checked=true]").ShouldHaveSingleItem().ClassList.ShouldContain("bg-blue-200");
+    }
 }

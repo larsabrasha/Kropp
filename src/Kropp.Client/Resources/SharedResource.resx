@@ -17,7 +17,7 @@
   <data name="Home.LoadFailed" xml:space="preserve"><value>The workouts could not be read from this device.</value></data>
   <data name="Workout.Status.Planned" xml:space="preserve"><value>Planned</value></data>
   <data name="Workout.Status.Done" xml:space="preserve"><value>Done</value></data>
-  <data name="Workout.Status.Skipped" xml:space="preserve"><value>Not done</value></data>
+  <data name="Workout.Status.InProgress" xml:space="preserve"><value>In progress</value></data>
   <data name="Sync.Offline" xml:space="preserve"><value>Offline</value></data>
   <data name="Sync.Syncing" xml:space="preserve"><value>Syncing…</value></data>
   <data name="Sync.Failed" xml:space="preserve"><value>Could not sync</value></data>
@@ -37,7 +37,6 @@
   <data name="Workout.Status" xml:space="preserve"><value>Status</value></data>
   <data name="Workout.NoExercises" xml:space="preserve"><value>No exercises yet. Add the first one below.</value></data>
   <data name="Workout.AddExercise" xml:space="preserve"><value>Add exercise</value></data>
-  <data name="Workout.CopyAsPlan" xml:space="preserve"><value>Copy as new plan</value></data>
   <data name="Workout.Delete" xml:space="preserve"><value>Delete workout</value></data>
   <data name="Workout.DeleteConfirm" xml:space="preserve"><value>Delete this workout on every device?</value></data>
   <data name="Exercise.Unknown" xml:space="preserve"><value>Unknown exercise</value></data>
@@ -53,7 +52,7 @@
   <data name="Entry.LastTime" xml:space="preserve"><value>Last time: {0}</value></data>
   <data name="Entry.MoveUp" xml:space="preserve"><value>Move up</value></data>
   <data name="Entry.MoveDown" xml:space="preserve"><value>Move down</value></data>
-  <data name="Entry.Remove" xml:space="preserve"><value>Remove exercise</value></data>
+  <data name="Entry.Remove" xml:space="preserve"><value>Delete exercise</value></data>
   <data name="Entry.Sets" xml:space="preserve"><value>Sets</value></data>
   <data name="Entry.Reps" xml:space="preserve"><value>Reps</value></data>
   <data name="Entry.Kg" xml:space="preserve"><value>kg</value></data>
@@ -62,18 +61,18 @@
   <data name="Entry.Km" xml:space="preserve"><value>km</value></data>
   <data name="Entry.Pulse" xml:space="preserve"><value>Avg. pulse</value></data>
   <data name="Entry.SetN" xml:space="preserve"><value>Set {0}</value></data>
-  <data name="Entry.RemoveSet" xml:space="preserve"><value>Remove set</value></data>
+  <data name="Entry.RemoveSet" xml:space="preserve"><value>Delete set</value></data>
   <data name="Entry.Settings" xml:space="preserve"><value>Settings</value></data>
   <data name="Entry.SettingsPlaceholder" xml:space="preserve"><value>e.g. 45 degrees</value></data>
   <data name="Entry.Comment" xml:space="preserve"><value>Comment</value></data>
   <data name="Entry.CommentPlaceholder" xml:space="preserve"><value>e.g. tired in the last set</value></data>
   <data name="Home.ExerciseCountOne" xml:space="preserve"><value>1 exercise</value></data>
-  <data name="Entry.More" xml:space="preserve"><value>More</value></data>
-  <data name="Entry.EditNotes" xml:space="preserve"><value>Settings and comment</value></data>
   <data name="Entry.ExtraSet" xml:space="preserve"><value>Extra set</value></data>
   <data name="Entry.SetTarget" xml:space="preserve"><value>Set target</value></data>
+  <data name="Entry.Finish" xml:space="preserve"><value>Done</value></data>
+  <data name="Entry.CardioDone" xml:space="preserve"><value>Done: {0}</value></data>
+  <data name="Entry.ClearResult" xml:space="preserve"><value>Delete result</value></data>
   <data name="Entry.SetDone" xml:space="preserve"><value>Set {0} done: {1}</value></data>
-  <data name="Workout.AddDetails" xml:space="preserve"><value>Add number and note</value></data>
   <data name="Entry.Drag" xml:space="preserve"><value>Drag to reorder</value></data>
   <data name="Illustration.Show" xml:space="preserve"><value>Picture of {0}</value></data>
   <data name="Illustration.Change" xml:space="preserve"><value>Change picture</value></data>
@@ -83,7 +82,6 @@
   <data name="Illustration.Credit" xml:space="preserve"><value>Pictures:</value></data>
   <data name="Stepper.Decrease" xml:space="preserve"><value>Decrease {0}</value></data>
   <data name="Stepper.Increase" xml:space="preserve"><value>Increase {0}</value></data>
-  <data name="Entry.WeightStep" xml:space="preserve"><value>Step</value></data>
   <data name="BodyArea.Legs" xml:space="preserve"><value>Legs</value></data>
   <data name="BodyArea.Chest" xml:space="preserve"><value>Chest</value></data>
   <data name="BodyArea.Back" xml:space="preserve"><value>Back</value></data>
@@ -99,7 +97,7 @@
   <data name="Next.Open" xml:space="preserve"><value>Open</value></data>
   <data name="Next.Plan" xml:space="preserve"><value>Plan</value></data>
   <data name="Next.Templates" xml:space="preserve"><value>Templates</value></data>
-  <data name="Next.NoTemplates" xml:space="preserve"><value>No templates yet. Open a workout you often do and choose “Save as template”.</value></data>
+  <data name="Next.NoTemplates" xml:space="preserve"><value>No templates yet. Create one with “New template” under Settings → Templates.</value></data>
   <data name="Next.Blank" xml:space="preserve"><value>New empty workout</value></data>
   <data name="Next.ManageTemplates" xml:space="preserve"><value>Templates</value></data>
   <data name="Next.Today" xml:space="preserve"><value>Today</value></data>
@@ -108,8 +106,6 @@
   <data name="Templates.Help" xml:space="preserve"><value>Standard workouts to plan from. The next one is suggested on the start page.</value></data>
   <data name="Templates.Name" xml:space="preserve"><value>Name</value></data>
   <data name="Templates.Delete" xml:space="preserve"><value>Delete</value></data>
-  <data name="Workout.SaveAsTemplate" xml:space="preserve"><value>Save as template</value></data>
-  <data name="Workout.TemplateSaved" xml:space="preserve"><value>Saved as “{0}”</value></data>
   <data name="Settings.Heading" xml:space="preserve"><value>Settings</value></data>
   <data name="Settings.Planning" xml:space="preserve"><value>Planning</value></data>
   <data name="Settings.SessionsPerWeek" xml:space="preserve"><value>Workouts a week</value></data>
@@ -124,4 +120,39 @@
   <data name="Next.PlanNext" xml:space="preserve"><value>Plan next workout</value></data>
   <data name="Home.MoreWeeks" xml:space="preserve"><value>Show more weeks ({0} older)</value></data>
   <data name="Next.Empty" xml:space="preserve"><value>Empty workout</value></data>
+  <data name="Exercises.Heading" xml:space="preserve"><value>Exercises</value></data>
+  <data name="Exercises.Help" xml:space="preserve"><value>Name, categories and picture of each exercise. A change applies in every workout.</value></data>
+  <data name="Exercises.Search" xml:space="preserve"><value>Search exercise</value></data>
+  <data name="Exercises.Empty" xml:space="preserve"><value>No exercises yet. Add one in a workout.</value></data>
+  <data name="Exercises.NoMatches" xml:space="preserve"><value>No exercise matches.</value></data>
+  <data name="Exercises.NotFound" xml:space="preserve"><value>The exercise does not exist, or has been removed.</value></data>
+  <data name="Exercises.Name" xml:space="preserve"><value>Name</value></data>
+  <data name="Exercises.NameRequired" xml:space="preserve"><value>The exercise needs a name.</value></data>
+  <data name="Exercises.NameTooLong" xml:space="preserve"><value>The name can be at most {0} characters.</value></data>
+  <data name="Exercises.SettingsNote" xml:space="preserve"><value>Fixed setting</value></data>
+  <data name="Exercises.SettingsNotePlaceholder" xml:space="preserve"><value>e.g. seat height 11</value></data>
+  <data name="Exercises.Picture" xml:space="preserve"><value>Picture</value></data>
+  <data name="Exercises.Archived" xml:space="preserve"><value>Hide when adding exercises. Workouts that used it keep it.</value></data>
+  <data name="Exercises.Hidden" xml:space="preserve"><value>Hidden</value></data>
+  <data name="Exercises.UsedIn" xml:space="preserve"><value>Used in {0} workouts</value></data>
+  <data name="Exercises.UsedInOne" xml:space="preserve"><value>Used in 1 workout</value></data>
+  <data name="Exercises.UsedInNone" xml:space="preserve"><value>Not used in any workout yet</value></data>
+  <data name="Entry.EditExercise" xml:space="preserve"><value>Edit exercise</value></data>
+  <data name="Common.Back" xml:space="preserve"><value>Back</value></data>
+  <data name="Exercises.WeightStep" xml:space="preserve"><value>Weight step for − and +</value></data>
+  <data name="Templates.New" xml:space="preserve"><value>New template</value></data>
+  <data name="Entry.CardioFinishAt" xml:space="preserve"><value>Done at {0}</value></data>
+  <data name="Entry.SkipRest" xml:space="preserve"><value>Skip the rest</value></data>
+  <data name="Entry.SkipExercise" xml:space="preserve"><value>Skip exercise</value></data>
+  <data name="Entry.Unskip" xml:space="preserve"><value>Undo skip</value></data>
+  <data name="Entry.SetSkipped" xml:space="preserve"><value>Set {0} skipped</value></data>
+  <data name="Entry.Skipped" xml:space="preserve"><value>Skipped</value></data>
+  <data name="Entry.Edit" xml:space="preserve"><value>Edit</value></data>
+  <data name="Exercises.TimeOnly" xml:space="preserve"><value>Measures time only, no distance or pulse</value></data>
+  <data name="Entry.AgoToday" xml:space="preserve"><value>today</value></data>
+  <data name="Entry.AgoYesterday" xml:space="preserve"><value>yesterday</value></data>
+  <data name="Entry.AgoDays" xml:space="preserve"><value>{0} days ago</value></data>
+  <data name="Entry.LastComment" xml:space="preserve"><value>Comment last time</value></data>
+  <data name="Exercises.Kind" xml:space="preserve"><value>Type</value></data>
+  <data name="Exercises.KindHelp" xml:space="preserve"><value>Old workouts are shown by the new type.</value></data>
 </root>

@@ -53,9 +53,9 @@ public class TemplatesPageTests : ClientTestContext
         page.WaitForElement("[data-testid=exercise-entry]");
         page.FindComponent<ExerciseList>().Instance.ForTemplate.ShouldBeTrue();
         page.FindAll("[data-testid=sets]").ShouldBeEmpty();
-        page.FindAll("[data-testid=context]").ShouldBeEmpty();
+        page.FindAll("[data-testid=last-time]").ShouldBeEmpty();
 
-        page.Find("[data-testid=target]").Click();
+        page.Find("[data-testid=edit]").Click();
         page.Find("[data-testid=target-editor]").QuerySelectorAll("[data-testid=stepper]")
             .Single(s => s.GetAttribute("data-label") == "kg").QuerySelector("[data-testid=increase]")!.Click();
 
@@ -100,4 +100,39 @@ public class TemplatesPageTests : ClientTestContext
     [Fact]
     public void An_unknown_template_shows_not_found() =>
         Render<TemplatePage>(p => p.Add(x => x.Id, Guid.NewGuid())).WaitForElement("[data-testid=not-found]");
+
+    [Fact]
+    public async Task A_new_template_is_created_empty_and_opened()
+    {
+        var list = Render<TemplatesPage>();
+        list.WaitForElement("[data-testid=templates-empty]");
+
+        list.Find("[data-testid=new-template]").Click();
+
+        var template = (await Repository.GetAllAsync<WorkoutTemplate>()).ShouldHaveSingleItem();
+        (template.Name, template.Exercises.Count).ShouldBe(("Ny mall", 0));
+        Services.GetRequiredService<NavigationManager>().Uri.ShouldEndWith($"templates/{template.Id}");
+    }
+
+    [Fact]
+    public async Task Cardio_minutes_in_a_template_are_a_plan_and_old_ones_move_there()
+    {
+        var walk = new Exercise { Id = Guid.NewGuid(), Name = "Gång i maskin", Kind = ExerciseKind.Cardio };
+        await Repository.SaveAsync(walk.Id, walk);
+        var template = new WorkoutTemplate { Id = Guid.NewGuid(), Name = "Armar", Exercises = [new WorkoutExercise { ExerciseId = walk.Id, DurationMinutes = 5 }] };
+        await Repository.SaveAsync(template.Id, template);
+        var page = Render<TemplatePage>(p => p.Add(x => x.Id, template.Id));
+
+        page.WaitForElement("[data-testid=target]").TextContent.Trim().ShouldBe("5 min");
+        page.FindAll("[data-testid=cardio]").ShouldBeEmpty();
+        page.Find("[data-testid=edit]").Click();
+        page.Find("[data-testid=target-editor]").QuerySelectorAll("[data-testid=stepper]")
+            .Single(s => s.GetAttribute("data-label") == "Minuter").QuerySelector("[data-testid=increase]")!.Click();
+
+        page.WaitForAssertion(async () =>
+        {
+            var entry = (await ReloadAsync(template.Id)).Exercises.Single();
+            (entry.TargetDurationMinutes, entry.DurationMinutes).ShouldBe((5.5m, (decimal?)null));
+        });
+    }
 }

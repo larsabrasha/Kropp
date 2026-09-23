@@ -1,0 +1,18 @@
+@* A workout's status, the same badge in the list and on the workout: blue for a plan, amber for a
+   workout begun, green for one done. *@
+
+<span class="shrink-0 rounded-full px-2 py-0.5 text-xs font-medium @Colours" data-testid="status" data-status="@Status">@L[$"Workout.Status.{Shown}"]</span>
+
+@code {
+    [Parameter, EditorRequired] public WorkoutStatus Status { get; set; }
+
+    // Skipped is no longer derived; a workout stored with it reads as the plan it is.
+    private WorkoutStatus Shown => Status == WorkoutStatus.Skipped ? WorkoutStatus.Planned : Status;
+
+    private string Colours => Shown switch
+    {
+        WorkoutStatus.InProgress => "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300",
+        WorkoutStatus.Done => "bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300",
+        _ => "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300",
+    };
+}

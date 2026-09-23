@@ -111,7 +111,7 @@ internal static class NumbersImport
                 Id = DeterministicGuid.Create("workout:" + day.Key.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)),
                 Date = day.Key,
                 SessionNumber = dayRows.Select(r => r.SessionNumber).FirstOrDefault(n => n is not null),
-                Status = dayRows.Any(r => r.Done) ? WorkoutStatus.Done : day.Key < today ? WorkoutStatus.Skipped : WorkoutStatus.Planned,
+                Status = dayRows.Any(r => r.Done) ? WorkoutStatus.Done : WorkoutStatus.Planned,
                 Note = visit is not null ? $"Gång {visit} av 40" : null,
                 Exercises = entries,
             });
@@ -207,7 +207,10 @@ internal static class NumbersImport
                 TargetSets = row.Sets,
                 TargetReps = reps,
                 TargetWeightKg = weight,
-                Settings = settingInReps && row.Reps is { } setting ? setting.ToString(CultureInfo.InvariantCulture) : CommentParser.Setting(row.Comment),
+                Settings = settingInReps && row.Reps is { } setting ? setting.ToString(CultureInfo.InvariantCulture)
+                    : ExerciseCatalog.SettingInInst.Contains(row.Exercise) && row.Inst is { } bench
+                        ? string.Join(" · ", new[] { bench.ToString(CultureInfo.CurrentCulture), CommentParser.Setting(row.Comment) }.Where(p => p is not null))
+                    : CommentParser.Setting(row.Comment),
             };
             if (row.Done)
             {

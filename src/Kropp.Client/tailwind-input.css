@@ -6,3 +6,27 @@
     /* iOS zooms into any focused field with text smaller than 16px. */
     input, select, textarea { font-size: max(16px, 1em); }
 }
+
+/* The set the user is on: its background breathes green, so it is found at a glance.
+   Still for anyone who has asked their system for less motion. */
+@theme {
+    /* The app's blue for filled buttons and the logo: Tailwind's blue hue at about half its
+       chroma, calm beside the greens and greys; white text on 600 holds about 5:1. */
+    --color-accent-600: oklch(0.52 0.13 257);
+    --color-accent-700: oklch(0.46 0.12 257);
+
+    --animate-next-set: next-set 1.6s ease-in-out infinite;
+
+    @keyframes next-set {
+        0%, 100% { background-color: transparent; }
+        50% { background-color: var(--next-set-pulse); }
+    }
+}
+
+@layer base {
+    :root { --next-set-pulse: var(--color-green-100); }
+
+    @media (prefers-color-scheme: dark) {
+        :root { --next-set-pulse: color-mix(in oklab, var(--color-green-900) 60%, transparent); }
+    }
+}

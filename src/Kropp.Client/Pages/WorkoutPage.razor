@@ -5,7 +5,6 @@
 @inject NavigationManager Navigation
 @inject ILogger<WorkoutPage> Logger
 @inject IJSRuntime JS
-@inject TimeProvider Time
 
 <PageTitle>@L["App.Title"]</PageTitle>
 
@@ -27,14 +26,25 @@ else if (workout is null)
 }
 else
 {
-    @* Compact like the exercise cards: date and details as text, opened for editing on a tap. *@
-    <div data-testid="details">
-        <h1 class="text-xl font-semibold">
-            <button type="button" @onclick="ToggleDetails" aria-expanded="@(editingDetails ? "true" : "false")"
-                    class="text-left first-letter:uppercase hover:text-gray-600 dark:hover:text-gray-300">@workout.Date.ToString("dddd d MMMM yyyy")</button>
-        </h1>
-        <button type="button" @onclick="ToggleDetails" aria-expanded="@(editingDetails ? "true" : "false")"
-                class="block max-w-full truncate text-left text-sm text-gray-500 underline decoration-gray-300 decoration-dotted underline-offset-4 hover:text-gray-700 dark:text-gray-400 dark:decoration-gray-600 dark:hover:text-gray-200">@DetailsText</button>
+    @* The same as the workout's row in the list: picture, name, day, exercises and status. The
+       grey line, with the number and note too, opens the details for editing. *@
+    <div class="flex items-center gap-3" data-testid="details">
+        <span class="size-14 shrink-0 overflow-hidden rounded-xl bg-white dark:bg-gray-900" aria-hidden="true">
+            @if (ExerciseCategories.IconFor(workout, exercises) is { } icon)
+            {
+                <img src="@ExerciseIllustrations.Picture(icon)" alt="" class="illustration size-full object-contain p-1" data-testid="workout-icon" />
+            }
+        </span>
+        <div class="min-w-0 flex-1">
+            <div class="flex items-start justify-between gap-2">
+                <h1 class="min-w-0 break-words text-xl font-semibold leading-tight">@Title</h1>
+                <span class="mt-0.5"><StatusBadge Status="WorkoutEditing.StatusOf(workout)" /></span>
+            </div>
+            <button type="button" @onclick="ToggleDetails" aria-expanded="@(editingDetails ? "true" : "false")" data-testid="workout-meta"
+                    class="mt-0.5 block max-w-full text-left text-sm text-gray-500 underline decoration-gray-300 decoration-dotted underline-offset-4 hover:text-gray-700 dark:text-gray-400 dark:decoration-gray-600 dark:hover:text-gray-200">
+                <span class="inline-block first-letter:uppercase">@workout.Date.ToString("dddd d MMM")</span>@string.Concat(MetaParts.Select(p => " · " + p))
+            </button>
+        </div>
     </div>
 
     @if (editingDetails)
@@ -66,21 +76,7 @@ else
         <ExerciseList Owner="workout" Exercises="exercises" History="workouts" OnChange="SaveAsync" OnExerciseChange="SaveExerciseAsync" />
     </div>
 
-    <section class="mt-8 flex flex-col gap-2 border-t border-gray-200 pt-4 sm:flex-row sm:justify-between dark:border-gray-800">
-        <div class="flex flex-col gap-2 sm:flex-row">
-            <button type="button" @onclick="CopyAsync" disabled="@busy"
-                    class="rounded-lg border border-gray-300 px-4 py-2.5 font-medium hover:bg-gray-100 disabled:opacity-60 dark:border-gray-700 dark:hover:bg-gray-800">
-                @L["Workout.CopyAsPlan"]
-            </button>
-            <button type="button" @onclick="SaveAsTemplateAsync" disabled="@(busy || workout.Exercises.Count == 0)" data-testid="save-template"
-                    class="rounded-lg border border-gray-300 px-4 py-2.5 font-medium hover:bg-gray-100 disabled:opacity-60 dark:border-gray-700 dark:hover:bg-gray-800">
-                @L["Workout.SaveAsTemplate"]
-            </button>
-            @if (savedTemplate is not null)
-            {
-                <p class="self-center text-sm text-green-700 dark:text-green-400" role="status" data-testid="template-saved">@L["Workout.TemplateSaved", savedTemplate]</p>
-            }
-        </div>
+    <section class="mt-8 flex justify-end border-t border-gray-200 pt-4 dark:border-gray-800">
         @if (confirmingDelete)
         {
             <div class="flex items-center gap-2" role="alertdialog" aria-label="@L["Workout.DeleteConfirm"]">
@@ -106,33 +102,35 @@ else
     private List<Workout> workouts = [];
     private Dictionary<Guid, Exercise> exercises = [];
     private bool editingDetails;
-    private string? savedTemplate;
 
     // The workout whose first render has been scrolled to the top. The page is reused when only the
-    // id changes ("Kopiera som ny plan" is at the bottom), and a reload lets the browser restore an
-    // old position; either way a workout should open at its top.
+    // id changes, and a reload lets the browser restore an old position; either way a workout should
+    // open at its top.
     private Guid? scrolledFor;
 
 
     private void ToggleDetails() => editingDetails = !editingDetails;
 
-    private string DetailsText
+    private string? Name => workout is null ? null : ExerciseCategories.WorkoutName(workout, exercises, L);
+
+    private string Title => Name ?? workout?.Note ?? L["Home.Heading"];
+
+    /// <summary>After the day, as in the list: the exercises, then the number and a note not already the title.</summary>
+    private List<string> MetaParts
     {
         get
         {
             var parts = new List<string>();
-            if (workout is not null && ExerciseCategories.WorkoutName(workout, exercises, L) is { } name)
-                parts.Add(name);
-            if (workout?.SessionNumber is { } number)
+            if (workout is null)
+                return parts;
+            parts.Add(workout.Exercises.Count == 1 ? L["Home.ExerciseCountOne"] : L["Home.ExerciseCount", workout.Exercises.Count]);
+            if (workout.SessionNumber is { } number)
                 parts.Add(L["Home.SessionShort", number]);
-            if (workout is not null)
-                parts.Add(L[$"Workout.Status.{WorkoutEditing.StatusOf(workout, Today)}"]);
-            if (!string.IsNullOrWhiteSpace(workout?.Note))
+            if (Name is not null && !string.IsNullOrWhiteSpace(workout.Note))
                 parts.Add(workout.Note);
-            return parts.Count > 0 ? string.Join(" · ", parts) : L["Workout.AddDetails"];
+            return parts;
         }
     }
-    private bool busy;
     private bool confirmingDelete;
     private string? error;
 
@@ -226,11 +224,10 @@ else
     }
 
     // Saved at once and locally; sync picks it up a few seconds later.
-    private DateOnly Today => DateOnly.FromDateTime(Time.GetLocalNow().DateTime);
 
     private async Task SaveAsync(Workout next)
     {
-        next = WorkoutEditing.WithDerivedStatus(next, Today);
+        next = WorkoutEditing.WithDerivedStatus(next);
         var exercisesChanged = workout is null || !workout.Exercises.Select(e => e.ExerciseId).ToHashSet().SetEquals(next.Exercises.Select(e => e.ExerciseId));
         var previous = workout;
         workout = next;
@@ -254,51 +251,6 @@ else
         DateOnly.TryParseExact(e.Value?.ToString(), "yyyy-MM-dd", out var date) && workout is not null
             ? SaveAsync(workout with { Date = date })
             : Task.CompletedTask;
-
-    private async Task CopyAsync()
-    {
-        if (busy || workout is null)
-            return;
-        busy = true;
-        try
-        {
-            var copy = WorkoutEditing.CopyAsPlan(workout, Guid.NewGuid(), Today, WorkoutEditing.NextSessionNumber(workouts));
-            await Repository.SaveAsync(copy.Id, copy);
-            Navigation.NavigateTo($"workouts/{copy.Id}");
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Could not copy workout");
-            error = L["Home.SaveFailed"];
-        }
-        finally
-        {
-            busy = false;
-        }
-    }
-
-    private async Task SaveAsTemplateAsync()
-    {
-        if (busy || workout is null)
-            return;
-        busy = true;
-        try
-        {
-            var name = ExerciseCategories.WorkoutName(workout, exercises, L) ?? workout.Note ?? L["Home.Heading"];
-            var template = Planning.TemplateFrom(workout, Guid.NewGuid(), name);
-            await Repository.SaveAsync(template.Id, template);
-            savedTemplate = name;
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Could not save template");
-            error = L["Home.SaveFailed"];
-        }
-        finally
-        {
-            busy = false;
-        }
-    }
 
     private async Task DeleteAsync()
     {

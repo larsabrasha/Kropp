@@ -92,7 +92,7 @@ public static partial class AggregateValidator
             if (entry.Sets.Count > MaxSetsPerExercise)
                 return "An exercise entry has too many sets.";
             if (IsNegative(entry.TargetSets, entry.TargetReps, entry.TargetSeconds, entry.AvgHeartRate)
-                || IsNegative(entry.TargetWeightKg, entry.DurationMinutes, entry.DistanceKm)
+                || IsNegative(entry.TargetWeightKg, entry.DurationMinutes, entry.DistanceKm, entry.TargetDurationMinutes, entry.TargetDistanceKm)
                 || entry.Sets.Any(s => IsNegative(s.Reps, s.Seconds) || IsNegative(s.WeightKg)))
                 return "An exercise entry has a negative value.";
         }
@@ -110,6 +110,8 @@ public static partial class AggregateValidator
             return "The exercise name is too long.";
         if (exercise.SettingsNote?.Length > MaxText)
             return "The settings note is too long.";
+        if (!Enum.IsDefined(exercise.Kind))
+            return "The exercise kind is not valid.";
         if (exercise.Categories.Count > Enum.GetValues<BodyArea>().Length || exercise.Categories.Any(c => !Enum.IsDefined(c)))
             return "The categories are not valid.";
         if (exercise.WeightStepKg is { } step && (step <= 0 || step > 50))

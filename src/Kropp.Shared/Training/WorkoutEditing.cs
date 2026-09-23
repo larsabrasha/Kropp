@@ -7,17 +7,20 @@ namespace Kropp.Shared.Training;
 public static class WorkoutEditing
 {
     /// <summary>
-    /// The status follows from what was logged, so there is nothing to tick: anything recorded makes
-    /// the workout done; nothing recorded is a plan until its day has passed, and not done after.
+    /// The status follows from what was logged, so there is nothing to tick: nothing recorded is a
+    /// plan, whatever the date; something recorded is in progress until every exercise is finished.
     /// </summary>
-    public static WorkoutStatus StatusOf(Workout workout, DateOnly today) =>
-        workout.Exercises.Any(HasResult) ? WorkoutStatus.Done
-        : workout.Date < today ? WorkoutStatus.Skipped
-        : WorkoutStatus.Planned;
+    public static WorkoutStatus StatusOf(Workout workout) =>
+        !workout.Exercises.Any(HasResult) ? WorkoutStatus.Planned
+        : CurrentEntry(workout) is null ? WorkoutStatus.Done
+        : WorkoutStatus.InProgress;
+
+    /// <summary>Started or done: the workout happened, which is what planning counts.</summary>
+    public static bool HasHappened(Workout workout) => workout.Exercises.Any(HasResult);
 
     /// <summary>The workout with its stored status brought in line with <see cref="StatusOf"/>.</summary>
-    public static Workout WithDerivedStatus(Workout workout, DateOnly today) =>
-        workout with { Status = StatusOf(workout, today) };
+    public static Workout WithDerivedStatus(Workout workout) =>
+        workout with { Status = StatusOf(workout) };
 
     /// <summary>
     /// The body areas a workout trains, most exercises first, for naming it. Cardio is left out:
@@ -57,6 +60,8 @@ public static class WorkoutEditing
             TargetReps = lastTime?.TargetReps ?? DefaultReps(exercise.Kind),
             TargetWeightKg = exercise.Kind == ExerciseKind.Strength ? lastTime?.TargetWeightKg : null,
             TargetSeconds = exercise.Kind == ExerciseKind.Timed ? lastTime?.TargetSeconds ?? 30 : null,
+            TargetDurationMinutes = exercise.Kind == ExerciseKind.Cardio ? lastTime?.TargetDurationMinutes : null,
+            TargetDistanceKm = exercise.Kind == ExerciseKind.Cardio ? lastTime?.TargetDistanceKm : null,
         };
         return workout with { Exercises = [.. workout.Exercises, entry] };
     }
@@ -114,37 +119,19 @@ public static class WorkoutEditing
         entry with { Sets = [.. entry.Sets.Where((_, i) => i != index)] };
 
     /// <summary>
-    /// A new planned workout with the same exercises and targets and nothing done yet — how the
-    /// weekly sheet in Numbers was built. Comments belong to the occasion and are left behind.
-    /// </summary>
-    public static Workout CopyAsPlan(Workout source, Guid id, DateOnly date, int sessionNumber) =>
-        new()
-        {
-            Id = id,
-            Date = date,
-            SessionNumber = sessionNumber,
-            Status = WorkoutStatus.Planned,
-            Exercises = [.. source.Exercises.Select((e, i) => e with
-            {
-                Order = i,
-                Comment = null,
-                Sets = [],
-                DurationMinutes = null,
-                DistanceKm = null,
-                AvgHeartRate = null,
-            })],
-        };
-
-    /// <summary>
     /// The most recent other workout, on or before <paramref name="current"/>'s date, where the
     /// exercise has something recorded. Ties on a date go to the higher session number.
     /// </summary>
     public static WorkoutExercise? LastTime(IEnumerable<Workout> workouts, Workout current, Guid exerciseId) =>
+        LastTimeOn(workouts, current, exerciseId)?.Entry;
+
+    /// <summary><see cref="LastTime"/> with the day it was, to say how long ago.</summary>
+    public static (DateOnly Date, WorkoutExercise Entry)? LastTimeOn(IEnumerable<Workout> workouts, Workout current, Guid exerciseId) =>
         workouts
             .Where(w => w.Id != current.Id && w.Date <= current.Date)
             .OrderByDescending(w => w.Date)
             .ThenByDescending(w => w.SessionNumber)
-            .SelectMany(w => w.Exercises.Where(e => e.ExerciseId == exerciseId && HasResult(e)))
+            .SelectMany(w => w.Exercises.Where(e => e.ExerciseId == exerciseId && HasResult(e)).Select(e => ((DateOnly Date, WorkoutExercise Entry)?)(w.Date, e)))
             .FirstOrDefault();
 
     /// <summary>The newest workout that has exercises, the natural one to copy.</summary>
@@ -155,7 +142,50 @@ public static class WorkoutEditing
             .ThenByDescending(w => w.SessionNumber)
             .FirstOrDefault();
 
-    private static bool HasResult(WorkoutExercise e) =>
+    /// <summary>
+    /// The exercise the user is on: the first, in order, that is not finished. Null when every
+    /// exercise is finished.
+    /// </summary>
+    public static int? CurrentEntry(Workout workout)
+    {
+        var index = workout.Exercises.FindIndex(e => !IsFinished(e));
+        return index < 0 ? null : index;
+    }
+
+    /// <summary>
+    /// Skipped, or done: cardio with a time or a distance, anything else with its planned sets
+    /// (one set when nothing is planned). Cardio has no sets, so it needs no kind to tell.
+    /// </summary>
+    public static bool IsFinished(WorkoutExercise e) =>
+        e.IsSkipped || e.DurationMinutes is not null || e.DistanceKm is not null || e.Sets.Count >= Math.Max(e.TargetSets ?? 1, 1);
+
+    /// <summary>
+    /// Records cardio as done at the planned time and distance — the cardio twin of
+    /// <see cref="CompleteNextSet"/>. What is not planned comes from last time, and so does the pulse.
+    /// </summary>
+    public static WorkoutExercise CompleteCardio(WorkoutExercise entry, WorkoutExercise? lastTime) =>
+        entry with
+        {
+            DurationMinutes = entry.TargetDurationMinutes ?? lastTime?.DurationMinutes,
+            DistanceKm = entry.TargetDistanceKm ?? lastTime?.DistanceKm,
+            AvgHeartRate = lastTime?.AvgHeartRate,
+        };
+
+    /// <summary>
+    /// Cardio's planned minutes in a template. Templates from before cardio had targets kept them
+    /// in <see cref="WorkoutExercise.DurationMinutes"/>, which a template never uses for a result.
+    /// </summary>
+    public static decimal? CardioTargetMinutes(WorkoutExercise templateEntry) =>
+        templateEntry.TargetDurationMinutes ?? templateEntry.DurationMinutes;
+
+    public static decimal? CardioTargetKm(WorkoutExercise templateEntry) =>
+        templateEntry.TargetDistanceKm ?? templateEntry.DistanceKm;
+
+    public static WorkoutExercise ClearCardio(WorkoutExercise entry) =>
+        entry with { DurationMinutes = null, DistanceKm = null, AvgHeartRate = null };
+
+    /// <summary>Whether anything was recorded: a set, or for cardio a time or a distance.</summary>
+    public static bool HasResult(WorkoutExercise e) =>
         e.Sets.Count > 0 || e.DurationMinutes is not null || e.DistanceKm is not null;
 
     private static int? DefaultSets(ExerciseKind kind) => kind == ExerciseKind.Cardio ? null : 3;

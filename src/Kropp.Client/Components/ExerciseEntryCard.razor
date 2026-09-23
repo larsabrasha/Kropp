@@ -1,8 +1,13 @@
+@inject NavigationManager Navigation
+@inject TimeProvider Time
+
 @* Compact by default: the name and plan on one line, the set buttons, one grey line of context.
-   Everything else opens in place on a tap and closes with Klar. At the gym, with a plan that
+   Everything else opens in place on a tap and closes with Klar: one editor under the name, opened
+   from the plan beside it, except a set's fields, which open under the sets. At the gym, with a plan that
    was right, the set buttons are all that gets touched — so they stay large and always first. *@
 
-<article class="rounded-xl border border-gray-200 p-3 dark:border-gray-800" data-testid="exercise-entry">
+<article class="rounded-xl border border-gray-200 bg-white p-3 dark:border-gray-800 dark:bg-gray-900"
+         aria-current="@(Current ? "step" : null)" data-testid="exercise-entry" data-current="@(Current ? "true" : "false")">
     <div class="flex items-center gap-1">
         <span class="drag-handle -my-1 -ml-1 flex shrink-0 cursor-grab touch-none items-center self-stretch px-1 text-gray-300 active:cursor-grabbing dark:text-gray-600"
               title="@L["Entry.Drag"]" aria-hidden="true" data-testid="drag-handle">
@@ -20,69 +25,32 @@
                 <svg class="m-auto size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2" /><path d="M4 16l4-4 4 4 3-3 5 5" /></svg>
             }
         </button>
-        <h3 class="min-w-0 flex-1 truncate font-semibold">@(Exercise?.Name ?? L["Exercise.Unknown"])</h3>
-        <button type="button" @onclick="() => Toggle(Panel.Targets)" aria-expanded="@Expanded(Panel.Targets)" data-testid="target"
-                class="shrink-0 rounded-lg px-2 py-1.5 text-sm tabular-nums text-gray-700 underline decoration-gray-300 decoration-dotted underline-offset-4 hover:bg-gray-100 dark:text-gray-300 dark:decoration-gray-600 dark:hover:bg-gray-800">
-            @TargetText
-        </button>
-        <button type="button" @onclick="() => Toggle(Panel.Menu)" aria-expanded="@Expanded(Panel.Menu)" aria-label="@L["Entry.More"]" title="@L["Entry.More"]" data-testid="more"
-                class="shrink-0 rounded-lg p-2 text-gray-600 hover:bg-gray-100 focus-visible:outline-2 focus-visible:outline-blue-500 dark:text-gray-400 dark:hover:bg-gray-800">
-            <svg class="size-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8" /><circle cx="12" cy="12" r="1.8" /><circle cx="19" cy="12" r="1.8" /></svg>
+        <h3 class="min-w-0 flex-1 font-semibold @(Current ? "break-words" : "truncate") @(WhollySkipped ? "text-gray-400 line-through dark:text-gray-500" : "")" data-skipped="@(WhollySkipped ? "true" : "false")">
+            @(Exercise?.Name ?? L["Exercise.Unknown"])
+            @if (WhollySkipped)
+            {
+                <span class="sr-only">(@L["Entry.Skipped"])</span>
+            }
+        </h3>
+        <button type="button" @onclick="() => Toggle(Panel.Edit)" aria-expanded="@Expanded(Panel.Edit)" title="@L["Entry.Edit"]" data-testid="edit"
+                class="flex shrink-0 items-center rounded-lg px-2 py-1.5 text-sm tabular-nums text-gray-700 hover:bg-gray-100 focus-visible:outline-2 focus-visible:outline-blue-500 dark:text-gray-300 dark:hover:bg-gray-800">
+            <span class="@(WhollySkipped ? "text-gray-400 line-through dark:text-gray-500" : "underline decoration-gray-300 decoration-dotted underline-offset-4 dark:decoration-gray-600")" data-testid="target">@TargetText</span>
         </button>
     </div>
 
-    @if (panel == Panel.Menu)
+    @* One place to change this exercise in this workout: the plan first, as it is what changes
+       most, then the notes, skipping and the actions. Every field has its label above. *@
+    @if (panel == Panel.Edit)
     {
-        <div class="mt-2 flex flex-wrap gap-1" data-testid="menu">
-            <MenuButton OnClick="() => Toggle(Panel.Notes)">@(ForTemplate ? L["Entry.Settings"] : L["Entry.EditNotes"])</MenuButton>
-            <MenuButton OnClick="() => Toggle(Panel.Categories)">@L["Entry.Categories"]</MenuButton>
-            <MenuButton OnClick="OnRemove" Danger="true">@L["Entry.Remove"]</MenuButton>
-        </div>
-    }
-
-    @if (panel == Panel.Categories && Exercise is not null)
-    {
-        <div class="mt-2 rounded-lg bg-gray-50 p-2 dark:bg-gray-900" data-testid="categories-editor">
-            <CategoryChips Selected="ExerciseCategories.For(Exercise)" Changed="areas => OnExerciseChange.InvokeAsync(Exercise with { Categories = areas })" />
-            <DoneRow OnDone="Close" />
-        </div>
-    }
-
-    @if (panel == Panel.Illustration)
-    {
-        <div class="mt-2 rounded-lg bg-gray-50 p-2 dark:bg-gray-900" data-testid="illustration">
-            @if (choosingIllustration || Slug is null)
-            {
-                <IllustrationPicker Selected="Slug" OnPick="PickIllustration" />
-            }
-            else
-            {
-                <div class="mx-auto aspect-square w-full max-w-64 rounded-lg bg-gray-100 p-2 dark:bg-gray-800" data-testid="illustration-large">
-                    <img src="@ExerciseIllustrations.Picture(Slug)" alt="@ExerciseIllustrations.NameOf(Slug)" class="illustration size-full object-contain" />
-                </div>
-                <p class="mt-1 text-center text-xs text-gray-500 dark:text-gray-400">@ExerciseIllustrations.NameOf(Slug)</p>
-            }
-            <p class="mt-2 text-[11px] leading-tight text-gray-400 dark:text-gray-500">
-                @L["Illustration.Credit"] <a href="https://github.com/bryllim/workout-guide" target="_blank" rel="noopener" class="underline">Bryl Lim</a>, <a href="https://github.com/everkinetic/data" target="_blank" rel="noopener" class="underline">Everkinetic</a>, <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener" class="underline">CC BY-SA 4.0</a>
-            </p>
-            <DoneRow OnDone="Close">
-                @if (!choosingIllustration && Slug is not null)
-                {
-                    <button type="button" @onclick="() => choosingIllustration = true" class="rounded-lg px-3 py-2 text-sm hover:bg-gray-200 dark:hover:bg-gray-800" data-testid="change-illustration">@L["Illustration.Change"]</button>
-                }
-            </DoneRow>
-        </div>
-    }
-
-    @if (panel == Panel.Targets)
-    {
-        <div class="mt-2 rounded-lg bg-gray-50 p-2 dark:bg-gray-900" data-testid="target-editor">
-            <div class="flex flex-col gap-2">
+        <div class="mt-3 flex flex-col gap-3" data-testid="editor">
+            <div class="flex flex-col gap-3" data-testid="target-editor">
                 @if (Kind == ExerciseKind.Cardio)
                 {
-                    <Stepper Label="@L["Entry.Minutes"]" Value="Entry.DurationMinutes" Step="0.5m" Start="5" Changed="v => Change(Entry with { DurationMinutes = v })" />
-                    <Stepper Label="@L["Entry.Km"]" Value="Entry.DistanceKm" Step="0.1m" Start="1" Changed="v => Change(Entry with { DistanceKm = v })" />
-                    <Stepper Label="@L["Entry.Pulse"]" Value="Entry.AvgHeartRate" Start="120" Changed="v => Change(Entry with { AvgHeartRate = ToInt(v) })" />
+                    <Stepper Label="@L["Entry.Minutes"]" Value="Plan.TargetDurationMinutes" Step="0.5m" Start="5" Changed="v => ChangeCardioPlan(Plan with { TargetDurationMinutes = v })" />
+                    @if (!TimeOnly)
+                    {
+                        <Stepper Label="@L["Entry.Km"]" Value="Plan.TargetDistanceKm" Step="0.1m" Start="1" Changed="v => ChangeCardioPlan(Plan with { TargetDistanceKm = v })" />
+                    }
                 }
                 else
                 {
@@ -98,24 +66,138 @@
                     @if (Kind == ExerciseKind.Strength)
                     {
                         <Stepper Label="@L["Entry.Kg"]" Value="Entry.TargetWeightKg" Step="WeightStep" Changed="v => Change(Entry with { TargetWeightKg = v })" />
-                        <label class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                            <span class="w-20 shrink-0">@L["Entry.WeightStep"]</span>
-                            <select value="@TrainingText.Invariant(WeightStep)" @onchange="ChangeWeightStep" data-testid="weight-step"
-                                    class="rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-base text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100">
-                                @foreach (var step in Exercise.WeightSteps)
-                                {
-                                    <option value="@TrainingText.Invariant(step)">@TrainingText.Number(step) kg</option>
-                                }
-                            </select>
-                        </label>
                     }
                 }
             </div>
-            <DoneRow OnDone="Close" />
+            <div class="flex flex-col gap-3" data-testid="notes-editor">
+                <TextField Label="@L["Entry.Settings"]" Value="@Entry.Settings" Placeholder="@L["Entry.SettingsPlaceholder"]" Changed="v => Change(Entry with { Settings = v })" />
+                @if (!ForTemplate)
+                {
+                    <TextField Label="@L["Entry.Comment"]" Value="@Entry.Comment" Placeholder="@L["Entry.CommentPlaceholder"]" Multiline="true" Changed="v => Change(Entry with { Comment = v })" />
+                }
+            </div>
+            @if (SkipLabel is not null)
+            {
+                <button type="button" @onclick="ToggleSkipped" data-testid="@(Entry.IsSkipped ? "unskip" : "skip")"
+                        class="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-800 hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800">
+                    @SkipLabel
+                </button>
+            }
+            @* 20px above the actions in every editor: the column's gap plus this. *@
+            <div class="mt-2">
+                <EditorActions OnDone="Close" OnDelete="OnRemove" DeleteLabel="@L["Entry.Remove"]" DeleteTestId="remove" />
+            </div>
         </div>
     }
 
-    @if (Kind != ExerciseKind.Cardio && !ForTemplate)
+    @* Only to look at here; the picture belongs to the exercise and is changed on its page. *@
+    @if (panel == Panel.Illustration)
+    {
+        <div class="mt-3" data-testid="illustration">
+            @if (Slug is not null)
+            {
+                <div class="mx-auto aspect-square w-full max-w-64 rounded-lg bg-gray-100 p-2 dark:bg-gray-800" data-testid="illustration-large">
+                    <img src="@ExerciseIllustrations.Picture(Slug)" alt="@ExerciseIllustrations.NameOf(Slug)" class="illustration size-full object-contain" />
+                </div>
+                <p class="mt-1 text-center text-xs text-gray-500 dark:text-gray-400">@ExerciseIllustrations.NameOf(Slug)</p>
+                <p class="mt-2 text-[11px] leading-tight text-gray-400 dark:text-gray-500">
+                    @L["Illustration.Credit"] <a href="https://github.com/bryllim/workout-guide" target="_blank" rel="noopener" class="underline">Bryl Lim</a>, <a href="https://github.com/everkinetic/data" target="_blank" rel="noopener" class="underline">Everkinetic</a>, <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener" class="underline">CC BY-SA 4.0</a>
+                </p>
+            }
+            else
+            {
+                <p class="py-2 text-center text-sm text-gray-500 dark:text-gray-400">@L["Illustration.None"]</p>
+            }
+            <DoneRow OnDone="Close">
+                @if (Exercise is not null)
+                {
+                    <a href="@ExerciseHref" class="rounded-lg px-3 py-2 text-sm text-blue-700 hover:bg-blue-50 dark:text-blue-300 dark:hover:bg-blue-950" data-testid="edit-exercise">@L["Entry.EditExercise"]</a>
+                }
+            </DoneRow>
+        </div>
+    }
+
+    @* Cardio has no sets, so one large button finishes it, like the set buttons do. With what was
+       done open for correcting, it steps aside: two "Klar" would compete. *@
+    @if (Kind == ExerciseKind.Cardio && !ForTemplate && !Collapsed && panel != Panel.Edit)
+    {
+        @if (panel == Panel.CardioResult)
+        {
+            <div class="mt-3 border-b border-gray-200 pb-3 dark:border-gray-800" data-testid="cardio-editor">
+                <div class="flex flex-col gap-2">
+                    <Stepper Label="@L["Entry.Minutes"]" Value="Entry.DurationMinutes" Step="0.5m" Start="@(Entry.TargetDurationMinutes ?? 5)" Changed="v => Change(Entry with { DurationMinutes = v })" />
+                    @if (!TimeOnly)
+                    {
+                        <Stepper Label="@L["Entry.Km"]" Value="Entry.DistanceKm" Step="0.1m" Start="@(Entry.TargetDistanceKm ?? 1)" Changed="v => Change(Entry with { DistanceKm = v })" />
+                        <Stepper Label="@L["Entry.Pulse"]" Value="Entry.AvgHeartRate" Start="120" Changed="v => Change(Entry with { AvgHeartRate = ToInt(v) })" />
+                    }
+                </div>
+                <div class="mt-5">
+                    @if (WorkoutEditing.HasResult(Entry))
+                    {
+                        <EditorActions OnDone="Close" OnDelete="ClearCardio" DeleteLabel="@L["Entry.ClearResult"]" DeleteTestId="clear-cardio" />
+                    }
+                    else
+                    {
+                        <EditorActions OnDone="Close" />
+                    }
+                </div>            </div>
+        }
+        else
+        {
+            <div class="mt-2 flex" data-testid="cardio">
+                @if (WorkoutEditing.HasResult(Entry))
+                {
+                    <button type="button" @onclick="() => Toggle(Panel.CardioResult)" aria-expanded="false"
+                            aria-label="@L["Entry.CardioDone", TrainingText.Result(Measured(Entry)!, Kind)]"
+                            class="relative inline-flex min-h-14 flex-1 items-center justify-center rounded-xl bg-green-600 px-3 text-lg font-semibold tabular-nums text-white hover:bg-green-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-500"
+                            data-testid="cardio-done">
+                        <span class="flex items-center gap-2">
+                            <span class="flex size-5 shrink-0 items-center justify-center rounded-full bg-white/90 text-green-700 dark:bg-white/85" aria-hidden="true" data-testid="check"><svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7" /></svg></span>
+                            <span>@TrainingText.Result(Measured(Entry)!, Kind)</span>
+                        </span>
+                    </button>
+                }
+                else
+                {
+                    var planned = WorkoutEditing.CompleteCardio(Measured(Entry)!, Measured(LastTime));
+                    var label = WorkoutEditing.HasResult(planned) ? L["Entry.CardioFinishAt", TrainingText.Result(planned, Kind)] : L["Entry.Finish"];
+                    RenderFragment content = @<text>
+                        @if (planned.DurationMinutes is { } min)
+                        {
+                            <span class="text-xl font-semibold leading-tight">@TrainingText.Number(min) min</span>
+                            @if (planned.DistanceKm is { } km)
+                            {
+                                <span class="text-xs font-medium leading-tight opacity-90">@TrainingText.Number(km) km</span>
+                            }
+                        }
+                        else if (planned.DistanceKm is { } km)
+                        {
+                            <span class="text-xl font-semibold leading-tight">@TrainingText.Number(km) km</span>
+                        }
+                        else
+                        {
+                            <span class="text-base font-semibold">@L["Entry.Finish"]</span>
+                        }
+                    </text>;
+                    @if (Current)
+                    {
+                        <button type="button" @onclick="CompleteCardio" aria-label="@label" data-testid="cardio-next"
+                                class="inline-flex min-h-14 flex-1 flex-col items-center justify-center rounded-xl border-2 border-green-600 px-3 tabular-nums text-green-700 hover:bg-green-50 active:bg-green-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-500 motion-safe:animate-next-set dark:border-green-500 dark:text-green-300 dark:hover:bg-green-950">
+                            @content
+                        </button>
+                    }
+                    else
+                    {
+                        <span class="inline-flex min-h-14 flex-1 flex-col items-center justify-center rounded-xl border border-dashed border-gray-300 px-3 tabular-nums text-gray-400 dark:border-gray-700 @(Entry.IsSkipped ? "line-through" : "")"
+                              aria-label="@(Entry.IsSkipped ? L["Entry.Skipped"] : label)" data-testid="cardio-planned">@content</span>
+                    }
+                }
+            </div>
+        }
+    }
+
+    @if (Kind != ExerciseKind.Cardio && !ForTemplate && !Collapsed && panel != Panel.Edit)
     {
         <div class="mt-2 flex gap-2" data-testid="sets">
             @for (var i = 0; i < PlannedSlots; i++)
@@ -124,31 +206,34 @@
                 if (index < Entry.Sets.Count)
                 {
                     var set = Entry.Sets[index];
-                    var weight = TrainingText.SetWeightIfChanged(set, Entry, Kind);
+                    var weight = TrainingText.SetWeight(set, Kind);
                     var shortSet = TrainingText.IsShort(set, Entry, Kind);
                     <button type="button" @onclick="() => Toggle(Panel.Set, index)" aria-expanded="@Expanded(Panel.Set, index)"
                             aria-label="@L["Entry.SetDone", index + 1, TrainingText.Set(set, Kind)]"
                             class="relative inline-flex min-h-14 min-w-0 flex-1 flex-col items-center justify-center whitespace-nowrap rounded-xl px-1 tabular-nums focus-visible:outline-2 focus-visible:outline-offset-2 @(shortSet ? "bg-amber-300 text-gray-900 hover:bg-amber-400 focus-visible:outline-amber-500" : "bg-green-600 text-white hover:bg-green-700 focus-visible:outline-green-500")"
                             data-testid="set-done" data-short="@(shortSet ? "true" : "false")">
-                        <svg class="absolute left-1.5 top-1.5 size-3 opacity-80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" aria-hidden="true"><path d="M5 12l5 5L20 7" /></svg>
-                        <span class="text-xl font-semibold leading-tight">@TrainingText.SetMain(set, Kind)</span>
+                        <span class="flex items-center gap-1.5">
+                            <span class="flex size-5 shrink-0 items-center justify-center rounded-full bg-white/90 text-green-700 dark:bg-white/85" aria-hidden="true" data-testid="check"><svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7" /></svg></span>
+                            <span class="text-xl font-semibold leading-tight" data-testid="set-main">@TrainingText.SetMain(set, Kind)</span>
+                        </span>
                         @if (weight is not null)
                         {
                             <span class="text-xs font-medium leading-tight opacity-90" data-testid="set-weight">@weight</span>
                         }
                     </button>
                 }
-                else if (index == Entry.Sets.Count)
+                else if (index == Entry.Sets.Count && Current)
                 {
-                    <button type="button" @onclick="CompleteNext"
-                            class="inline-flex min-h-14 min-w-0 flex-1 items-center justify-center rounded-xl border-2 border-blue-600 px-1 text-base font-semibold text-blue-700 hover:bg-blue-50 active:bg-blue-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 dark:text-blue-300 dark:hover:bg-blue-950"
+                    <button type="button" @onclick="CompleteNext" aria-label="@SetLabel(index)"
+                            class="inline-flex min-h-14 min-w-0 flex-1 flex-col items-center justify-center whitespace-nowrap rounded-xl border-2 border-green-600 px-1 tabular-nums text-green-700 hover:bg-green-50 active:bg-green-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-500 motion-safe:animate-next-set dark:border-green-500 dark:text-green-300 dark:hover:bg-green-950"
                             data-testid="set-next">
-                        @L["Entry.SetN", index + 1]
+                        @PlannedSetContent(index)
                     </button>
                 }
                 else
                 {
-                    <span class="inline-flex min-h-14 min-w-0 flex-1 items-center justify-center rounded-xl border border-dashed border-gray-300 px-1 text-gray-400 dark:border-gray-700">@L["Entry.SetN", index + 1]</span>
+                    <span class="inline-flex min-h-14 min-w-0 flex-1 flex-col items-center justify-center whitespace-nowrap rounded-xl border border-dashed border-gray-300 px-1 tabular-nums text-gray-400 dark:border-gray-700 @(Entry.IsSkipped ? "line-through" : "")"
+                          aria-label="@(Entry.IsSkipped ? L["Entry.SetSkipped", index + 1] : SetLabel(index))" data-testid="set-planned" data-skipped="@(Entry.IsSkipped ? "true" : "false")">@PlannedSetContent(index)</span>
                 }
             }
             @if (Entry.Sets.Count >= PlannedSlots)
@@ -164,7 +249,7 @@
         {
             var e = setIndex;
             var set = Entry.Sets[e];
-            <div class="mt-2 rounded-lg bg-gray-50 p-2 dark:bg-gray-900" data-testid="set-editor">
+            <div class="mt-3 border-b border-gray-200 pb-3 dark:border-gray-800" data-testid="set-editor">
                 <div class="flex flex-col gap-2">
                     @if (Kind == ExerciseKind.Timed)
                     {
@@ -179,41 +264,95 @@
                         <Stepper Label="@L["Entry.Kg"]" Value="set.WeightKg" Step="WeightStep" Changed="v => Change(WorkoutEditing.ReplaceSet(Entry, e, set with { WeightKg = v }))" />
                     }
                 </div>
-                <DoneRow OnDone="Close">
-                    <button type="button" @onclick="() => RemoveSet(e)" class="rounded-lg px-3 py-2 text-sm text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950">@L["Entry.RemoveSet"]</button>
-                </DoneRow>
+                <div class="mt-5">
+                    <EditorActions OnDone="Close" OnDelete="() => RemoveSet(e)" DeleteLabel="@L["Entry.RemoveSet"]" DeleteTestId="remove-set" />
+                </div>
             </div>
         }
     }
 
-    @if (panel == Panel.Notes)
+    @* Below the sets, one line each, every one opening the editor: how it went last time and what
+       was said then, the settings to use, and what is said this time. *@
+    @if (panel != Panel.Edit && !Collapsed)
     {
-        <div class="mt-2 rounded-lg bg-gray-50 p-2 dark:bg-gray-900" data-testid="notes-editor">
-            <div class="grid gap-2 sm:grid-cols-2">
-                <TextField Label="@L["Entry.Settings"]" Value="@Entry.Settings" Placeholder="@L["Entry.SettingsPlaceholder"]" Changed="v => Change(Entry with { Settings = v })" />
-                @if (!ForTemplate)
+        @if (LastTime is { } last)
+        {
+            var shown = Measured(last)!;
+            <button type="button" @onclick="() => Toggle(Panel.Edit)" aria-label="@L["Entry.LastTime", LastTimeLabel(shown)]" data-testid="last-time"
+                    class="mt-2 flex w-full items-start gap-2 rounded-md text-left text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                <span class="flex h-5 w-5 shrink-0 items-center justify-center" aria-hidden="true"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8" /><path d="M3 3v5h5" /><path d="M12 7v5l3 2" /></svg></span>
+                <span class="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                @if (LastTimeDate is { } date)
                 {
-                    <TextField Label="@L["Entry.Comment"]" Value="@Entry.Comment" Placeholder="@L["Entry.CommentPlaceholder"]" Changed="v => Change(Entry with { Comment = v })" />
+                    <span data-testid="last-time-date">@ShortDate(date) (@Ago(date))</span>
                 }
-            </div>
-            <DoneRow OnDone="Close" />
-        </div>
-    }
-    else if (ContextParts.Count > 0)
-    {
-        <button type="button" @onclick="() => Toggle(Panel.Notes)" data-testid="context"
-                class="mt-2 block w-full truncate rounded-md text-left text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
-            @string.Join(" · ", ContextParts)
-        </button>
+                @if (Kind == ExerciseKind.Cardio || shown.Sets.Count == 0)
+                {
+                    <span class="tabular-nums">@TrainingText.Result(shown, Kind)</span>
+                }
+                else
+                {
+                    var uniform = Kind == ExerciseKind.Strength && shown.Sets.All(x => x.WeightKg == shown.Sets[0].WeightKg) ? shown.Sets[0].WeightKg : null;
+                    <span class="flex flex-wrap items-center gap-1" data-testid="last-sets">
+                        @foreach (var set in shown.Sets)
+                        {
+                            var shortSet = TrainingText.IsShort(set, shown, Kind);
+                            <span class="rounded-md px-1.5 py-0.5 text-xs font-semibold tabular-nums @(shortSet ? "bg-amber-200 text-gray-900 dark:bg-amber-400" : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300")"
+                                  data-short="@(shortSet ? "true" : "false")">@(uniform is null && Kind == ExerciseKind.Strength ? TrainingText.Set(set, Kind) : TrainingText.SetMain(set, Kind))</span>
+                        }
+                        @if (uniform is { } kg)
+                        {
+                            <span class="text-xs tabular-nums">× @TrainingText.Number(kg) kg</span>
+                        }
+                    </span>
+                }
+                </span>
+            </button>
+            @if (!string.IsNullOrWhiteSpace(last.Comment))
+            {
+                <button type="button" @onclick="() => Toggle(Panel.Edit)" aria-label="@L["Entry.LastComment"]: @last.Comment" data-testid="last-comment"
+                        class="mt-1 flex w-full items-start gap-2 rounded-md text-left text-sm text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300">
+                    <span class="flex h-5 w-5 shrink-0 items-start justify-center" aria-hidden="true"><svg class="size-4 text-gray-300 dark:text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v9a4 4 0 0 0 4 4h8" /></svg></span>
+                    <span class="-ml-1 flex h-5 w-4 shrink-0 items-center justify-center" aria-hidden="true"><svg class="size-4 text-gray-300 dark:text-gray-600" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3C6.5 3 2 6.8 2 11.5c0 2.6 1.4 4.9 3.6 6.5-.2 1.3-.8 2.5-1.8 3.4-.2.2 0 .6.3.6 2 0 3.7-.8 4.9-1.7 1 .3 2 .4 3 .4 5.5 0 10-3.8 10-8.5S17.5 3 12 3z" /></svg></span>
+                    <span class="min-w-0 whitespace-pre-line break-words">@last.Comment</span>
+                </button>
+            }
+        }
+        @if (SettingsParts.Count > 0)
+        {
+            <button type="button" @onclick="() => Toggle(Panel.Edit)" aria-label="@L["Entry.Settings"]: @string.Join(", ", SettingsParts)" data-testid="settings-line"
+                    class="mt-1.5 flex w-full items-start gap-2 rounded-md text-left text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                <span class="flex h-5 w-5 shrink-0 items-center justify-center" aria-hidden="true"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0" /><circle cx="16" cy="6" r="2" /><circle cx="10" cy="12" r="2" /><circle cx="18" cy="18" r="2" /></svg></span>
+                <span class="min-w-0 break-words">@string.Join(" · ", SettingsParts)</span>
+            </button>
+        }
+        @if (!ForTemplate && !string.IsNullOrWhiteSpace(Entry.Comment))
+        {
+            <button type="button" @onclick="() => Toggle(Panel.Edit)" aria-label="@L["Entry.Comment"]: @Entry.Comment" data-testid="comment"
+                    class="mt-1.5 flex w-full items-start gap-2 rounded-md text-left text-sm text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-gray-100">
+                <span class="flex h-5 w-5 shrink-0 items-center justify-center" aria-hidden="true"><svg class="size-[18px] text-gray-500 dark:text-gray-400" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3C6.5 3 2 6.8 2 11.5c0 2.6 1.4 4.9 3.6 6.5-.2 1.3-.8 2.5-1.8 3.4-.2.2 0 .6.3.6 2 0 3.7-.8 4.9-1.7 1 .3 2 .4 3 .4 5.5 0 10-3.8 10-8.5S17.5 3 12 3z" /></svg></span>
+                <span class="min-w-0 whitespace-pre-line break-words">@Entry.Comment</span>
+            </button>
+        }
     }
 </article>
 
 @code {
-    public enum Panel { None, Targets, Menu, Notes, Set, Illustration, Categories }
+    public enum Panel { None, Edit, Set, Illustration, CardioResult }
 
     [Parameter, EditorRequired] public WorkoutExercise Entry { get; set; } = default!;
     [Parameter] public Exercise? Exercise { get; set; }
     [Parameter] public WorkoutExercise? LastTime { get; set; }
+
+    /// <summary>The day of <see cref="LastTime"/>.</summary>
+    [Parameter] public DateOnly? LastTimeDate { get; set; }
+
+    /// <summary>
+    /// Whether this is the exercise the user is on, the first one not finished. Only it takes new
+    /// sets, and its next set pulses: the rest show their plan dashed, so there is one place to tap. Done sets and "+" stay
+    /// tappable everywhere, for corrections and an extra set.
+    /// </summary>
+    [Parameter] public bool Current { get; set; }
 
     /// <summary>Whether this card may show an open panel; the page lets one card at a time.</summary>
     [Parameter] public bool Active { get; set; }
@@ -225,26 +364,32 @@
     [Parameter] public EventCallback<WorkoutExercise> OnChange { get; set; }
     [Parameter] public EventCallback OnRemove { get; set; }
 
-    /// <summary>Raised with the exercise changed in the register, such as a new picture.</summary>
-    [Parameter] public EventCallback<Exercise> OnExerciseChange { get; set; }
 
     private Panel openPanel;
-    private bool choosingIllustration;
 
     private string? Slug => ExerciseIllustrations.SlugFor(Exercise);
+
+    // The exercise's own page, with the way back to this workout or template.
+    private string ExerciseHref => $"exercises/{Exercise?.Id}?back={Uri.EscapeDataString(Navigation.ToBaseRelativePath(Navigation.Uri).Split('?')[0])}";
 
     private decimal WeightStep => Exercise?.WeightStepKg ?? Exercise.DefaultWeightStepKg;
 
     private static int? ToInt(decimal? value) => value is { } v ? (int)Math.Round(v) : null;
 
-    private async Task ChangeWeightStep(ChangeEventArgs e)
-    {
-        if (Exercise is not null && TrainingText.ParseDecimal(e.Value) is { } step && Exercise.WeightSteps.Contains(step))
-            await OnExerciseChange.InvokeAsync(Exercise with { WeightStepKg = step == Exercise.DefaultWeightStepKg ? null : step });
-    }
     private int setIndex;
 
     private Panel panel => Active ? openPanel : Panel.None;
+
+    // With the editor open the sets step aside, so what opened is all there is below the name.
+
+    /// <summary>
+    /// Only the top row, on an exercise that is neither the one the user is on nor done in any
+    /// part: the rest of the list stays quiet. One skipped whole is struck through at that row;
+    /// one skipped part way shows its sets, with the skipped ones struck through.
+    /// </summary>
+    private bool Collapsed => !ForTemplate && !Current && !WorkoutEditing.HasResult(Entry);
+
+    private bool WhollySkipped => !ForTemplate && Entry.IsSkipped && !WorkoutEditing.HasResult(Entry);
 
     private ExerciseKind Kind => Exercise?.Kind ?? ExerciseKind.Strength;
 
@@ -254,29 +399,41 @@
     {
         get
         {
-            var text = TrainingText.Target(Entry, Kind);
+            var text = TrainingText.Target(Measured(Plan)!, Kind);
             if (Kind == ExerciseKind.Cardio && !string.IsNullOrWhiteSpace(Entry.Settings))
                 text = string.IsNullOrEmpty(text) ? Entry.Settings : $"{text} · {Entry.Settings}";
             return string.IsNullOrWhiteSpace(text) ? L["Entry.SetTarget"] : text;
         }
     }
 
-    private List<string> ContextParts
+    /// <summary>The settings to use: the exercise's own, then this time's. Cardio's is on the plan.</summary>
+    private List<string> SettingsParts
     {
         get
         {
             var parts = new List<string>();
-            if (LastTime is not null)
-                parts.Add(L["Entry.LastTime", TrainingText.Result(LastTime, Kind)]);
             if (!string.IsNullOrWhiteSpace(Exercise?.SettingsNote))
                 parts.Add(Exercise.SettingsNote);
             if (Kind != ExerciseKind.Cardio && !string.IsNullOrWhiteSpace(Entry.Settings))
                 parts.Add(Entry.Settings);
-            if (!ForTemplate && !string.IsNullOrWhiteSpace(Entry.Comment))
-                parts.Add($"”{Entry.Comment}”");
             return parts;
         }
     }
+
+    private DateOnly Today => DateOnly.FromDateTime(Time.GetLocalNow().DateTime);
+
+    // "mån 21 sep": the culture's short names, without the full stop Swedish puts after them.
+    private static string ShortDate(DateOnly date) => date.ToString("ddd d MMM").Replace(".", "");
+
+    private string Ago(DateOnly date) => (Today.DayNumber - date.DayNumber) switch
+    {
+        <= 0 => L["Entry.AgoToday"],
+        1 => L["Entry.AgoYesterday"],
+        var days => L["Entry.AgoDays", days],
+    };
+
+    private string LastTimeLabel(WorkoutExercise shown) =>
+        LastTimeDate is { } date ? $"{ShortDate(date)} ({Ago(date)}), {TrainingText.Result(shown, Kind)}" : TrainingText.Result(shown, Kind);
 
     private string Expanded(Panel p, int index = 0) => panel == p && (p != Panel.Set || setIndex == index) ? "true" : "false";
 
@@ -284,7 +441,6 @@
     {
         var isOpen = panel == p && (p != Panel.Set || setIndex == index);
         openPanel = isOpen ? Panel.None : p;
-        choosingIllustration = false;
         setIndex = index;
         if (!isOpen)
             await OnActivate.InvokeAsync();
@@ -293,22 +449,95 @@
     private void Close()
     {
         openPanel = Panel.None;
-        choosingIllustration = false;
     }
 
-    private async Task PickIllustration(string slug)
-    {
-        choosingIllustration = false;
-        if (Exercise is not null)
-            await OnExerciseChange.InvokeAsync(Exercise with { Illustration = slug });
-    }
 
     private Task Change(WorkoutExercise next) => OnChange.InvokeAsync(next);
+
+    /// <summary>What a tap on a set not yet done records: the plan, like the one-tap case does.</summary>
+    private SetResult PlannedSet => WorkoutEditing.CompleteNextSet(Entry, Kind).Sets[^1];
+
+    private bool HasPlan(SetResult set) => Kind == ExerciseKind.Timed ? set.Seconds is not null : set.Reps is not null;
+
+    private string SetLabel(int index) => HasPlan(PlannedSet)
+        ? $"{L["Entry.SetN", index + 1]}: {TrainingText.Set(PlannedSet, Kind)}"
+        : L["Entry.SetN", index + 1];
+
+    /// <summary>The planned reps (or seconds) large and the weight small, as on a done set; "Set 2" with no plan.</summary>
+    private RenderFragment PlannedSetContent(int index) => __builder =>
+    {
+        var set = PlannedSet;
+        if (!HasPlan(set))
+        {
+            <span class="text-base font-semibold">@L["Entry.SetN", index + 1]</span>
+            return;
+        }
+        <span class="text-xl font-semibold leading-tight">@TrainingText.SetMain(set, Kind)</span>
+        @if (Kind == ExerciseKind.Strength && set.WeightKg is { } kg)
+        {
+            <span class="text-xs font-medium leading-tight opacity-90">@TrainingText.Number(kg) kg</span>
+        }
+    };
+
+    /// <summary>
+    /// "Hoppa över" in the editor of the exercise the user is on, so a set not done does not hold up
+    /// the rest; "Ångra" on one that was skipped. Null where neither applies.
+    /// </summary>
+    private string? SkipLabel =>
+        ForTemplate ? null
+        : Entry.IsSkipped ? L["Entry.Unskip"].Value
+        : !Current ? null
+        : WorkoutEditing.HasResult(Entry) ? L["Entry.SkipRest"].Value
+        : L["Entry.SkipExercise"].Value;
+
+    private Task ToggleSkipped()
+    {
+        openPanel = Panel.None;
+        return Change(Entry with { IsSkipped = !Entry.IsSkipped });
+    }
 
     private Task CompleteNext()
     {
         openPanel = Panel.None;
         return Change(WorkoutEditing.CompleteNextSet(Entry, Kind));
+    }
+
+    /// <summary>
+    /// The entry with cardio's plan as it is shown and edited. In a workout, what is not planned is
+    /// last time's, which is also what "Klar" records. A template made before cardio had targets
+    /// holds its minutes in the result fields, which a template never uses for anything else.
+    /// </summary>
+    private WorkoutExercise Plan => Kind != ExerciseKind.Cardio ? Entry
+        : ForTemplate ? Entry with { TargetDurationMinutes = WorkoutEditing.CardioTargetMinutes(Entry), TargetDistanceKm = WorkoutEditing.CardioTargetKm(Entry) }
+        : Entry with { TargetDurationMinutes = Entry.TargetDurationMinutes ?? LastTime?.DurationMinutes, TargetDistanceKm = Entry.TargetDistanceKm ?? LastTime?.DistanceKm };
+
+    private bool TimeOnly => Kind == ExerciseKind.Cardio && Exercise?.MeasuresTimeOnly == true;
+
+    /// <summary>
+    /// The entry as far as the exercise measures it: for cardio by time alone, without distance
+    /// and pulse, also when older workouts recorded them.
+    /// </summary>
+    private WorkoutExercise? Measured(WorkoutExercise? entry) => TimeOnly && entry is not null
+        ? entry with { DistanceKm = null, AvgHeartRate = null, TargetDistanceKm = null }
+        : entry;
+
+    private Task ChangeCardioPlan(WorkoutExercise plan) =>
+        Change(ForTemplate ? plan with { DurationMinutes = null, DistanceKm = null, AvgHeartRate = null } : plan);
+
+    /// <summary>One tap at the plan, or last time's values; with nothing to go on, the fields open instead.</summary>
+    private Task CompleteCardio()
+    {
+        var done = WorkoutEditing.CompleteCardio(Measured(Entry)!, Measured(LastTime));
+        if (!WorkoutEditing.HasResult(done))
+            return Toggle(Panel.CardioResult);
+        openPanel = Panel.None;
+        return Change(done);
+    }
+
+    private Task ClearCardio()
+    {
+        openPanel = Panel.None;
+        return Change(WorkoutEditing.ClearCardio(Entry));
     }
 
     private Task RemoveSet(int index)

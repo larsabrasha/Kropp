@@ -2,9 +2,17 @@ namespace Kropp.Shared.Training;
 
 public enum WorkoutStatus
 {
+    /// <summary>Nothing logged yet, also when its day has passed.</summary>
     Planned,
+
+    /// <summary>Every exercise finished: its sets done, its time logged, or skipped.</summary>
     Done,
+
+    /// <summary>No longer derived; kept so workouts stored with it can still be read.</summary>
     Skipped,
+
+    /// <summary>Something logged, with exercises still to go.</summary>
+    InProgress,
 }
 
 /// <summary>
@@ -42,8 +50,18 @@ public sealed record WorkoutExercise
     public decimal? TargetWeightKg { get; init; }
     public int? TargetSeconds { get; init; }
 
+    /// <summary>Cardio's plan. What was done is <see cref="DurationMinutes"/> and <see cref="DistanceKm"/>.</summary>
+    public decimal? TargetDurationMinutes { get; init; }
+    public decimal? TargetDistanceKm { get; init; }
+
     /// <summary>What was actually done, one entry per set.</summary>
     public List<SetResult> Sets { get; init; } = [];
+
+    /// <summary>
+    /// Ended by the user before the plan was done: fewer sets than planned, or none. The plan is
+    /// kept as it was, so the next workout plans the same.
+    /// </summary>
+    public bool IsSkipped { get; init; }
 
     public decimal? DurationMinutes { get; init; }
     public decimal? DistanceKm { get; init; }

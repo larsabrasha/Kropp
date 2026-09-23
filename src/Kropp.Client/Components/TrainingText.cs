@@ -8,11 +8,15 @@ internal static class TrainingText
 {
     public static string Number(decimal value) => value.ToString("0.##", CultureInfo.CurrentCulture);
 
-    /// <summary>"3 × 8 @ 20 kg", "3 × 30 s", "3 set @ 5 kg" — or empty when nothing is planned.</summary>
+    /// <summary>"3 × 8 @ 20 kg", "3 × 30 s", "3 set @ 5 kg", "20 min" — or empty when nothing is planned.</summary>
     public static string Target(WorkoutExercise entry, ExerciseKind kind)
     {
         if (kind == ExerciseKind.Cardio)
-            return Cardio(entry);
+            return string.Join(" · ", new[]
+            {
+                entry.TargetDurationMinutes is { } min ? $"{Number(min)} min" : null,
+                entry.TargetDistanceKm is { } km ? $"{Number(km)} km" : null,
+            }.Where(s => s is not null));
 
         var (sets, each, unit) = kind == ExerciseKind.Timed
             ? (entry.TargetSets, entry.TargetSeconds, " s")
@@ -32,9 +36,9 @@ internal static class TrainingText
     public static string SetMain(SetResult set, ExerciseKind kind) =>
         kind == ExerciseKind.Timed ? $"{set.Seconds} s" : $"{set.Reps}";
 
-    /// <summary>The weight, but only when it differs from the plan — the plan already says it once.</summary>
-    public static string? SetWeightIfChanged(SetResult set, WorkoutExercise entry, ExerciseKind kind) =>
-        kind == ExerciseKind.Strength && set.WeightKg is { } kg && kg != entry.TargetWeightKg ? $"{Number(kg)} kg" : null;
+    /// <summary>The weight of a set, always shown on it, like the plan shows it on a set not yet done.</summary>
+    public static string? SetWeight(SetResult set, ExerciseKind kind) =>
+        kind == ExerciseKind.Strength && set.WeightKg is { } kg ? $"{Number(kg)} kg" : null;
 
     /// <summary>Fewer reps (or seconds) than planned, which the set button shows in another colour.</summary>
     public static bool IsShort(SetResult set, WorkoutExercise entry, ExerciseKind kind) => kind == ExerciseKind.Timed

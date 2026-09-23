@@ -1,0 +1,226 @@
+@page "/exercises/{Id:guid}"
+@implements IDisposable
+@inject LocalRepository Repository
+@inject SyncEngine Engine
+@inject ILogger<ExercisePage> Logger
+
+@* What belongs to the exercise itself and holds in every workout and template that uses it.
+   What belongs to one occasion stays on the workout's card. *@
+
+<PageTitle>@L["App.Title"]</PageTitle>
+
+<a href="@BackHref" class="mb-1 inline-flex items-center gap-1 rounded-lg py-2 pr-2 text-sm text-blue-700 hover:underline dark:text-blue-300" data-testid="back">
+    <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M15 18l-6-6 6-6" /></svg>
+    @(SafeBack is null ? L["Exercises.Heading"] : L["Common.Back"])
+</a>
+
+@if (!loaded)
+{
+    <p class="text-sm text-gray-500 dark:text-gray-400">@L["Common.Loading"]</p>
+}
+else if (exercise is null)
+{
+    <div class="flex flex-col items-center gap-3 rounded-xl border border-dashed border-gray-300 px-4 py-10 text-center text-gray-500 dark:border-gray-700 dark:text-gray-400" data-testid="not-found">
+        <svg class="size-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M20 20l-4-4" /></svg>
+        <p>@L["Exercises.NotFound"]</p>
+    </div>
+}
+else
+{
+    <h1 class="text-xl font-semibold">@exercise.Name</h1>
+    <p class="text-sm text-gray-500 dark:text-gray-400" data-testid="usage">
+        @L[$"Exercise.Kind.{exercise.Kind}"] · @(usedIn switch { 0 => L["Exercises.UsedInNone"], 1 => L["Exercises.UsedInOne"], _ => L["Exercises.UsedIn", usedIn] })
+    </p>
+
+    @if (error is not null)
+    {
+        <p class="mt-3 text-sm text-red-600 dark:text-red-400" role="alert">@error</p>
+    }
+
+    <section class="mt-4 flex flex-col gap-4 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
+        <TextField @key="nameKey" Label="@L["Exercises.Name"]" Value="@exercise.Name" Changed="RenameAsync" />
+        <label class="flex flex-col gap-1 text-xs text-gray-600 dark:text-gray-400">
+            <span>@L["Exercises.Kind"]</span>
+            <select value="@exercise.Kind" @onchange="ChangeKind" data-testid="kind"
+                    class="rounded-lg border border-gray-300 bg-white px-2 py-2 text-base text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100">
+                @foreach (var kind in Enum.GetValues<ExerciseKind>())
+                {
+                    <option value="@kind">@L[$"Exercise.Kind.{kind}"]</option>
+                }
+            </select>
+            <span>@L["Exercises.KindHelp"]</span>
+        </label>
+        <TextField Label="@L["Exercises.SettingsNote"]" Value="@exercise.SettingsNote" Placeholder="@L["Exercises.SettingsNotePlaceholder"]"
+                   Changed="v => SaveAsync(exercise with { SettingsNote = string.IsNullOrWhiteSpace(v) ? null : v.Trim() })" />
+
+        <div class="flex flex-col gap-1 text-xs text-gray-600 dark:text-gray-400">
+            <span>@L["Entry.Categories"]</span>
+            <CategoryChips Selected="ExerciseCategories.For(exercise)" Changed="areas => SaveAsync(exercise with { Categories = areas })" />
+        </div>
+
+        @if (exercise.Kind == ExerciseKind.Strength)
+        {
+            <label class="flex flex-col gap-1 text-xs text-gray-600 dark:text-gray-400">
+                <span>@L["Exercises.WeightStep"]</span>
+                <select value="@TrainingText.Invariant(exercise.WeightStepKg ?? Exercise.DefaultWeightStepKg)" @onchange="ChangeWeightStep" data-testid="weight-step"
+                        class="w-32 rounded-lg border border-gray-300 bg-white px-2 py-2 text-base text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100">
+                    @foreach (var step in Exercise.WeightSteps)
+                    {
+                        <option value="@TrainingText.Invariant(step)">@TrainingText.Number(step) kg</option>
+                    }
+                </select>
+            </label>
+        }
+
+        @if (exercise.Kind == ExerciseKind.Cardio)
+        {
+            <label class="flex items-start gap-3 text-sm">
+                <input type="checkbox" checked="@exercise.MeasuresTimeOnly" @onchange="e => SaveAsync(exercise with { MeasuresTimeOnly = e.Value is true })" data-testid="time-only"
+                       class="mt-0.5 size-5 shrink-0 rounded border-gray-300 dark:border-gray-700" />
+                <span>@L["Exercises.TimeOnly"]</span>
+            </label>
+        }
+
+        <label class="flex items-start gap-3 text-sm">
+            <input type="checkbox" checked="@exercise.IsArchived" @onchange="e => SaveAsync(exercise with { IsArchived = e.Value is true })" data-testid="archived"
+                   class="mt-0.5 size-5 shrink-0 rounded border-gray-300 dark:border-gray-700" />
+            <span>@L["Exercises.Archived"]</span>
+        </label>
+    </section>
+
+    <section class="mt-4 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900" data-testid="illustration">
+        <h2 class="mb-2 text-base font-semibold">@L["Exercises.Picture"]</h2>
+        @if (choosingIllustration)
+        {
+            <IllustrationPicker Selected="Slug" OnPick="PickIllustration" />
+            <DoneRow OnDone="() => choosingIllustration = false" />
+        }
+        else
+        {
+            @if (Slug is not null)
+            {
+                <div class="mx-auto aspect-square w-full max-w-48 rounded-lg bg-gray-100 p-2 dark:bg-gray-800" data-testid="illustration-large">
+                    <img src="@ExerciseIllustrations.Picture(Slug)" alt="@ExerciseIllustrations.NameOf(Slug)" class="illustration size-full object-contain" />
+                </div>
+                <p class="mt-1 text-center text-xs text-gray-500 dark:text-gray-400">@ExerciseIllustrations.NameOf(Slug)</p>
+            }
+            else
+            {
+                <p class="text-sm text-gray-500 dark:text-gray-400">@L["Illustration.None"]</p>
+            }
+            <div class="mt-2 flex justify-end">
+                <button type="button" @onclick="() => choosingIllustration = true" data-testid="change-illustration"
+                        class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800">
+                    @L["Illustration.Change"]
+                </button>
+            </div>
+        }
+        <p class="mt-2 text-[11px] leading-tight text-gray-400 dark:text-gray-500">
+            @L["Illustration.Credit"] <a href="https://github.com/bryllim/workout-guide" target="_blank" rel="noopener" class="underline">Bryl Lim</a>, <a href="https://github.com/everkinetic/data" target="_blank" rel="noopener" class="underline">Everkinetic</a>, <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener" class="underline">CC BY-SA 4.0</a>
+        </p>
+    </section>
+}
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    /// <summary>The workout or template the user came from, to go back to it.</summary>
+    [SupplyParameterFromQuery] public string? Back { get; set; }
+
+    private Exercise? exercise;
+    private int usedIn;
+    private bool loaded;
+    private bool choosingIllustration;
+    private string? error;
+
+    // Bumped to put the stored name back in the field after a name that was refused.
+    private int nameKey;
+
+    private const int MaxName = 200;
+
+    private string? Slug => ExerciseIllustrations.SlugFor(exercise);
+
+    // Only a workout or a template of this app, never a URL from elsewhere.
+    private string? SafeBack => Back is not null && System.Text.RegularExpressions.Regex.IsMatch(Back, "^(workouts|templates)/[0-9a-fA-F-]{36}$") ? Back : null;
+
+    private string BackHref => SafeBack ?? "exercises";
+
+    protected override async Task OnInitializedAsync()
+    {
+        Engine.DataChanged += OnRemoteChange;
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        try
+        {
+            exercise = await Repository.GetAsync<Exercise>(Id);
+            usedIn = (await Repository.GetAllAsync<Workout>()).Count(w => w.Exercises.Any(e => e.ExerciseId == Id));
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Could not read exercise {Id}", Id);
+            error = L["Home.LoadFailed"];
+        }
+        loaded = true;
+    }
+
+    private Task RenameAsync(string? name)
+    {
+        if (exercise is null)
+            return Task.CompletedTask;
+        if (string.IsNullOrWhiteSpace(name) || name.Trim().Length > MaxName)
+        {
+            error = string.IsNullOrWhiteSpace(name) ? L["Exercises.NameRequired"] : L["Exercises.NameTooLong", MaxName];
+            nameKey++;
+            return Task.CompletedTask;
+        }
+        return SaveAsync(exercise with { Name = name.Trim() });
+    }
+
+    /// <summary>
+    /// A kind set wrong at import, like Sit ups taken for weights. What is stored stays; it is shown
+    /// by the new kind, so a weight on a bodyweight exercise is simply not shown.
+    /// </summary>
+    private Task ChangeKind(ChangeEventArgs e) =>
+        exercise is not null && Enum.TryParse<ExerciseKind>(e.Value?.ToString(), out var kind) && Enum.IsDefined(kind)
+            ? SaveAsync(exercise with { Kind = kind })
+            : Task.CompletedTask;
+
+    private Task ChangeWeightStep(ChangeEventArgs e) =>
+        exercise is not null && TrainingText.ParseDecimal(e.Value) is { } step && Exercise.WeightSteps.Contains(step)
+            ? SaveAsync(exercise with { WeightStepKg = step == Exercise.DefaultWeightStepKg ? null : step })
+            : Task.CompletedTask;
+
+    private Task PickIllustration(string slug)
+    {
+        choosingIllustration = false;
+        return exercise is null ? Task.CompletedTask : SaveAsync(exercise with { Illustration = slug });
+    }
+
+    private async Task SaveAsync(Exercise next)
+    {
+        var previous = exercise;
+        exercise = next;
+        error = null;
+        try
+        {
+            await Repository.SaveAsync(next.Id, next);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Could not save exercise {Id}", next.Id);
+            exercise = previous;
+            error = L["Home.SaveFailed"];
+        }
+    }
+
+    private void OnRemoteChange() => _ = InvokeAsync(async () =>
+    {
+        await LoadAsync();
+        StateHasChanged();
+    });
+
+    public void Dispose() => Engine.DataChanged -= OnRemoteChange;
+}

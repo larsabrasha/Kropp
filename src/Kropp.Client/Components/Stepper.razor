@@ -1,21 +1,27 @@
-@* A number with large − and + buttons, for adjusting reps and weight with a thumb. The middle is
-   still a field, for typing an exact value. Values never go below zero. *@
+@* A number with large − and + buttons, for adjusting reps and weight with a thumb. The label sits
+   above, as on every field; the buttons sit together at the right, with room between them so a
+   thumb takes the one it means. The field is still a field, for typing an exact value. Values
+   never go below zero. *@
 
-<div class="flex items-center gap-2" data-testid="stepper" data-label="@Label">
-    <span class="w-20 shrink-0 text-sm text-gray-600 dark:text-gray-400">@Label</span>
-    <button type="button" @onclick="() => Change(-Step)" disabled="@(Value is null || Value <= Min)"
-            aria-label="@L["Stepper.Decrease", Label]" title="@L["Stepper.Decrease", Label]" data-testid="decrease"
-            class="flex size-11 shrink-0 items-center justify-center rounded-xl bg-gray-200 text-2xl font-medium text-gray-800 hover:bg-gray-300 active:bg-gray-400 disabled:opacity-40 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">
-        −
-    </button>
-    <input type="number" inputmode="decimal" min="0" step="@TrainingText.Invariant(Step)" value="@TrainingText.Invariant(Value)" aria-label="@Label"
-           @onchange="e => Changed.InvokeAsync(TrainingText.ParseDecimal(e.Value))"
-           class="h-11 w-full min-w-0 rounded-xl border border-gray-300 bg-white text-center text-lg font-semibold tabular-nums text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100" />
-    <button type="button" @onclick="() => Change(Step)" disabled="@(Max is { } max && Value >= max)"
-            aria-label="@L["Stepper.Increase", Label]" title="@L["Stepper.Increase", Label]" data-testid="increase"
-            class="flex size-11 shrink-0 items-center justify-center rounded-xl bg-gray-200 text-2xl font-medium text-gray-800 hover:bg-gray-300 active:bg-gray-400 disabled:opacity-40 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">
-        +
-    </button>
+<div class="flex flex-col gap-1" data-testid="stepper" data-label="@Label">
+    <span class="text-xs text-gray-600 dark:text-gray-400">@Label</span>
+    <div class="flex items-center gap-2">
+        <input type="number" inputmode="decimal" min="0" step="@TrainingText.Invariant(Step)" value="@TrainingText.Invariant(Value)" aria-label="@Label"
+               @onchange="e => Changed.InvokeAsync(TrainingText.ParseDecimal(e.Value))"
+               class="h-11 w-full min-w-0 rounded-xl border border-gray-300 bg-white text-center text-lg font-semibold tabular-nums text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100" />
+        <div class="flex shrink-0 gap-3">
+            <button type="button" @onclick="() => Change(-Step)" disabled="@(Value is null || Value <= Min)"
+                    aria-label="@L["Stepper.Decrease", Label]" title="@L["Stepper.Decrease", Label]" data-testid="decrease"
+                    class="flex size-11 shrink-0 items-center justify-center rounded-xl bg-gray-200 text-2xl font-medium text-gray-800 hover:bg-gray-300 active:bg-gray-400 disabled:opacity-40 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">
+                −
+            </button>
+            <button type="button" @onclick="() => Change(Step)" disabled="@(Max is { } max && Value >= max)"
+                    aria-label="@L["Stepper.Increase", Label]" title="@L["Stepper.Increase", Label]" data-testid="increase"
+                    class="flex size-11 shrink-0 items-center justify-center rounded-xl bg-gray-200 text-2xl font-medium text-gray-800 hover:bg-gray-300 active:bg-gray-400 disabled:opacity-40 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">
+                +
+            </button>
+        </div>
+    </div>
 </div>
 
 @code {

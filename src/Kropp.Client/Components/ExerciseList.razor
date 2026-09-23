@@ -19,16 +19,19 @@
         {
             var index = i;
             var entry = Owner.Exercises[index];
+            var current = index == currentEntry;
+            var last = ForTemplate ? null : WorkoutEditing.LastTimeOn(History, Owner, entry.ExerciseId);
             <ExerciseEntryCard @key="(entry.ExerciseId, entry.Order)"
                                ForTemplate="ForTemplate"
                                Entry="entry"
                                Exercise="Exercises.GetValueOrDefault(entry.ExerciseId)"
-                               LastTime="@(ForTemplate ? null : WorkoutEditing.LastTime(History, Owner, entry.ExerciseId))"
+                               LastTime="last?.Entry"
+                               LastTimeDate="last?.Date"
+                               Current="current"
                                Active="activeEntry == index"
                                OnActivate="() => activeEntry = index"
                                OnChange="next => OnChange.InvokeAsync(WorkoutEditing.ReplaceEntry(Owner, index, next))"
-                               OnRemove="() => RemoveAsync(index)"
-                               OnExerciseChange="OnExerciseChange" />
+                               OnRemove="() => RemoveAsync(index)" />
         }
     </div>
 
@@ -58,10 +61,11 @@
 
     [Parameter] public EventCallback<Workout> OnChange { get; set; }
 
-    /// <summary>Raised with an exercise changed or created in the register, for the page to save.</summary>
+    /// <summary>Raised with an exercise created in the register, for the page to save.</summary>
     [Parameter] public EventCallback<Exercise> OnExerciseChange { get; set; }
 
     private int? activeEntry;
+    private int? currentEntry;
     private bool picking;
     private Guid? ownerId;
     private ElementReference entryList;
@@ -77,6 +81,9 @@
             activeEntry = null;
             picking = false;
         }
+        currentEntry = !ForTemplate
+            ? WorkoutEditing.CurrentEntry(Owner)
+            : null;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)

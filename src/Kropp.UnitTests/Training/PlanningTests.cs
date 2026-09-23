@@ -137,19 +137,6 @@ public class PlanningTests
     }
 
     [Fact]
-    public void A_template_keeps_the_plan_and_drops_the_results()
-    {
-        var workout = Done(Wednesday, Walk, Bench) with { Note = "tungt" };
-        workout.Exercises[0] = workout.Exercises[0] with { DurationMinutes = 5, Comment = "lätt" };
-
-        var template = Planning.TemplateFrom(workout, Guid.NewGuid(), "Bröst");
-
-        template.Exercises.Select(e => e.ExerciseId).ShouldBe([Walk.Id, Bench.Id]);
-        template.Exercises.ShouldAllBe(e => e.Sets.Count == 0 && e.Comment == null && e.DurationMinutes == null);
-        template.Exercises[1].TargetWeightKg.ShouldBe(21);
-    }
-
-    [Fact]
     public void The_upcoming_plan_is_the_earliest_from_today()
     {
         var later = new Workout { Id = Guid.NewGuid(), Date = new DateOnly(2026, 9, 25) };
@@ -157,5 +144,57 @@ public class PlanningTests
         var past = new Workout { Id = Guid.NewGuid(), Date = new DateOnly(2026, 9, 21) };
 
         Planning.Upcoming([later, past, soon, Done(Wednesday, Bench)], Wednesday).ShouldBe(soon);
+    }
+
+    [Fact]
+    public void Cardio_minutes_in_a_template_become_the_plan_and_nothing_counts_as_done()
+    {
+        // Templates from before cardio had targets kept the minutes in the result field.
+        var template = new WorkoutTemplate
+        {
+            Id = Guid.NewGuid(), Name = "Armar",
+            Exercises = [new WorkoutExercise { ExerciseId = Walk.Id, DurationMinutes = 5, Settings = "60" }, new WorkoutExercise { ExerciseId = Bench.Id, Order = 1, TargetDurationMinutes = null }],
+        };
+
+        var plan = Planning.PlanFrom(template, Guid.NewGuid(), Wednesday, 103, []);
+
+        var walk = plan.Exercises[0];
+        (walk.TargetDurationMinutes, walk.DurationMinutes, walk.Settings).ShouldBe((5m, (decimal?)null, "60"));
+        WorkoutEditing.StatusOf(plan).ShouldBe(WorkoutStatus.Planned);
+    }
+
+    [Fact]
+    public void Cardio_keeps_last_times_plan_like_any_other_exercise()
+    {
+        var last = new Workout
+        {
+            Id = Guid.NewGuid(), Date = new DateOnly(2026, 9, 21), Status = WorkoutStatus.Done,
+            Exercises = [new WorkoutExercise { ExerciseId = Walk.Id, TargetDurationMinutes = 10, DurationMinutes = 8 }],
+        };
+        var template = new WorkoutTemplate { Id = Guid.NewGuid(), Name = "Armar", Exercises = [new WorkoutExercise { ExerciseId = Walk.Id, TargetDurationMinutes = 5 }] };
+
+        Planning.PlanFrom(template, Guid.NewGuid(), Wednesday, 103, [last]).Exercises.Single().TargetDurationMinutes.ShouldBe(10);
+    }
+
+    [Fact]
+    public void A_plan_never_starts_skipped()
+    {
+        var template = new WorkoutTemplate { Id = Guid.NewGuid(), Name = "Bröst", Exercises = [new WorkoutExercise { ExerciseId = Bench.Id, TargetSets = 3, IsSkipped = true }] };
+
+        Planning.PlanFrom(template, Guid.NewGuid(), Wednesday, 103, []).Exercises.Single().IsSkipped.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void A_workout_begun_today_is_still_the_one_to_open_and_counts_as_a_session()
+    {
+        var begun = new Workout
+        {
+            Id = Guid.NewGuid(), Date = Wednesday,
+            Exercises = [new WorkoutExercise { ExerciseId = Bench.Id, TargetSets = 3, Sets = [new SetResult { Reps = 8 }] }],
+        };
+
+        WorkoutEditing.StatusOf(begun).ShouldBe(WorkoutStatus.InProgress);
+        Planning.Upcoming([begun], Wednesday).ShouldBe(begun);
+        Planning.SuggestDate([begun], Wednesday, UserSettings.Default).ShouldBe(new DateOnly(2026, 9, 25));
     }
 }

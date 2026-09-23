@@ -20,7 +20,7 @@
 }
 else if (upcoming is not null)
 {
-    <section class="mb-3 rounded-xl border border-green-200 bg-green-50/60 p-4 dark:border-green-900 dark:bg-green-950/30" data-testid="next">
+    <section class="mb-3 rounded-xl border border-green-200 bg-green-50 p-4 dark:border-green-900 dark:bg-green-950/30" data-testid="next">
         <h2 class="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">@L["Next.Heading"]</h2>
         <a href="workouts/@upcoming.Id" class="flex items-center gap-3" data-testid="upcoming">
             <PlanIcon Slug="@ExerciseCategories.IconFor(upcoming, exercises)" />
@@ -35,7 +35,7 @@ else if (upcoming is not null)
 
 @if (workouts is not null)
 {
-<section class="rounded-xl border border-blue-200 bg-blue-50/50 p-4 dark:border-blue-900 dark:bg-blue-950/30" data-testid="plan-card">
+<section class="rounded-xl border border-blue-200 bg-blue-50 p-4 dark:border-blue-900 dark:bg-blue-950/30" data-testid="plan-card">
     <h2 class="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">@(upcoming is null ? L["Next.PlanNext"] : L["Next.Another"])</h2>
 
     <div class="flex items-center gap-3">
@@ -50,7 +50,7 @@ else if (upcoming is not null)
             </label>
         </span>
         <button type="button" @onclick="PlanAsync" disabled="@saving" data-testid="plan"
-                class="inline-flex shrink-0 items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 font-medium text-white hover:bg-blue-700 disabled:opacity-60">
+                class="inline-flex shrink-0 items-center gap-2 rounded-lg bg-accent-600 px-4 py-2.5 font-medium text-white hover:bg-accent-700 disabled:opacity-60">
             @if (saving)
             {
                 <svg class="size-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="3" stroke-dasharray="42 100" /></svg>
@@ -61,11 +61,13 @@ else if (upcoming is not null)
     @if (templates.Count > 0)
     {
         <div class="mt-3 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]" role="radiogroup" aria-label="@L["Next.Templates"]" data-testid="template-choices">
+            @* The chosen one is a deeper blue than the card with a border that holds 3:1 against it, never
+               bolder: a bolder name is wider and moves the rest. *@
             @foreach (var template in templates.Append(EmptyTemplate))
             {
                 var on = template.Id == chosen.Id;
                 <button type="button" role="radio" aria-checked="@(on ? "true" : "false")" @onclick="() => chosenId = template.Id" data-template="@(template.Id == Guid.Empty ? "empty" : template.Id)"
-                        class="shrink-0 rounded-full border px-3 py-1.5 text-sm @(on ? "border-gray-800 bg-white font-medium text-gray-900 dark:border-gray-200 dark:bg-gray-800 dark:text-gray-100" : "border-gray-200 bg-white text-gray-600 hover:border-gray-400 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400")">
+                        class="shrink-0 rounded-full border px-3 py-1.5 text-sm @(on ? "border-accent-600 bg-blue-200 text-blue-950 dark:border-blue-400 dark:bg-blue-900 dark:text-blue-50" : "border-gray-300 bg-white text-gray-700 hover:border-gray-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-300")">
                     @template.Name
                 </button>
             }
@@ -114,9 +116,9 @@ else if (upcoming is not null)
                         {
                             var name = ExerciseCategories.WorkoutName(workout, exercises, L);
                             var icon = ExerciseCategories.IconFor(workout, exercises);
-                            var status = WorkoutEditing.StatusOf(workout, Today);
+                            var status = WorkoutEditing.StatusOf(workout);
                             <li @key="workout.Id">
-                                <a href="workouts/@workout.Id" class="flex items-center gap-3 rounded-xl border border-gray-200 px-3 py-2.5 hover:bg-gray-50 focus-visible:outline-2 focus-visible:outline-blue-500 dark:border-gray-800 dark:hover:bg-gray-900">
+                                <a href="workouts/@workout.Id" class="flex items-center gap-3 rounded-xl border border-gray-200 bg-white px-3 py-2.5 hover:bg-gray-50 focus-visible:outline-2 focus-visible:outline-blue-500 dark:border-gray-800 dark:bg-gray-900 dark:hover:bg-gray-800">
                                     <span class="size-12 shrink-0 overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800" aria-hidden="true">
                                         @if (icon is not null)
                                         {
@@ -126,7 +128,7 @@ else if (upcoming is not null)
                                     <span class="min-w-0 flex-1">
                                         <span class="flex items-baseline justify-between gap-2">
                                             <span class="truncate font-semibold" data-testid="workout-name">@(name ?? workout.Note ?? L["Home.Heading"])</span>
-                                            <span class="shrink-0 rounded-full px-2 py-0.5 text-xs @StatusClass(status)">@L[$"Workout.Status.{status}"]</span>
+                                            <StatusBadge Status="status" />
                                         </span>
                                         <span class="block truncate text-sm text-gray-500 dark:text-gray-400" data-testid="workout-meta">
                                             <span class="first-letter:uppercase inline-block">@workout.Date.ToString("dddd d MMM")</span>
@@ -146,7 +148,7 @@ else if (upcoming is not null)
             @if (Weeks.Count > weeksShown)
             {
                 <button type="button" @onclick="() => weeksShown += WeeksPerPage" data-testid="more-weeks"
-                        class="rounded-xl border border-gray-200 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:text-gray-300 dark:hover:bg-gray-900">
+                        class="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800">
                     @L["Home.MoreWeeks", Weeks.Count - weeksShown]
                 </button>
             }
@@ -216,7 +218,7 @@ else if (upcoming is not null)
             var plan = Planning.PlanFrom(template, Guid.NewGuid(), planDate, WorkoutEditing.NextSessionNumber(workouts ?? []), workouts ?? []);
             if (template.Id == Guid.Empty)
                 plan = plan with { TemplateId = null };
-            plan = WorkoutEditing.WithDerivedStatus(plan, Today);
+            plan = WorkoutEditing.WithDerivedStatus(plan);
             await Repository.SaveAsync(plan.Id, plan);
             Navigation.NavigateTo($"workouts/{plan.Id}");
         }
@@ -263,13 +265,6 @@ else if (upcoming is not null)
             ? $"{monday.Day}–{sunday.Day} {sunday:MMMM}"
             : $"{monday:d MMM} – {sunday:d MMM}";
     }
-
-    // Done is the normal case and stays quiet; only a plan, which asks for action, gets colour.
-    private static string StatusClass(WorkoutStatus status) => status switch
-    {
-        WorkoutStatus.Planned => "bg-blue-100 font-medium text-blue-800 dark:bg-blue-950 dark:text-blue-300",
-        _ => "text-gray-400 dark:text-gray-500",
-    };
 
     private void OnDataChanged() => _ = InvokeAsync(async () =>
     {

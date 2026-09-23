@@ -8,23 +8,6 @@ public static class Planning
     /// <summary>A workout counts as one of a template's when this share of their exercises match.</summary>
     private const double SimilarityThreshold = 0.5;
 
-    /// <summary>A template with the workout's exercises and targets, and none of what was done.</summary>
-    public static WorkoutTemplate TemplateFrom(Workout workout, Guid id, string name) =>
-        new()
-        {
-            Id = id,
-            Name = name,
-            Exercises = [.. workout.Exercises.Select((e, i) => e with
-            {
-                Order = i,
-                Comment = null,
-                Sets = [],
-                DurationMinutes = null,
-                DistanceKm = null,
-                AvgHeartRate = null,
-            })],
-        };
-
     /// <summary>
     /// A planned workout from a template. Each exercise starts from what it was last time, so the
     /// plan continues where training left off; the template's targets are for exercises never done.
@@ -46,7 +29,14 @@ public static class Planning
                     TargetReps = last?.TargetReps ?? entry.TargetReps,
                     TargetWeightKg = last?.TargetWeightKg ?? entry.TargetWeightKg,
                     TargetSeconds = last?.TargetSeconds ?? entry.TargetSeconds,
+                    TargetDurationMinutes = last?.TargetDurationMinutes ?? WorkoutEditing.CardioTargetMinutes(entry),
+                    TargetDistanceKm = last?.TargetDistanceKm ?? WorkoutEditing.CardioTargetKm(entry),
                     Settings = last?.Settings ?? entry.Settings,
+                    // A plan has nothing done yet, whatever the template holds.
+                    IsSkipped = false,
+                    DurationMinutes = null,
+                    DistanceKm = null,
+                    AvgHeartRate = null,
                 };
             })],
         };
@@ -60,7 +50,7 @@ public static class Planning
     {
         var core = Core(template.Exercises, exercise);
         return workouts
-            .Where(w => WorkoutEditing.StatusOf(w, today) == WorkoutStatus.Done)
+            .Where(WorkoutEditing.HasHappened)
             .Where(w => w.TemplateId == template.Id || (w.TemplateId is null && Similarity(core, Core(w.Exercises, exercise)) >= SimilarityThreshold))
             .Select(w => (DateOnly?)w.Date)
             .Max();
@@ -73,7 +63,7 @@ public static class Planning
     public static WorkoutTemplate? SuggestTemplate(IReadOnlyList<WorkoutTemplate> templates, IEnumerable<Workout> workouts, Func<Guid, Exercise?> exercise, DateOnly today)
     {
         var history = workouts.ToList();
-        var planned = history.Where(w => w.TemplateId is not null && WorkoutEditing.StatusOf(w, today) == WorkoutStatus.Planned && w.Date >= today).ToList();
+        var planned = history.Where(w => w.TemplateId is not null && WorkoutEditing.StatusOf(w) == WorkoutStatus.Planned && w.Date >= today).ToList();
         DateOnly? PlannedFor(WorkoutTemplate t) => planned.Where(w => w.TemplateId == t.Id).Select(w => (DateOnly?)w.Date).Max();
         return templates
             .Select((t, i) => (t, i, last: Max(LastDone(t, history, exercise, today), PlannedFor(t)) ?? DateOnly.MinValue))
@@ -89,7 +79,7 @@ public static class Planning
     /// </summary>
     public static DateOnly SuggestDate(IEnumerable<Workout> workouts, DateOnly today, UserSettings settings)
     {
-        var done = workouts.Where(w => WorkoutEditing.StatusOf(w, today) == WorkoutStatus.Done).Select(w => w.Date).ToList();
+        var done = workouts.Where(WorkoutEditing.HasHappened).Select(w => w.Date).ToList();
         var next = done.Count > 0 ? done.Max().AddDays(settings.DaysBetweenSessions) : today;
         var candidate = next > today ? next : today;
 
@@ -114,7 +104,7 @@ public static class Planning
     /// <summary>The earliest planned workout from today on, which the suggestion then is.</summary>
     public static Workout? Upcoming(IEnumerable<Workout> workouts, DateOnly today) =>
         workouts
-            .Where(w => w.Date >= today && WorkoutEditing.StatusOf(w, today) == WorkoutStatus.Planned)
+            .Where(w => w.Date >= today && WorkoutEditing.StatusOf(w) is WorkoutStatus.Planned or WorkoutStatus.InProgress)
             .OrderBy(w => w.Date)
             .ThenBy(w => w.SessionNumber)
             .FirstOrDefault();

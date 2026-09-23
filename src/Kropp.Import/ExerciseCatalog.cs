@@ -26,6 +26,9 @@ internal static partial class ExerciseCatalog
     public static readonly IReadOnlySet<string> MachineCardio = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Gång i maskin", "Cykel till gymet" };
     public static readonly IReadOnlySet<string> PacedCardio = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Löpning på band" };
     public static readonly IReadOnlySet<string> SettingInReps = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Deadlift" };
+
+    /// <summary>Inst is the bench's setting here, not a weight: the exercise is done with the body alone.</summary>
+    public static readonly IReadOnlySet<string> SettingInInst = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Sit ups" };
     public static readonly IReadOnlySet<string> Timed = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Plankan", "Häng i stång", "Hänga i armarna" };
 
     public static string Canonical(string raw)
@@ -38,6 +41,7 @@ internal static partial class ExerciseCatalog
     public static ExerciseKind KindOf(string name, bool anyWeight) =>
         MachineCardio.Contains(name) || PacedCardio.Contains(name) ? ExerciseKind.Cardio
         : Timed.Contains(name) ? ExerciseKind.Timed
+        : SettingInInst.Contains(name) ? ExerciseKind.Bodyweight
         : anyWeight ? ExerciseKind.Strength
         : ExerciseKind.Bodyweight;
 

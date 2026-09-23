@@ -68,40 +68,32 @@ public class WorkoutEditingTests
         last.ShouldNotBeNull().Sets.Single().WeightKg.ShouldBe(60);
     }
 
-    [Fact]
-    public void Copying_as_a_plan_keeps_targets_and_drops_what_was_done()
-    {
-        var source = Workout(new DateOnly(2026, 9, 21), 104, WorkoutStatus.Done, Entry(Bench, new SetResult { Reps = 8, WeightKg = 60 }), Entry(Plank));
-        var id = Guid.NewGuid();
-
-        var copy = WorkoutEditing.CopyAsPlan(source, id, new DateOnly(2026, 9, 23), 105);
-
-        copy.Id.ShouldBe(id);
-        copy.Status.ShouldBe(WorkoutStatus.Planned);
-        copy.SessionNumber.ShouldBe(105);
-        copy.Exercises.Select(e => e.ExerciseId).ShouldBe([Bench.Id, Plank.Id]);
-        copy.Exercises.ShouldAllBe(e => e.Sets.Count == 0 && e.Comment == null && e.Settings == "Sitthöjd 11" && e.TargetWeightKg == 60);
-        source.Exercises[0].Sets.Count.ShouldBe(1);
-    }
-
     [Theory]
-    [InlineData(true, "2026-09-20", WorkoutStatus.Done)]
-    [InlineData(true, "2026-09-30", WorkoutStatus.Done)]
-    [InlineData(false, "2026-09-23", WorkoutStatus.Planned)]
-    [InlineData(false, "2026-09-30", WorkoutStatus.Planned)]
-    [InlineData(false, "2026-09-22", WorkoutStatus.Skipped)]
-    public void The_status_follows_from_what_was_logged(bool anySet, string date, WorkoutStatus expected)
+    [InlineData(0, WorkoutStatus.Planned)]
+    [InlineData(1, WorkoutStatus.InProgress)]
+    [InlineData(3, WorkoutStatus.Done)]
+    public void The_status_follows_from_what_was_logged(int sets, WorkoutStatus expected)
     {
-        var entry = Entry(Bench, anySet ? [new SetResult { Reps = 8 }] : []);
-        var workout = Workout(DateOnly.Parse(date), status: WorkoutStatus.Planned, entries: entry);
+        var entry = Entry(Bench, [.. Enumerable.Repeat(new SetResult { Reps = 8 }, sets)]);
 
-        WorkoutEditing.StatusOf(workout, new DateOnly(2026, 9, 23)).ShouldBe(expected);
+        WorkoutEditing.StatusOf(Workout(new DateOnly(2026, 9, 23), status: WorkoutStatus.Planned, entries: entry)).ShouldBe(expected);
     }
 
     [Fact]
-    public void Cardio_with_a_time_counts_as_done() =>
-        WorkoutEditing.StatusOf(Workout(new DateOnly(2026, 9, 20), entries: new WorkoutExercise { ExerciseId = Guid.NewGuid(), DurationMinutes = 20 }), new DateOnly(2026, 9, 23))
-            .ShouldBe(WorkoutStatus.Done);
+    public void A_plan_stays_planned_after_its_day_and_never_turns_skipped() =>
+        WorkoutEditing.StatusOf(Workout(new DateOnly(2020, 1, 1), status: WorkoutStatus.Skipped, entries: Entry(Bench))).ShouldBe(WorkoutStatus.Planned);
+
+    [Fact]
+    public void A_workout_is_done_when_every_exercise_is_finished_or_skipped()
+    {
+        var walk = new WorkoutExercise { ExerciseId = Guid.NewGuid(), DurationMinutes = 20 };
+        var started = Entry(Bench, new SetResult { Reps = 8 });
+
+        WorkoutEditing.StatusOf(Workout(default, entries: [walk])).ShouldBe(WorkoutStatus.Done);
+        WorkoutEditing.StatusOf(Workout(default, entries: [walk, started])).ShouldBe(WorkoutStatus.InProgress);
+        WorkoutEditing.StatusOf(Workout(default, entries: [walk, started with { IsSkipped = true }, Entry(Bench) with { IsSkipped = true }])).ShouldBe(WorkoutStatus.Done);
+        WorkoutEditing.StatusOf(Workout(default, entries: [Entry(Bench) with { IsSkipped = true }])).ShouldBe(WorkoutStatus.Planned);
+    }
 
     [Fact]
     public void The_next_session_number_follows_the_highest()
@@ -130,5 +122,29 @@ public class WorkoutEditingTests
 
         WorkoutEditing.MoveEntry(removed, 0, 5).ShouldBeSameAs(removed);
         WorkoutEditing.MoveEntry(removed, 1, 1).ShouldBeSameAs(removed);
+    }
+
+    [Fact]
+    public void The_current_exercise_is_the_first_not_finished()
+    {
+        var walk = Guid.NewGuid();
+        var warmUp = new WorkoutExercise { ExerciseId = walk, DurationMinutes = 10 };
+        var done = Entry(Bench, new SetResult(), new SetResult(), new SetResult());
+        var started = Entry(Bench, new SetResult());
+
+        WorkoutEditing.CurrentEntry(Workout(default, entries: [warmUp, done, started, Entry(Bench)])).ShouldBe(2);
+        WorkoutEditing.CurrentEntry(Workout(default, entries: [warmUp with { DurationMinutes = null }, done])).ShouldBe(0);
+        WorkoutEditing.CurrentEntry(Workout(default, entries: [warmUp, new WorkoutExercise { ExerciseId = Bench.Id }])).ShouldBe(1);
+        WorkoutEditing.CurrentEntry(Workout(default, entries: [warmUp, done])).ShouldBeNull();
+        WorkoutEditing.CurrentEntry(Workout(default)).ShouldBeNull();
+    }
+
+    [Fact]
+    public void A_skipped_exercise_is_finished_whatever_its_sets()
+    {
+        var started = Entry(Bench, new SetResult { Reps = 8 });
+
+        WorkoutEditing.CurrentEntry(Workout(default, entries: [started with { IsSkipped = true }, Entry(Bench)])).ShouldBe(1);
+        WorkoutEditing.CurrentEntry(Workout(default, entries: [Entry(Bench) with { IsSkipped = true }])).ShouldBeNull();
     }
 }

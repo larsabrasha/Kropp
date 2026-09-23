@@ -44,6 +44,9 @@ public sealed record Exercise
 
     public const string NoIllustration = "none";
 
+    /// <summary>Cardio logged by time alone, like the treadmill walk: no distance, no pulse.</summary>
+    public bool MeasuresTimeOnly { get; init; }
+
     /// <summary>How much − and + change the weight; null for <see cref="DefaultWeightStepKg"/>.</summary>
     public decimal? WeightStepKg { get; init; }
 

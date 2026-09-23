@@ -76,11 +76,11 @@ public class NumbersImportTests
     }
 
     [Fact]
-    public void A_day_with_nothing_ticked_is_skipped_in_the_past_and_planned_ahead()
+    public void A_day_with_nothing_ticked_is_planned_in_the_past_and_ahead()
     {
         var result = Import($"{Header}\n2025-10-02;Vader;3;20;;FALSKT;;\n2026-10-02;Vader;3;20;;FALSKT;;\n");
 
-        result.Workouts.Select(w => w.Status).ShouldBe([WorkoutStatus.Skipped, WorkoutStatus.Planned]);
+        result.Workouts.Select(w => w.Status).ShouldBe([WorkoutStatus.Planned, WorkoutStatus.Planned]);
     }
 
     [Fact]
@@ -105,6 +105,18 @@ public class NumbersImportTests
         entry.TargetReps.ShouldBeNull();
         entry.TargetWeightKg.ShouldBe(5);
         entry.Sets.ShouldBe([new SetResult { WeightKg = 5 }, new SetResult { WeightKg = 5 }]);
+    }
+
+    [Fact]
+    public void Sit_ups_keep_the_inst_column_as_the_benchs_setting()
+    {
+        var result = Import($"{Header}\n2026-01-05;Sit ups;3;20;5;SANT;20,18;\n");
+
+        result.Exercises.Single().Kind.ShouldBe(ExerciseKind.Bodyweight);
+        var entry = OnlyEntry(result);
+        entry.Settings.ShouldBe("5");
+        entry.TargetWeightKg.ShouldBeNull();
+        entry.TargetReps.ShouldBe(20);
     }
 
     [Theory]
