@@ -1,53 +1,95 @@
-using System.Globalization;
 using Bunit;
 using Kropp.Client.Pages;
 using Kropp.Shared.Sync;
 using Kropp.Shared.Training;
-using Kropp.UnitTests.Sync;
+using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Shouldly;
 
 namespace Kropp.UnitTests.Components;
 
-public class HomeTests : TestContext
+public class HomeTests : ClientTestContext
 {
-    private readonly MemoryLocalStore store = new();
-    private readonly LocalRepository repository;
-
-    public HomeTests()
-    {
-        CultureInfo.CurrentCulture = CultureInfo.CurrentUICulture = new CultureInfo("sv-SE");
-        repository = new LocalRepository(store);
-        Services.AddLocalization();
-        Services.AddSingleton(repository);
-        Services.AddSingleton(new SyncEngine(store, new FakeSyncApi()));
-    }
-
     [Fact]
     public void Shows_the_empty_state_when_there_are_no_workouts()
     {
-        var home = RenderComponent<Home>();
+        var home = Render<Home>();
 
         home.WaitForAssertion(() => home.Find("[data-testid=empty-state]").TextContent.ShouldContain("Inga pass än"));
+        home.FindAll("[data-testid=copy-latest]").ShouldBeEmpty();
     }
 
     [Fact]
-    public async Task Adding_a_workout_saves_it_locally_and_lists_it()
+    public async Task Adding_a_workout_saves_it_locally_and_opens_it()
     {
-        var home = RenderComponent<Home>();
-        home.WaitForElement("[data-testid=empty-state]");
+        await Repository.SaveAsync(Guid.NewGuid(), new Workout { Id = Guid.NewGuid(), Date = new DateOnly(2026, 9, 14), SessionNumber = 103 });
+        var home = Render<Home>();
+        home.WaitForElement("[data-testid=workout-list]");
 
         home.Find("input[type=date]").Change("2026-09-21");
-        home.Find("input:not([type=date])").Change("Ben och bröst");
         home.Find("form").Submit();
+
+        home.WaitForAssertion(() => Services.GetRequiredService<NavigationManager>().Uri.ShouldContain("/workouts/"));
+        var added = (await Repository.GetAllAsync<Workout>()).Single(w => w.Date == new DateOnly(2026, 9, 21));
+        added.SessionNumber.ShouldBe(104);
+        added.Status.ShouldBe(WorkoutStatus.Planned);
+        Services.GetRequiredService<NavigationManager>().Uri.ShouldEndWith($"/workouts/{added.Id}");
+    }
+
+    [Fact]
+    public async Task Lists_workouts_as_links_with_a_summary()
+    {
+        var workout = new Workout
+        {
+            Id = Guid.NewGuid(), Date = new DateOnly(2026, 9, 21), SessionNumber = 101, Status = WorkoutStatus.Done,
+            Exercises = [new WorkoutExercise { ExerciseId = Guid.NewGuid() }, new WorkoutExercise { ExerciseId = Guid.NewGuid(), Order = 1 }],
+        };
+        await Repository.SaveAsync(workout.Id, workout);
+
+        var home = Render<Home>();
 
         home.WaitForAssertion(() =>
         {
-            var item = home.Find("[data-testid=workout-list] li");
-            item.TextContent.ShouldContain("måndag 21 september 2026");
-            item.TextContent.ShouldContain("Ben och bröst");
+            var link = home.Find("[data-testid=workout-list] a");
+            link.GetAttribute("href").ShouldBe($"workouts/{workout.Id}");
+            link.TextContent.ShouldContain("Måndag 21 september 2026", Case.Insensitive);
+            link.TextContent.ShouldContain("Nr 101");
+            link.TextContent.ShouldContain("2 övningar");
+            link.TextContent.ShouldContain("Genomfört");
         });
-        (await store.GetPendingAsync()).Single().Type.ShouldBe(AggregateTypes.Workout);
-        (await repository.GetAllAsync<Workout>()).Single().Date.ShouldBe(new DateOnly(2026, 9, 21));
+    }
+
+    [Fact]
+    public async Task One_exercise_is_singular()
+    {
+        var workout = new Workout { Id = Guid.NewGuid(), Date = new DateOnly(2026, 9, 21), Exercises = [new WorkoutExercise { ExerciseId = Guid.NewGuid() }] };
+        await Repository.SaveAsync(workout.Id, workout);
+
+        var home = Render<Home>();
+
+        home.WaitForAssertion(() => home.Find("[data-testid=workout-list] a").TextContent.ShouldContain("1 övning"));
+        home.Find("[data-testid=workout-list] a").TextContent.ShouldNotContain("övningar");
+    }
+
+    [Fact]
+    public async Task Copying_the_latest_workout_makes_a_plan_without_results()
+    {
+        var exerciseId = Guid.NewGuid();
+        var source = new Workout
+        {
+            Id = Guid.NewGuid(), Date = new DateOnly(2026, 9, 21), SessionNumber = 101, Status = WorkoutStatus.Done,
+            Exercises = [new WorkoutExercise { ExerciseId = exerciseId, TargetSets = 3, TargetReps = 8, Sets = [new SetResult { Reps = 8 }] }],
+        };
+        await Repository.SaveAsync(source.Id, source);
+        var home = Render<Home>();
+
+        home.WaitForElement("[data-testid=copy-latest]").Click();
+
+        home.WaitForAssertion(() => Store.GetPendingAsync().Result.Count.ShouldBe(2));
+        var copy = (await Repository.GetAllAsync<Workout>()).Single(w => w.Id != source.Id);
+        copy.SessionNumber.ShouldBe(102);
+        copy.Exercises.Single().Sets.ShouldBeEmpty();
+        copy.Exercises.Single().TargetReps.ShouldBe(8);
+        Services.GetRequiredService<NavigationManager>().Uri.ShouldEndWith($"/workouts/{copy.Id}");
     }
 }

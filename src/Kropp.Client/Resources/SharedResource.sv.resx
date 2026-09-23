@@ -26,4 +26,46 @@
   <data name="Sync.SavedLocally" xml:space="preserve"><value>Sparat lokalt</value></data>
   <data name="Sync.Pending" xml:space="preserve"><value>{0} väntar</value></data>
   <data name="Sync.SyncNow" xml:space="preserve"><value>Synka nu</value></data>
+  <data name="Common.Cancel" xml:space="preserve"><value>Avbryt</value></data>
+  <data name="Common.Done" xml:space="preserve"><value>Klar</value></data>
+  <data name="Home.CopyLatest" xml:space="preserve"><value>Kopiera passet från {0} som ny plan</value></data>
+  <data name="Home.SessionShort" xml:space="preserve"><value>Nr {0}</value></data>
+  <data name="Home.ExerciseCount" xml:space="preserve"><value>{0} övningar</value></data>
+  <data name="Workout.Back" xml:space="preserve"><value>Alla pass</value></data>
+  <data name="Workout.NotFound" xml:space="preserve"><value>Passet finns inte, eller har tagits bort.</value></data>
+  <data name="Workout.SessionNumber" xml:space="preserve"><value>Pass nr</value></data>
+  <data name="Workout.Status" xml:space="preserve"><value>Status</value></data>
+  <data name="Workout.NoExercises" xml:space="preserve"><value>Inga övningar än. Lägg till den första nedan.</value></data>
+  <data name="Workout.AddExercise" xml:space="preserve"><value>Lägg till övning</value></data>
+  <data name="Workout.CopyAsPlan" xml:space="preserve"><value>Kopiera som ny plan</value></data>
+  <data name="Workout.Delete" xml:space="preserve"><value>Ta bort passet</value></data>
+  <data name="Workout.DeleteConfirm" xml:space="preserve"><value>Ta bort passet på alla enheter?</value></data>
+  <data name="Exercise.Unknown" xml:space="preserve"><value>Okänd övning</value></data>
+  <data name="Exercise.Kind.Strength" xml:space="preserve"><value>Vikter</value></data>
+  <data name="Exercise.Kind.Bodyweight" xml:space="preserve"><value>Kroppsvikt</value></data>
+  <data name="Exercise.Kind.Timed" xml:space="preserve"><value>Tid</value></data>
+  <data name="Exercise.Kind.Cardio" xml:space="preserve"><value>Kondition</value></data>
+  <data name="Picker.Search" xml:space="preserve"><value>Övning</value></data>
+  <data name="Picker.SearchPlaceholder" xml:space="preserve"><value>Sök eller skriv ett nytt namn</value></data>
+  <data name="Picker.NoExercises" xml:space="preserve"><value>Inga övningar än. Skriv ett namn för att skapa den första.</value></data>
+  <data name="Picker.Kind" xml:space="preserve"><value>Typ</value></data>
+  <data name="Picker.Create" xml:space="preserve"><value>Skapa ”{0}”</value></data>
+  <data name="Entry.LastTime" xml:space="preserve"><value>Förra gången: {0}</value></data>
+  <data name="Entry.MoveUp" xml:space="preserve"><value>Flytta upp</value></data>
+  <data name="Entry.MoveDown" xml:space="preserve"><value>Flytta ner</value></data>
+  <data name="Entry.Remove" xml:space="preserve"><value>Ta bort övningen</value></data>
+  <data name="Entry.Sets" xml:space="preserve"><value>Set</value></data>
+  <data name="Entry.Reps" xml:space="preserve"><value>Rep</value></data>
+  <data name="Entry.Kg" xml:space="preserve"><value>kg</value></data>
+  <data name="Entry.Seconds" xml:space="preserve"><value>Sekunder</value></data>
+  <data name="Entry.Minutes" xml:space="preserve"><value>Minuter</value></data>
+  <data name="Entry.Km" xml:space="preserve"><value>km</value></data>
+  <data name="Entry.Pulse" xml:space="preserve"><value>Snittpuls</value></data>
+  <data name="Entry.SetN" xml:space="preserve"><value>Set {0}</value></data>
+  <data name="Entry.RemoveSet" xml:space="preserve"><value>Ta bort set</value></data>
+  <data name="Entry.Settings" xml:space="preserve"><value>Inställning</value></data>
+  <data name="Entry.SettingsPlaceholder" xml:space="preserve"><value>t.ex. 45 grader</value></data>
+  <data name="Entry.Comment" xml:space="preserve"><value>Kommentar</value></data>
+  <data name="Entry.CommentPlaceholder" xml:space="preserve"><value>t.ex. trött i sista setet</value></data>
+  <data name="Home.ExerciseCountOne" xml:space="preserve"><value>1 övning</value></data>
 </root>

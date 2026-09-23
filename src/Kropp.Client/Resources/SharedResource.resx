@@ -26,4 +26,46 @@
   <data name="Sync.SavedLocally" xml:space="preserve"><value>Saved locally</value></data>
   <data name="Sync.Pending" xml:space="preserve"><value>{0} waiting</value></data>
   <data name="Sync.SyncNow" xml:space="preserve"><value>Sync now</value></data>
+  <data name="Common.Cancel" xml:space="preserve"><value>Cancel</value></data>
+  <data name="Common.Done" xml:space="preserve"><value>Done</value></data>
+  <data name="Home.CopyLatest" xml:space="preserve"><value>Copy the workout from {0} as a new plan</value></data>
+  <data name="Home.SessionShort" xml:space="preserve"><value>No. {0}</value></data>
+  <data name="Home.ExerciseCount" xml:space="preserve"><value>{0} exercises</value></data>
+  <data name="Workout.Back" xml:space="preserve"><value>All workouts</value></data>
+  <data name="Workout.NotFound" xml:space="preserve"><value>This workout does not exist, or has been deleted.</value></data>
+  <data name="Workout.SessionNumber" xml:space="preserve"><value>Session no.</value></data>
+  <data name="Workout.Status" xml:space="preserve"><value>Status</value></data>
+  <data name="Workout.NoExercises" xml:space="preserve"><value>No exercises yet. Add the first one below.</value></data>
+  <data name="Workout.AddExercise" xml:space="preserve"><value>Add exercise</value></data>
+  <data name="Workout.CopyAsPlan" xml:space="preserve"><value>Copy as new plan</value></data>
+  <data name="Workout.Delete" xml:space="preserve"><value>Delete workout</value></data>
+  <data name="Workout.DeleteConfirm" xml:space="preserve"><value>Delete this workout on every device?</value></data>
+  <data name="Exercise.Unknown" xml:space="preserve"><value>Unknown exercise</value></data>
+  <data name="Exercise.Kind.Strength" xml:space="preserve"><value>Weights</value></data>
+  <data name="Exercise.Kind.Bodyweight" xml:space="preserve"><value>Bodyweight</value></data>
+  <data name="Exercise.Kind.Timed" xml:space="preserve"><value>Time</value></data>
+  <data name="Exercise.Kind.Cardio" xml:space="preserve"><value>Cardio</value></data>
+  <data name="Picker.Search" xml:space="preserve"><value>Exercise</value></data>
+  <data name="Picker.SearchPlaceholder" xml:space="preserve"><value>Search or type a new name</value></data>
+  <data name="Picker.NoExercises" xml:space="preserve"><value>No exercises yet. Type a name to create the first one.</value></data>
+  <data name="Picker.Kind" xml:space="preserve"><value>Type</value></data>
+  <data name="Picker.Create" xml:space="preserve"><value>Create “{0}”</value></data>
+  <data name="Entry.LastTime" xml:space="preserve"><value>Last time: {0}</value></data>
+  <data name="Entry.MoveUp" xml:space="preserve"><value>Move up</value></data>
+  <data name="Entry.MoveDown" xml:space="preserve"><value>Move down</value></data>
+  <data name="Entry.Remove" xml:space="preserve"><value>Remove exercise</value></data>
+  <data name="Entry.Sets" xml:space="preserve"><value>Sets</value></data>
+  <data name="Entry.Reps" xml:space="preserve"><value>Reps</value></data>
+  <data name="Entry.Kg" xml:space="preserve"><value>kg</value></data>
+  <data name="Entry.Seconds" xml:space="preserve"><value>Seconds</value></data>
+  <data name="Entry.Minutes" xml:space="preserve"><value>Minutes</value></data>
+  <data name="Entry.Km" xml:space="preserve"><value>km</value></data>
+  <data name="Entry.Pulse" xml:space="preserve"><value>Avg. pulse</value></data>
+  <data name="Entry.SetN" xml:space="preserve"><value>Set {0}</value></data>
+  <data name="Entry.RemoveSet" xml:space="preserve"><value>Remove set</value></data>
+  <data name="Entry.Settings" xml:space="preserve"><value>Settings</value></data>
+  <data name="Entry.SettingsPlaceholder" xml:space="preserve"><value>e.g. 45 degrees</value></data>
+  <data name="Entry.Comment" xml:space="preserve"><value>Comment</value></data>
+  <data name="Entry.CommentPlaceholder" xml:space="preserve"><value>e.g. tired in the last set</value></data>
+  <data name="Home.ExerciseCountOne" xml:space="preserve"><value>1 exercise</value></data>
 </root>

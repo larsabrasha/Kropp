@@ -1,0 +1,13 @@
+<button type="button" aria-label="@Label" title="@Label" disabled="@Disabled" @onclick="OnClick"
+        class="rounded-lg p-2.5 text-gray-600 hover:bg-gray-100 focus-visible:outline-2 focus-visible:outline-blue-500 disabled:opacity-30 dark:text-gray-400 dark:hover:bg-gray-800">
+    <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="@Path" />
+    </svg>
+</button>
+
+@code {
+    [Parameter, EditorRequired] public string Label { get; set; } = "";
+    [Parameter, EditorRequired] public string Path { get; set; } = "";
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public EventCallback OnClick { get; set; }
+}

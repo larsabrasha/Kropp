@@ -1,0 +1,247 @@
+@page "/workouts/{Id:guid}"
+@implements IDisposable
+@inject LocalRepository Repository
+@inject SyncEngine Engine
+@inject NavigationManager Navigation
+@inject ILogger<WorkoutPage> Logger
+
+<PageTitle>@L["App.Title"]</PageTitle>
+
+<a href="" class="mb-3 inline-flex items-center gap-1 rounded-lg py-2 pr-2 text-sm text-blue-700 hover:underline dark:text-blue-300">
+    <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M15 18l-6-6 6-6" /></svg>
+    @L["Workout.Back"]
+</a>
+
+@if (!loaded)
+{
+    <p class="text-sm text-gray-500 dark:text-gray-400">@L["Common.Loading"]</p>
+}
+else if (workout is null)
+{
+    <div class="flex flex-col items-center gap-3 rounded-xl border border-dashed border-gray-300 px-4 py-10 text-center text-gray-500 dark:border-gray-700 dark:text-gray-400" data-testid="not-found">
+        <svg class="size-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M20 20l-4-4" /></svg>
+        <p>@L["Workout.NotFound"]</p>
+    </div>
+}
+else
+{
+    <h1 class="text-xl font-semibold first-letter:uppercase">@workout.Date.ToString("dddd d MMMM yyyy")</h1>
+
+    <section class="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+        <label class="flex flex-col gap-1 text-xs text-gray-600 dark:text-gray-400">
+            <span>@L["Home.Date"]</span>
+            <input type="date" value="@workout.Date.ToString("yyyy-MM-dd")" @onchange="ChangeDate"
+                   class="rounded-lg border border-gray-300 bg-white px-2 py-2 text-base text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100" />
+        </label>
+        <NumberField Label="@L["Workout.SessionNumber"]" Value="@TrainingText.Invariant(workout.SessionNumber)"
+                     Changed="v => SaveAsync(workout with { SessionNumber = TrainingText.ParseInt(v) })" />
+        <div class="col-span-2 sm:col-span-1">
+            <TextField Label="@L["Home.Note"]" Value="@workout.Note" Changed="v => SaveAsync(workout with { Note = v })" />
+        </div>
+    </section>
+
+    <div class="mt-3 grid grid-cols-3 gap-1 rounded-xl bg-gray-100 p-1 dark:bg-gray-900" role="radiogroup" aria-label="@L["Workout.Status"]">
+        @foreach (var status in Enum.GetValues<WorkoutStatus>())
+        {
+            var selected = workout.Status == status;
+            <button type="button" role="radio" aria-checked="@(selected ? "true" : "false")" @onclick="() => SaveAsync(workout with { Status = status })"
+                    class="rounded-lg px-2 py-2.5 text-sm font-medium @(selected ? "bg-white shadow-sm dark:bg-gray-700" : "text-gray-600 hover:bg-white/60 dark:text-gray-400 dark:hover:bg-gray-800")">
+                @L[$"Workout.Status.{status}"]
+            </button>
+        }
+    </div>
+
+    @if (error is not null)
+    {
+        <p class="mt-3 text-sm text-red-600 dark:text-red-400" role="alert">@error</p>
+    }
+
+    <section class="mt-5 flex flex-col gap-3">
+        @if (workout.Exercises.Count == 0 && !picking)
+        {
+            <div class="flex flex-col items-center gap-3 rounded-xl border border-dashed border-gray-300 px-4 py-8 text-center text-gray-500 dark:border-gray-700 dark:text-gray-400" data-testid="no-exercises">
+                <svg class="size-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11" /></svg>
+                <p>@L["Workout.NoExercises"]</p>
+            </div>
+        }
+
+        @for (var i = 0; i < workout.Exercises.Count; i++)
+        {
+            var index = i;
+            var entry = workout.Exercises[index];
+            <ExerciseEntryCard @key="(entry.ExerciseId, entry.Order)"
+                               Entry="entry"
+                               Exercise="exercises.GetValueOrDefault(entry.ExerciseId)"
+                               LastTime="WorkoutEditing.LastTime(workouts, workout, entry.ExerciseId)"
+                               Index="index" Count="workout.Exercises.Count"
+                               OnChange="next => SaveAsync(WorkoutEditing.ReplaceEntry(workout, index, next))"
+                               OnRemove="() => SaveAsync(WorkoutEditing.RemoveEntry(workout, index))"
+                               OnMove="offset => SaveAsync(WorkoutEditing.MoveEntry(workout, index, offset))" />
+        }
+
+        @if (picking)
+        {
+            <ExercisePicker Exercises="[.. exercises.Values]" OnPick="AddExerciseAsync" OnCreate="CreateExerciseAsync" OnCancel="() => picking = false" />
+        }
+        else
+        {
+            <button type="button" @onclick="() => picking = true" data-testid="add-exercise"
+                    class="rounded-xl border-2 border-dashed border-blue-300 px-4 py-4 font-medium text-blue-700 hover:bg-blue-50 focus-visible:outline-2 focus-visible:outline-blue-500 dark:border-blue-800 dark:text-blue-300 dark:hover:bg-blue-950">
+                + @L["Workout.AddExercise"]
+            </button>
+        }
+    </section>
+
+    <section class="mt-8 flex flex-col gap-2 border-t border-gray-200 pt-4 sm:flex-row sm:justify-between dark:border-gray-800">
+        <button type="button" @onclick="CopyAsync" disabled="@busy"
+                class="rounded-lg border border-gray-300 px-4 py-2.5 font-medium hover:bg-gray-100 disabled:opacity-60 dark:border-gray-700 dark:hover:bg-gray-800">
+            @L["Workout.CopyAsPlan"]
+        </button>
+        @if (confirmingDelete)
+        {
+            <div class="flex items-center gap-2" role="alertdialog" aria-label="@L["Workout.DeleteConfirm"]">
+                <span class="text-sm">@L["Workout.DeleteConfirm"]</span>
+                <button type="button" @onclick="DeleteAsync" class="rounded-lg bg-red-600 px-4 py-2.5 font-medium text-white hover:bg-red-700">@L["Workout.Delete"]</button>
+                <button type="button" @onclick="() => confirmingDelete = false" class="rounded-lg px-4 py-2.5 hover:bg-gray-100 dark:hover:bg-gray-800">@L["Common.Cancel"]</button>
+            </div>
+        }
+        else
+        {
+            <button type="button" @onclick="() => confirmingDelete = true" class="rounded-lg px-4 py-2.5 font-medium text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950">
+                @L["Workout.Delete"]
+            </button>
+        }
+    </section>
+}
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    private bool loaded;
+    private Workout? workout;
+    private List<Workout> workouts = [];
+    private Dictionary<Guid, Exercise> exercises = [];
+    private bool picking;
+    private bool busy;
+    private bool confirmingDelete;
+    private string? error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Engine.DataChanged += OnRemoteChange;
+        await LoadAsync();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (loaded && workout?.Id != Id)
+            await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        try
+        {
+            workouts = [.. await Repository.GetAllAsync<Workout>()];
+            exercises = (await Repository.GetAllAsync<Exercise>()).ToDictionary(e => e.Id);
+            workout = workouts.FirstOrDefault(w => w.Id == Id);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Could not read workout {Id}", Id);
+            error = L["Home.LoadFailed"];
+        }
+        loaded = true;
+    }
+
+    // Saved at once and locally; sync picks it up a few seconds later.
+    private async Task SaveAsync(Workout next)
+    {
+        var previous = workout;
+        workout = next;
+        workouts = [.. workouts.Where(w => w.Id != next.Id), next];
+        error = null;
+        try
+        {
+            await Repository.SaveAsync(next.Id, next);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Could not save workout {Id}", next.Id);
+            workout = previous;
+            error = L["Home.SaveFailed"];
+        }
+    }
+
+    private Task ChangeDate(ChangeEventArgs e) =>
+        DateOnly.TryParseExact(e.Value?.ToString(), "yyyy-MM-dd", out var date) && workout is not null
+            ? SaveAsync(workout with { Date = date })
+            : Task.CompletedTask;
+
+    private async Task AddExerciseAsync(Exercise exercise)
+    {
+        picking = false;
+        await SaveAsync(WorkoutEditing.AddExercise(workout!, exercise, WorkoutEditing.LastTime(workouts, workout!, exercise.Id)));
+    }
+
+    private async Task CreateExerciseAsync((string Name, ExerciseKind Kind) request)
+    {
+        var exercise = new Exercise { Id = Guid.NewGuid(), Name = request.Name, Kind = request.Kind };
+        try
+        {
+            await Repository.SaveAsync(exercise.Id, exercise);
+            exercises[exercise.Id] = exercise;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Could not save exercise");
+            error = L["Home.SaveFailed"];
+            return;
+        }
+        await AddExerciseAsync(exercise);
+    }
+
+    private async Task CopyAsync()
+    {
+        if (busy || workout is null)
+            return;
+        busy = true;
+        try
+        {
+            var copy = WorkoutEditing.CopyAsPlan(workout, Guid.NewGuid(), DateOnly.FromDateTime(DateTime.Now), WorkoutEditing.NextSessionNumber(workouts));
+            await Repository.SaveAsync(copy.Id, copy);
+            Navigation.NavigateTo($"workouts/{copy.Id}");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Could not copy workout");
+            error = L["Home.SaveFailed"];
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private async Task DeleteAsync()
+    {
+        try
+        {
+            await Repository.DeleteAsync<Workout>(Id);
+            Navigation.NavigateTo("");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Could not delete workout");
+            error = L["Home.SaveFailed"];
+        }
+    }
+
+    private void OnRemoteChange() => _ = InvokeAsync(async () =>
+    {
+        await LoadAsync();
+        StateHasChanged();
+    });
+
+    public void Dispose() => Engine.DataChanged -= OnRemoteChange;
+}
