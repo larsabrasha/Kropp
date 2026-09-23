@@ -121,4 +121,5 @@
   <data name="Templates.DeleteConfirm" xml:space="preserve"><value>Ta bort mallen? Pass som planerats från den finns kvar.</value></data>
   <data name="Next.Another" xml:space="preserve"><value>Planera ett till</value></data>
   <data name="Next.FromTemplate" xml:space="preserve"><value>Planera från mall</value></data>
+  <data name="Next.PlanNext" xml:space="preserve"><value>Planera nästa pass</value></data>
 </root>

@@ -125,6 +125,8 @@ public class HomeTests : ClientTestContext
         var home = Render<Home>();
 
         home.WaitForAssertion(() => home.Find("[data-testid=next-name]").TextContent.ShouldBe("Rygg"));
+        home.FindAll("[data-testid=next]").ShouldBeEmpty();
+        home.Find("[data-testid=plan-card] h2").TextContent.ShouldBe("Planera nästa pass");
         home.Find("[data-testid=next-date]").TextContent.ToLowerInvariant().ShouldBe("i morgon, 24 sep.");
         home.FindAll("[data-testid=template-choices] [role=radio]").Select(b => b.TextContent.Trim()).ShouldBe(["Bröst", "Rygg"]);
 
@@ -168,7 +170,8 @@ public class HomeTests : ClientTestContext
         var home = Render<Home>();
 
         home.WaitForElement("[data-testid=upcoming]").GetAttribute("href").ShouldBe($"workouts/{planned.Id}");
-        home.FindAll("[data-testid=plan]").ShouldBeEmpty();
+        home.Find("[data-testid=next]").ShouldNotBeNull();
+        home.Find("[data-testid=plan-card] h2").TextContent.ShouldBe("Planera ett till");
     }
 
     [Fact]
@@ -182,7 +185,7 @@ public class HomeTests : ClientTestContext
         await Repository.SaveAsync(planned.Id, planned);
         var home = Render<Home>();
 
-        home.WaitForElement("[data-testid=plan-another]").Click();
+        home.WaitForElement("[data-testid=upcoming]");
         home.Find("[data-testid=next-name]").TextContent.ShouldBe("Bröst");
         home.Find("[data-testid=next-date]").TextContent.ToLowerInvariant().ShouldBe("fredag 25 sep.");
         home.Find("[data-testid=plan]").Click();
