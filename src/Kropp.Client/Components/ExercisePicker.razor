@@ -2,7 +2,7 @@
     <label class="flex flex-col gap-1 text-sm">
         <span class="pl-inset">@L["Picker.Search"]</span>
         <input type="search" value="@query" @oninput="e => query = e.Value?.ToString() ?? string.Empty" @ref="searchInput"
-               autocomplete="off" maxlength="200" placeholder="@L["Picker.SearchPlaceholder"]"
+               autocomplete="off" maxlength="@Limits.Search" placeholder="@L["Picker.SearchPlaceholder"]"
                class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-base dark:border-gray-700 dark:bg-gray-900" />
     </label>
 

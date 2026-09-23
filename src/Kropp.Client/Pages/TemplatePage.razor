@@ -25,7 +25,7 @@ else if (template is null)
 else
 {
     <h1 class="sr-only">@template.Name</h1>
-    <TextField Label="@L["Templates.Name"]" Value="@template.Name" Changed="RenameAsync" />
+    <TextField Label="@L["Templates.Name"]" Value="@template.Name" MaxLength="Limits.Name" Changed="RenameAsync" />
 
     @if (error is not null)
     {

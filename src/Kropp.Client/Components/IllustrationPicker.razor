@@ -1,8 +1,9 @@
 @* Every illustration, searchable by its English name, with "no picture" first. Thumbnails load
-   lazily, so opening the picker fetches only what scrolls into view. *@
+   lazily, so opening the picker fetches only what scrolls into view. The pictures' credit is
+   shown here, where they are chosen, and not wherever one is shown. *@
 
 <div data-testid="illustration-picker">
-    <input type="search" value="@query" @oninput="e => query = e.Value?.ToString() ?? string.Empty"
+    <input type="search" value="@query" maxlength="@Limits.Search" @oninput="e => query = e.Value?.ToString() ?? string.Empty"
            placeholder="@L["Illustration.Search"]" aria-label="@L["Illustration.Search"]" autocomplete="off"
            class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-base dark:border-gray-700 dark:bg-gray-900" />
     <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">@L["Illustration.Count", Matches.Count]</p>
@@ -19,6 +20,9 @@
             </button>
         }
     </div>
+    <p class="mt-2 text-[11px] leading-tight text-gray-400 dark:text-gray-500" data-testid="illustration-credit">
+        @L["Illustration.Credit"] <a href="https://github.com/bryllim/workout-guide" target="_blank" rel="noopener" class="underline">Bryl Lim</a>, <a href="https://github.com/everkinetic/data" target="_blank" rel="noopener" class="underline">Everkinetic</a>, <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener" class="underline">CC BY-SA 4.0</a>
+    </p>
 </div>
 
 @code {

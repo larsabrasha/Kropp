@@ -27,7 +27,7 @@
   <data name="Sync.Pending" xml:space="preserve"><value>{0} väntar</value></data>
   <data name="Sync.SyncNow" xml:space="preserve"><value>Synka nu</value></data>
   <data name="Common.Cancel" xml:space="preserve"><value>Avbryt</value></data>
-  <data name="Common.Done" xml:space="preserve"><value>Klar</value></data>
+  <data name="Common.Close" xml:space="preserve"><value>Stäng</value></data>
   <data name="Home.CopyLatest" xml:space="preserve"><value>Kopiera passet från {0} som ny plan</value></data>
   <data name="Home.SessionShort" xml:space="preserve"><value>Nr {0}</value></data>
   <data name="Home.ExerciseCount" xml:space="preserve"><value>{0} övningar</value></data>
@@ -67,7 +67,6 @@
   <data name="Entry.Comment" xml:space="preserve"><value>Kommentar</value></data>
   <data name="Entry.CommentPlaceholder" xml:space="preserve"><value>t.ex. trött i sista setet</value></data>
   <data name="Home.ExerciseCountOne" xml:space="preserve"><value>1 övning</value></data>
-  <data name="Entry.ExtraSet" xml:space="preserve"><value>Extra set</value></data>
   <data name="Entry.SetTarget" xml:space="preserve"><value>Sätt mål</value></data>
   <data name="Entry.Finish" xml:space="preserve"><value>Klar</value></data>
   <data name="Entry.CardioDone" xml:space="preserve"><value>Klar: {0}</value></data>

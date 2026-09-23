@@ -239,11 +239,13 @@ public class HomeTests : ClientTestContext
         var home = Render<Home>();
 
         home.WaitForElements("[data-testid=template-choices] button").Count.ShouldBe(3);
+        // Same weight, border and padding either way, so choosing never resizes a chip.
         foreach (var chip in home.FindAll("[data-testid=template-choices] button"))
         {
-            chip.ClassList.ShouldNotContain("font-medium");
-            chip.ClassList.ShouldNotContain("font-semibold");
+            chip.ClassList.ShouldContain("font-medium");
+            chip.ClassList.ShouldContain("border");
+            chip.ClassList.ShouldContain("px-4");
         }
-        home.FindAll("[data-testid=template-choices] button[aria-checked=true]").ShouldHaveSingleItem().ClassList.ShouldContain("bg-blue-200");
+        home.FindAll("[data-testid=template-choices] button[aria-checked=true]").ShouldHaveSingleItem().ClassList.ShouldContain("bg-accent-600");
     }
 }

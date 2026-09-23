@@ -38,7 +38,7 @@ else
     }
 
     <section class="mt-4 flex flex-col gap-4 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
-        <TextField @key="nameKey" Label="@L["Exercises.Name"]" Value="@exercise.Name" Changed="RenameAsync" />
+        <TextField @key="nameKey" Label="@L["Exercises.Name"]" Value="@exercise.Name" MaxLength="Limits.Name" Changed="RenameAsync" />
         <label class="flex flex-col gap-1 text-xs text-gray-600 dark:text-gray-400">
             <span class="pl-inset">@L["Exercises.Kind"]</span>
             <select value="@exercise.Kind" @onchange="ChangeKind" data-testid="kind"
@@ -50,7 +50,7 @@ else
             </select>
             <span class="pl-inset">@L["Exercises.KindHelp"]</span>
         </label>
-        <TextField Label="@L["Exercises.SettingsNote"]" Value="@exercise.SettingsNote" Placeholder="@L["Exercises.SettingsNotePlaceholder"]"
+        <TextField Label="@L["Exercises.SettingsNote"]" Value="@exercise.SettingsNote" MaxLength="Limits.ShortText" Placeholder="@L["Exercises.SettingsNotePlaceholder"]"
                    Changed="v => SaveAsync(exercise with { SettingsNote = string.IsNullOrWhiteSpace(v) ? null : v.Trim() })" />
 
         <div class="flex flex-col gap-1 text-xs text-gray-600 dark:text-gray-400">
@@ -102,7 +102,6 @@ else
                 <div class="mx-auto aspect-square w-full max-w-48 rounded-lg bg-gray-100 p-2 dark:bg-gray-800" data-testid="illustration-large">
                     <img src="@ExerciseIllustrations.Picture(Slug)" alt="@ExerciseIllustrations.NameOf(Slug)" class="illustration size-full object-contain" />
                 </div>
-                <p class="mt-1 text-center text-xs text-gray-500 dark:text-gray-400">@ExerciseIllustrations.NameOf(Slug)</p>
             }
             else
             {
@@ -115,9 +114,6 @@ else
                 </button>
             </div>
         }
-        <p class="mt-2 text-[11px] leading-tight text-gray-400 dark:text-gray-500">
-            @L["Illustration.Credit"] <a href="https://github.com/bryllim/workout-guide" target="_blank" rel="noopener" class="underline">Bryl Lim</a>, <a href="https://github.com/everkinetic/data" target="_blank" rel="noopener" class="underline">Everkinetic</a>, <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener" class="underline">CC BY-SA 4.0</a>
-        </p>
     </section>
 }
 

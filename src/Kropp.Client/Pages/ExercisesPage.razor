@@ -32,7 +32,7 @@ else if (exercises.Count == 0)
 else
 {
     <input type="search" value="@query" @oninput="e => query = e.Value?.ToString() ?? string.Empty"
-           placeholder="@L["Exercises.Search"]" aria-label="@L["Exercises.Search"]" autocomplete="off" maxlength="200" data-testid="exercise-search"
+           placeholder="@L["Exercises.Search"]" aria-label="@L["Exercises.Search"]" autocomplete="off" maxlength="@Limits.Search" data-testid="exercise-search"
            class="mt-4 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-base dark:border-gray-700 dark:bg-gray-900" />
 
     @if (Matches.Count == 0)

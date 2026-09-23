@@ -122,7 +122,10 @@ public class ExercisePageTests : ClientTestContext
         await SeedAsync();
         var page = RenderExercise(Bench.Id);
 
-        page.WaitForElement("[data-testid=change-illustration]").Click();
+        page.WaitForElement("[data-testid=change-illustration]");
+        page.Find("[data-testid=illustration]").TextContent.ShouldNotContain("Bryl Lim");
+        page.Find("[data-testid=change-illustration]").Click();
+        page.Find("[data-testid=illustration-credit]").TextContent.ShouldContain("Bryl Lim");
         page.Find("[data-testid=illustration-picker] input").Input("pec deck");
         page.Find("[data-testid=illustration-picker] [data-slug=pec-deck]").Click();
 

@@ -54,13 +54,13 @@ else
             <div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
                 <label class="flex flex-col gap-1 text-xs text-gray-600 dark:text-gray-400">
                     <span class="pl-inset">@L["Home.Date"]</span>
-                    <input type="date" value="@workout.Date.ToString("yyyy-MM-dd")" @onchange="ChangeDate"
+                    <input type="date" value="@workout.Date.ToString("yyyy-MM-dd")" min="@Limits.FirstDate.ToString("yyyy-MM-dd")" max="@Limits.LastDate.ToString("yyyy-MM-dd")" @onchange="ChangeDate"
                            class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-base text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100" />
                 </label>
-                <NumberField Label="@L["Workout.SessionNumber"]" Value="@TrainingText.Invariant(workout.SessionNumber)"
-                             Changed="v => SaveAsync(workout with { SessionNumber = TrainingText.ParseInt(v) })" />
+                <NumberField Label="@L["Workout.SessionNumber"]" Value="@TrainingText.Invariant(workout.SessionNumber)" Max="Limits.SessionNumber"
+                             Changed="v => SaveAsync(workout with { SessionNumber = TrainingText.ParseInt(v) is { } n ? Math.Clamp(n, 0, Limits.SessionNumber) : null })" />
                 <div class="col-span-2 sm:col-span-1">
-                    <TextField Label="@L["Home.Note"]" Value="@workout.Note" Changed="v => SaveAsync(workout with { Note = v })" />
+                    <TextField Label="@L["Home.Note"]" Value="@workout.Note" MaxLength="Limits.LongText" Changed="v => SaveAsync(workout with { Note = v })" />
                 </div>
             </div>
             <DoneRow OnDone="() => editingDetails = false" />
@@ -250,7 +250,7 @@ else
     }
 
     private Task ChangeDate(ChangeEventArgs e) =>
-        DateOnly.TryParseExact(e.Value?.ToString(), "yyyy-MM-dd", out var date) && workout is not null
+        DateOnly.TryParseExact(e.Value?.ToString(), "yyyy-MM-dd", out var date) && Limits.IsInRange(date) && workout is not null
             ? SaveAsync(workout with { Date = date })
             : Task.CompletedTask;
 

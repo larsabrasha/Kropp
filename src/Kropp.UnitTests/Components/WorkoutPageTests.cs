@@ -85,7 +85,7 @@ public class WorkoutPageTests : ClientTestContext
         kg.Children[1].Children.Select(c => c.TagName).ShouldBe(["INPUT", "DIV"]);
         kg.Children[1].Children[1].QuerySelectorAll("button").Select(b => b.GetAttribute("data-testid")).ShouldBe(["decrease", "increase"]);
         page.FindAll("[data-testid=target-editor] input")[2].Change("25");
-        page.Find("[data-testid=close-editor]").TextContent.Trim().ShouldBe("Klar");
+        page.Find("[data-testid=close-editor]").TextContent.Trim().ShouldBe("Stäng");
         page.Find("[data-testid=close-editor]").Click();
 
         page.WaitForAssertion(() => page.Find("[data-testid=target]").TextContent.Trim().ShouldBe("3 × 8 @ 25 kg"));
@@ -95,6 +95,31 @@ public class WorkoutPageTests : ClientTestContext
 
     private static AngleSharp.Dom.IElement StepperFor(AngleSharp.Dom.IElement scope, string label) =>
         scope.QuerySelectorAll("[data-testid=stepper]").Single(s => s.GetAttribute("data-label") == label);
+
+    [Fact]
+    public async Task Typed_values_stay_within_the_limits_and_texts_have_a_length()
+    {
+        var workout = await SeedAsync(new Workout
+        {
+            Id = Guid.NewGuid(), Date = new DateOnly(2026, 9, 23),
+            Exercises = [new WorkoutExercise { ExerciseId = Bench.Id, TargetSets = 3, TargetReps = 8, TargetWeightKg = 20 }],
+        });
+        var page = Render<WorkoutPage>(p => p.Add(x => x.Id, workout.Id));
+        page.WaitForElement("[data-testid=edit]").Click();
+        var editor = page.Find("[data-testid=target-editor]");
+
+        StepperFor(editor, "Rep").QuerySelector("input")!.GetAttribute("max").ShouldBe("100");
+        StepperFor(editor, "Rep").QuerySelector("input")!.Change("800");
+        StepperFor(page.Find("[data-testid=target-editor]"), "kg").QuerySelector("input")!.Change("-5");
+
+        page.WaitForAssertion(async () =>
+        {
+            var saved = (await ReloadAsync(workout.Id)).Exercises.Single();
+            (saved.TargetReps, saved.TargetWeightKg).ShouldBe((100, 0m));
+        });
+        page.Find("[data-testid=notes-editor] input").GetAttribute("maxlength").ShouldBe("200");
+        page.Find("[data-testid=notes-editor] textarea").GetAttribute("maxlength").ShouldBe("1000");
+    }
 
     [Fact]
     public async Task Plus_and_minus_adjust_the_plan_by_one_rep_and_the_exercise_weight_step()
@@ -252,6 +277,7 @@ public class WorkoutPageTests : ClientTestContext
         thumbnail.Click();
         page.Find("[data-testid=illustration-large] img").GetAttribute("src").ShouldBe(picture);
         page.FindAll("[data-testid=illustration-picker]").ShouldBeEmpty();
+        page.Find("[data-testid=illustration]").TextContent.ShouldNotContain("Bryl Lim");
         page.Find("[data-testid=illustration] [data-testid=edit-exercise]").GetAttribute("href").ShouldBe($"exercises/{Bench.Id}?back=workouts%2F{workout.Id}");
     }
 
@@ -665,20 +691,43 @@ public class WorkoutPageTests : ClientTestContext
     }
     [Theory]
     [InlineData("thumbnail", "illustration")]
-    public async Task Panels_opened_from_the_card_open_under_its_name_above_the_sets(string tap, string panel)
+    [InlineData("edit", "editor")]
+    [InlineData("set-done", "set-editor")]
+    public async Task An_open_panel_ends_the_card_so_its_close_button_is_last(string tap, string panel)
     {
         var workout = await SeedAsync(new Workout
         {
             Id = Guid.NewGuid(), Date = new DateOnly(2026, 9, 23),
-            Exercises = [new WorkoutExercise { ExerciseId = Bench.Id, TargetSets = 3, TargetReps = 8 }],
+            Exercises = [new WorkoutExercise { ExerciseId = Bench.Id, TargetSets = 3, TargetReps = 8, Comment = "tungt", Sets = [new SetResult { Reps = 8 }] }],
+        });
+        var page = Render<WorkoutPage>(p => p.Add(x => x.Id, workout.Id));
+        page.WaitForElement("[data-testid=comment]");
+
+        page.Find($"[data-testid={tap}]").Click();
+
+        var card = page.Find("[data-testid=exercise-entry]");
+        card.Children.Last().GetAttribute("data-testid").ShouldBe(panel);
+        card.QuerySelectorAll("[data-testid=comment]").ShouldBeEmpty();
+        card.QuerySelectorAll("button").Last().TextContent.Trim().ShouldBe("Stäng");
+        if (panel == "set-editor")
+            card.QuerySelector("[data-testid=set-done]")!.GetAttribute("data-open").ShouldBe("true");
+    }
+
+    [Fact]
+    public async Task Sets_wrap_three_to_a_row_and_stop_at_ten()
+    {
+        var workout = await SeedAsync(new Workout
+        {
+            Id = Guid.NewGuid(), Date = new DateOnly(2026, 9, 23),
+            Exercises = [new WorkoutExercise { ExerciseId = Bench.Id, TargetSets = 10, TargetReps = 8, Sets = [.. Enumerable.Repeat(new SetResult { Reps = 8 }, 10)] }],
         });
         var page = Render<WorkoutPage>(p => p.Add(x => x.Id, workout.Id));
 
-        page.WaitForElement($"[data-testid={tap}]").Click();
+        page.WaitForElement("[data-testid=sets]").ClassList.ShouldContain("grid-cols-3");
+        page.FindAll("[data-testid=set-done]").Count.ShouldBe(10);
 
-        var parts = page.Find("[data-testid=exercise-entry]").Children.Select(c => c.GetAttribute("data-testid")).ToList();
-        parts.IndexOf(panel).ShouldBeGreaterThan(-1);
-        parts.IndexOf(panel).ShouldBeLessThan(parts.IndexOf("sets"));
+        page.Find("[data-testid=edit]").Click();
+        StepperFor(page.Find("[data-testid=target-editor]"), "Set").QuerySelector("[data-testid=increase]")!.HasAttribute("disabled").ShouldBeTrue();
     }
 
     [Fact]
@@ -755,7 +804,11 @@ public class WorkoutPageTests : ClientTestContext
         cards[2].QuerySelectorAll("[data-testid=sets]").ShouldBeEmpty();
         cards[2].QuerySelectorAll("[data-testid=set-next]").ShouldBeEmpty();
 
-        cards[0].QuerySelector("[data-testid=set-extra]")!.Click();
+        // Another set is planned with Set in the editor, and the exercise is the current one again.
+        cards[0].QuerySelector("[data-testid=edit]")!.Click();
+        StepperFor(page.Find("[data-testid=target-editor]"), "Set").QuerySelector("[data-testid=increase]")!.Click();
+        page.Find("[data-testid=close-editor]").Click();
+        page.WaitForElement("[data-testid=set-next]").Click();
         page.WaitForAssertion(async () => (await ReloadAsync(workout.Id)).Exercises[0].Sets.Count.ShouldBe(2));
         page.FindAll("[data-testid=exercise-entry]")[0].QuerySelector("[data-testid=set-done]")!.Click();
         page.WaitForElement("[data-testid=set-editor]");

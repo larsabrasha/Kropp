@@ -1,0 +1,15 @@
+@* The way out of every editor and panel: the same filled button and size everywhere, a word
+   without an icon, so it is never taken for marking something done. *@
+
+<button type="button" @onclick="OnClick" data-testid="@TestId"
+        class="rounded-lg bg-accent-600 px-4 py-2 text-sm font-medium text-white hover:bg-accent-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 @Class">
+    @L["Common.Close"]
+</button>
+
+@code {
+    [Parameter] public EventCallback OnClick { get; set; }
+    [Parameter] public string? TestId { get; set; }
+
+    /// <summary>Placement only, like <c>ml-auto</c>; the look is the same everywhere.</summary>
+    [Parameter] public string? Class { get; set; }
+}

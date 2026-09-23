@@ -147,4 +147,12 @@ public class WorkoutEditingTests
         WorkoutEditing.CurrentEntry(Workout(default, entries: [started with { IsSkipped = true }, Entry(Bench)])).ShouldBe(1);
         WorkoutEditing.CurrentEntry(Workout(default, entries: [Entry(Bench) with { IsSkipped = true }])).ShouldBeNull();
     }
+
+    [Fact]
+    public void No_set_is_added_past_ten()
+    {
+        var entry = new WorkoutExercise { ExerciseId = Guid.NewGuid(), TargetReps = 8, Sets = [.. Enumerable.Repeat(new SetResult { Reps = 8 }, WorkoutEditing.MaxSets)] };
+
+        WorkoutEditing.CompleteNextSet(entry, ExerciseKind.Bodyweight).Sets.Count.ShouldBe(10);
+    }
 }

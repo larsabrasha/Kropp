@@ -91,9 +91,18 @@ public static class WorkoutEditing
         return workout with { Exercises = [.. entries.Select((e, i) => e with { Order = i })] };
     }
 
+    /// <summary>
+    /// The most sets the app offers for one exercise, planned or done. More than anyone logs, and
+    /// few enough that the sets still fit the card. The server allows more, for older data.
+    /// </summary>
+    public const int MaxSets = Limits.Sets;
+
     /// <summary>Records the next set as done at the planned values, the one-tap case at the gym.</summary>
     public static WorkoutExercise CompleteNextSet(WorkoutExercise entry, ExerciseKind kind)
     {
+        if (entry.Sets.Count >= MaxSets)
+            return entry;
+
         var previous = entry.Sets.LastOrDefault();
         var set = kind switch
         {
