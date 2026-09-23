@@ -21,6 +21,10 @@ public class WorkoutPageTests : ClientTestContext
 
     private async Task<Workout> ReloadAsync(Guid id) => (await Repository.GetAllAsync<Workout>()).Single(w => w.Id == id);
 
+    // For WaitForAssertion, which retries only a synchronous assertion: an async lambda there
+    // becomes async void, and a failing assertion in it is never seen.
+    private Workout Reload(Guid id) => ReloadAsync(id).GetAwaiter().GetResult();
+
     [Fact]
     public void An_unknown_id_shows_not_found()
     {
@@ -112,10 +116,11 @@ public class WorkoutPageTests : ClientTestContext
         StepperFor(editor, "Rep").QuerySelector("input")!.Change("800");
         StepperFor(page.Find("[data-testid=target-editor]"), "kg").QuerySelector("input")!.Change("-5");
 
-        page.WaitForAssertion(async () =>
+        page.WaitForAssertion(() =>
         {
-            var saved = (await ReloadAsync(workout.Id)).Exercises.Single();
-            (saved.TargetReps, saved.TargetWeightKg).ShouldBe((100, 0m));
+            var saved = (Reload(workout.Id)).Exercises.Single();
+            // A negative weight is not a number the field takes, so it is cleared.
+            (saved.TargetReps, saved.TargetWeightKg).ShouldBe((100, (decimal?)null));
         });
         page.Find("[data-testid=notes-editor] input").GetAttribute("maxlength").ShouldBe("200");
         page.Find("[data-testid=notes-editor] textarea").GetAttribute("maxlength").ShouldBe("1000");
@@ -173,9 +178,9 @@ public class WorkoutPageTests : ClientTestContext
         page.WaitForElement("[data-testid=cardio-done]").Click();
         StepperFor(page.Find("[data-testid=cardio-editor]"), "Snittpuls").QuerySelector("[data-testid=increase]")!.Click();
 
-        page.WaitForAssertion(async () =>
+        page.WaitForAssertion(() =>
         {
-            var saved = await ReloadAsync(workout.Id);
+            var saved = Reload(workout.Id);
             (saved.Exercises.Single().DurationMinutes, saved.Exercises.Single().AvgHeartRate, saved.Status).ShouldBe((5.5m, (int?)120, WorkoutStatus.Done));
         });
     }
@@ -474,7 +479,8 @@ public class WorkoutPageTests : ClientTestContext
         page.Find("h1").TextContent.ShouldBe("Träningspass");
         page.FindAll("input[type=date]").ShouldBeEmpty();
 
-        meta.Click();
+        page.Find("[data-testid=unlock]").Click();
+        page.Find("[data-testid=workout-meta]").Click();
         page.Find("[data-testid=details-editor] input[type=text]").Change("Ben och bröst");
         page.Find("[data-testid=details-editor] button").Click();
 
@@ -605,9 +611,10 @@ public class WorkoutPageTests : ClientTestContext
         var page = Render<WorkoutPage>(p => p.Add(x => x.Id, workout.Id));
 
         page.WaitForElement("[data-testid=exercise-entry]").GetAttribute("data-current").ShouldBe("true");
+        page.Find("[data-testid=unlock]").Click();
         page.Find("[data-testid=set-next]").Click();
 
-        page.WaitForAssertion(async () => (await ReloadAsync(workout.Id)).Exercises.Single().Sets.Count.ShouldBe(1));
+        page.WaitForAssertion(() => (Reload(workout.Id)).Exercises.Single().Sets.Count.ShouldBe(1));
     }
     [Fact]
     public async Task Cardio_is_finished_with_one_tap_at_last_times_values_and_can_be_cleared()
@@ -809,7 +816,7 @@ public class WorkoutPageTests : ClientTestContext
         StepperFor(page.Find("[data-testid=target-editor]"), "Set").QuerySelector("[data-testid=increase]")!.Click();
         page.Find("[data-testid=close-editor]").Click();
         page.WaitForElement("[data-testid=set-next]").Click();
-        page.WaitForAssertion(async () => (await ReloadAsync(workout.Id)).Exercises[0].Sets.Count.ShouldBe(2));
+        page.WaitForAssertion(() => (Reload(workout.Id)).Exercises[0].Sets.Count.ShouldBe(2));
         page.FindAll("[data-testid=exercise-entry]")[0].QuerySelector("[data-testid=set-done]")!.Click();
         page.WaitForElement("[data-testid=set-editor]");
     }
@@ -839,9 +846,9 @@ public class WorkoutPageTests : ClientTestContext
 
         StepperFor(editor, "Minuter").QuerySelector("[data-testid=increase]")!.Click();
 
-        page.WaitForAssertion(async () =>
+        page.WaitForAssertion(() =>
         {
-            var entry = (await ReloadAsync(workout.Id)).Exercises.Single();
+            var entry = (Reload(workout.Id)).Exercises.Single();
             (entry.TargetDurationMinutes, entry.TargetDistanceKm, entry.DurationMinutes).ShouldBe((4m, (decimal?)0.3m, (decimal?)null));
         });
     }
@@ -910,7 +917,7 @@ public class WorkoutPageTests : ClientTestContext
         comment.GetAttribute("value").ShouldBe("tungt");
         comment.Change("tungt\nsista setet kort");
 
-        page.WaitForAssertion(async () => (await ReloadAsync(workout.Id)).Exercises.Single().Comment.ShouldBe("tungt\nsista setet kort"));
+        page.WaitForAssertion(() => (Reload(workout.Id)).Exercises.Single().Comment.ShouldBe("tungt\nsista setet kort"));
     }
 
     [Fact]
@@ -1023,9 +1030,9 @@ public class WorkoutPageTests : ClientTestContext
         page.Find("[data-testid=cardio-next]").QuerySelectorAll("span").Select(x => x.TextContent).ShouldBe(["3,5 min"]);
 
         page.Find("[data-testid=cardio-next]").Click();
-        page.WaitForAssertion(async () =>
+        page.WaitForAssertion(() =>
         {
-            var entry = (await ReloadAsync(workout.Id)).Exercises.Single();
+            var entry = (Reload(workout.Id)).Exercises.Single();
             (entry.DurationMinutes, entry.DistanceKm, entry.AvgHeartRate).ShouldBe((3.5m, (decimal?)null, (int?)null));
         });
 
@@ -1071,5 +1078,60 @@ public class WorkoutPageTests : ClientTestContext
         comment.Click();
         page.Find("[data-testid=editor]");
         page.FindAll("[data-testid=comment]").ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task A_workout_of_an_earlier_day_opens_locked_and_saves_nothing_until_unlocked()
+    {
+        var workout = await SeedAsync(new Workout
+        {
+            Id = Guid.NewGuid(), Date = new DateOnly(2026, 9, 22),
+            Exercises = [new WorkoutExercise { ExerciseId = Bench.Id, TargetSets = 3, TargetReps = 8 }],
+        });
+        var page = Render<WorkoutPage>(p => p.Add(x => x.Id, workout.Id));
+
+        page.WaitForElement("[data-testid=locked]").TextContent.ShouldContain("Passet är från en tidigare dag och är låst.");
+        page.Find("[data-testid=workout-body]").HasAttribute("disabled").ShouldBeTrue();
+        page.Find("[data-testid=workout-meta]").HasAttribute("disabled").ShouldBeTrue();
+        // The browser does not click a disabled button; the page refuses to save if it happens anyway.
+        page.Find("[data-testid=set-next]").Click();
+        page.Find("[data-testid=workout-meta]").Click();
+        page.FindAll("[data-testid=details-editor]").ShouldBeEmpty();
+        Reload(workout.Id).Exercises.Single().Sets.ShouldBeEmpty();
+
+        page.Find("[data-testid=unlock]").Click();
+
+        page.FindAll("[data-testid=locked]").ShouldBeEmpty();
+        page.Find("[data-testid=workout-body]").HasAttribute("disabled").ShouldBeFalse();
+        page.Find("[data-testid=set-next]").Click();
+        page.WaitForAssertion(() => Reload(workout.Id).Exercises.Single().Sets.Count.ShouldBe(1));
+
+        page.Find("[data-testid=lock]").Click();
+        page.Find("[data-testid=workout-body]").HasAttribute("disabled").ShouldBeTrue();
+    }
+
+    [Theory]
+    [InlineData(23)]
+    [InlineData(25)]
+    public async Task Today_and_later_are_not_locked(int day)
+    {
+        var workout = await SeedAsync(new Workout { Id = Guid.NewGuid(), Date = new DateOnly(2026, 9, day) });
+        var page = Render<WorkoutPage>(p => p.Add(x => x.Id, workout.Id));
+
+        page.WaitForElement("[data-testid=workout-body]").HasAttribute("disabled").ShouldBeFalse();
+        page.FindAll("[data-testid=locked]").ShouldBeEmpty();
+        page.FindAll("[data-testid=lock]").ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task An_unlocked_workout_stays_unlocked_when_a_sync_reloads_it()
+    {
+        var workout = await SeedAsync(new Workout { Id = Guid.NewGuid(), Date = new DateOnly(2026, 9, 21) });
+        var page = Render<WorkoutPage>(p => p.Add(x => x.Id, workout.Id));
+        page.WaitForElement("[data-testid=unlock]").Click();
+
+        await page.InvokeAsync(() => Services.GetRequiredService<Kropp.Shared.Sync.SyncEngine>().SyncAsync());
+
+        page.Find("[data-testid=workout-body]").HasAttribute("disabled").ShouldBeFalse();
     }
 }

@@ -7,6 +7,12 @@ namespace Kropp.Shared.Training;
 public static class WorkoutEditing
 {
     /// <summary>
+    /// A workout of an earlier day opens locked: what was logged is history, and a stray tap
+    /// should not change it. A plan for today or later stays open to edit.
+    /// </summary>
+    public static bool OpensLocked(Workout workout, DateOnly today) => workout.Date < today;
+
+    /// <summary>
     /// The status follows from what was logged, so there is nothing to tick: nothing recorded is a
     /// plan, whatever the date; something recorded is in progress until every exercise is finished,
     /// and done once its day has passed. A workout of an earlier day is over, even if not every

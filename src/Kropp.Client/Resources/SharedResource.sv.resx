@@ -176,4 +176,7 @@
   <data name="Calendar.WholeMonth" xml:space="preserve"><value>Visa hela månaden</value></data>
   <data name="Calendar.OneWorkout" xml:space="preserve"><value>1 pass</value></data>
   <data name="Calendar.Workouts" xml:space="preserve"><value>{0} pass</value></data>
+  <data name="Workout.Locked" xml:space="preserve"><value>Passet är från en tidigare dag och är låst.</value></data>
+  <data name="Workout.Unlock" xml:space="preserve"><value>Lås upp</value></data>
+  <data name="Workout.Lock" xml:space="preserve"><value>Lås igen</value></data>
 </root>

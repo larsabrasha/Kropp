@@ -7,6 +7,18 @@
     input, select, textarea { font-size: max(16px, 1em); }
 }
 
+/* Tailwind 4 leaves buttons with the default cursor; everything that can be tapped shows the hand.
+   A disabled button, also one inside a locked workout's disabled fieldset, keeps the arrow. */
+@layer base {
+    button:not(:disabled), select:not(:disabled), summary { cursor: pointer; }
+}
+
+/* A locked workout: its disabled controls do not look pressable, and its cards cannot be dragged. */
+@layer base {
+    fieldset:disabled :is(button, input, textarea, select) { cursor: default; }
+    fieldset:disabled .drag-handle { pointer-events: none; opacity: 0.4; }
+}
+
 /* Where text starts inside a field or a card: a 1px border plus px-3. Labels and headings take it,
    so they line up with the text below them rather than with the border. */
 @utility pl-inset {

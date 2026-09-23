@@ -176,4 +176,7 @@
   <data name="Calendar.WholeMonth" xml:space="preserve"><value>Show the whole month</value></data>
   <data name="Calendar.OneWorkout" xml:space="preserve"><value>1 workout</value></data>
   <data name="Calendar.Workouts" xml:space="preserve"><value>{0} workouts</value></data>
+  <data name="Workout.Locked" xml:space="preserve"><value>This workout is from an earlier day and is locked.</value></data>
+  <data name="Workout.Unlock" xml:space="preserve"><value>Unlock</value></data>
+  <data name="Workout.Lock" xml:space="preserve"><value>Lock again</value></data>
 </root>
