@@ -3,7 +3,16 @@
 <div class="min-h-dvh bg-white text-gray-900 dark:bg-gray-950 dark:text-gray-100">
     <header class="sticky top-0 z-10 border-b border-gray-200 bg-white/90 pt-[env(safe-area-inset-top)] backdrop-blur dark:border-gray-800 dark:bg-gray-950/90">
         <div class="mx-auto flex max-w-2xl items-center justify-between gap-4 px-4 py-3">
-            <span class="text-lg font-semibold">@L["App.Title"]</span>
+            @* The logo and name always lead home, from any page. *@
+            <a href="/" class="-ml-1 flex items-center gap-2 rounded-lg px-1 py-0.5 focus-visible:outline-2 focus-visible:outline-blue-500" data-testid="home-link">
+                <svg class="size-8 shrink-0" viewBox="0 0 32 32" aria-hidden="true">
+                    <rect width="32" height="32" rx="8" class="fill-blue-600" />
+                    <g stroke="#fff" stroke-width="2.6" stroke-linecap="round">
+                        <path d="M10.5 10v12M21.5 10v12M7 13v6M25 13v6M10.5 16h11" />
+                    </g>
+                </svg>
+                <span class="text-lg font-semibold">@L["App.Title"]</span>
+            </a>
             <div class="flex items-center gap-1">
                 <SyncStatusBar />
                 <a href="settings" aria-label="@L["Settings.Heading"]" title="@L["Settings.Heading"]" data-testid="settings-link"
