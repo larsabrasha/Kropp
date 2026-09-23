@@ -41,13 +41,15 @@ public static class WorkoutEditing
             Exercises = [.. workout.Exercises.Where((_, i) => i != index).Select((e, i) => e with { Order = i })],
         };
 
-    public static Workout MoveEntry(Workout workout, int index, int offset)
+    /// <summary>Moves an entry to a new position, as a drag and drop does.</summary>
+    public static Workout MoveEntry(Workout workout, int from, int to)
     {
-        var target = index + offset;
-        if (target < 0 || target >= workout.Exercises.Count)
+        if (from == to || from < 0 || to < 0 || from >= workout.Exercises.Count || to >= workout.Exercises.Count)
             return workout;
         var entries = workout.Exercises.ToList();
-        (entries[index], entries[target]) = (entries[target], entries[index]);
+        var moved = entries[from];
+        entries.RemoveAt(from);
+        entries.Insert(to, moved);
         return workout with { Exercises = [.. entries.Select((e, i) => e with { Order = i })] };
     }
 

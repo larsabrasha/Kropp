@@ -3,7 +3,11 @@
    was right, the set buttons are all that gets touched — so they stay large and always first. *@
 
 <article class="rounded-xl border border-gray-200 p-3 dark:border-gray-800" data-testid="exercise-entry">
-    <div class="flex items-center gap-2">
+    <div class="flex items-center gap-1">
+        <span class="drag-handle -my-1 -ml-1 flex shrink-0 cursor-grab touch-none items-center self-stretch px-1 text-gray-300 active:cursor-grabbing dark:text-gray-600"
+              title="@L["Entry.Drag"]" aria-hidden="true" data-testid="drag-handle">
+            <svg class="size-5" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.5" /><circle cx="15" cy="6" r="1.5" /><circle cx="9" cy="12" r="1.5" /><circle cx="15" cy="12" r="1.5" /><circle cx="9" cy="18" r="1.5" /><circle cx="15" cy="18" r="1.5" /></svg>
+        </span>
         <h3 class="min-w-0 flex-1 truncate font-semibold">@(Exercise?.Name ?? L["Exercise.Unknown"])</h3>
         <button type="button" @onclick="() => Toggle(Panel.Targets)" aria-expanded="@Expanded(Panel.Targets)" data-testid="target"
                 class="shrink-0 rounded-lg px-2 py-1.5 text-sm tabular-nums text-gray-700 underline decoration-gray-300 decoration-dotted underline-offset-4 hover:bg-gray-100 dark:text-gray-300 dark:decoration-gray-600 dark:hover:bg-gray-800">
@@ -18,8 +22,6 @@
     @if (panel == Panel.Menu)
     {
         <div class="mt-2 flex flex-wrap gap-1" data-testid="menu">
-            <MenuButton OnClick="() => Move(-1)" Disabled="Index == 0">@L["Entry.MoveUp"]</MenuButton>
-            <MenuButton OnClick="() => Move(1)" Disabled="Index == Count - 1">@L["Entry.MoveDown"]</MenuButton>
             <MenuButton OnClick="() => Toggle(Panel.Notes)">@L["Entry.EditNotes"]</MenuButton>
             <MenuButton OnClick="OnRemove" Danger="true">@L["Entry.Remove"]</MenuButton>
         </div>
@@ -152,8 +154,6 @@
     [Parameter, EditorRequired] public WorkoutExercise Entry { get; set; } = default!;
     [Parameter] public Exercise? Exercise { get; set; }
     [Parameter] public WorkoutExercise? LastTime { get; set; }
-    [Parameter] public int Index { get; set; }
-    [Parameter] public int Count { get; set; }
 
     /// <summary>Whether this card may show an open panel; the page lets one card at a time.</summary>
     [Parameter] public bool Active { get; set; }
@@ -161,7 +161,6 @@
     [Parameter] public EventCallback OnActivate { get; set; }
     [Parameter] public EventCallback<WorkoutExercise> OnChange { get; set; }
     [Parameter] public EventCallback OnRemove { get; set; }
-    [Parameter] public EventCallback<int> OnMove { get; set; }
 
     private Panel openPanel;
     private int setIndex;
@@ -225,11 +224,5 @@
     {
         openPanel = Panel.None;
         return Change(WorkoutEditing.RemoveSet(Entry, index));
-    }
-
-    private Task Move(int offset)
-    {
-        openPanel = Panel.None;
-        return OnMove.InvokeAsync(offset);
     }
 }

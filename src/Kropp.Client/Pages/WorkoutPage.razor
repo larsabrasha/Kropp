@@ -1,5 +1,5 @@
 @page "/workouts/{Id:guid}"
-@implements IDisposable
+@implements IAsyncDisposable
 @inject LocalRepository Repository
 @inject SyncEngine Engine
 @inject NavigationManager Navigation
@@ -80,21 +80,22 @@ else
             </div>
         }
 
-        @for (var i = 0; i < workout.Exercises.Count; i++)
-        {
-            var index = i;
-            var entry = workout.Exercises[index];
-            <ExerciseEntryCard @key="(entry.ExerciseId, entry.Order)"
-                               Entry="entry"
-                               Exercise="exercises.GetValueOrDefault(entry.ExerciseId)"
-                               LastTime="WorkoutEditing.LastTime(workouts, workout, entry.ExerciseId)"
-                               Index="index" Count="workout.Exercises.Count"
-                               Active="activeEntry == index"
-                               OnActivate="() => activeEntry = index"
-                               OnChange="next => SaveAsync(WorkoutEditing.ReplaceEntry(workout, index, next))"
-                               OnRemove="() => SaveAsync(WorkoutEditing.RemoveEntry(workout, index))"
-                               OnMove="offset => SaveAsync(WorkoutEditing.MoveEntry(workout, index, offset))" />
-        }
+        <div @ref="entryList" class="flex flex-col gap-2" data-testid="entry-list">
+            @for (var i = 0; i < workout.Exercises.Count; i++)
+            {
+                var index = i;
+                var entry = workout.Exercises[index];
+                <ExerciseEntryCard @key="(entry.ExerciseId, entry.Order)"
+                                   Entry="entry"
+                                   Exercise="exercises.GetValueOrDefault(entry.ExerciseId)"
+                                   LastTime="WorkoutEditing.LastTime(workouts, workout, entry.ExerciseId)"
+                                   Active="activeEntry == index"
+                                   OnActivate="() => activeEntry = index"
+                                   OnChange="next => SaveAsync(WorkoutEditing.ReplaceEntry(workout, index, next))"
+                                   OnRemove="() => SaveAsync(WorkoutEditing.RemoveEntry(workout, index))"
+                                   />
+            }
+        </div>
 
         @if (picking)
         {
@@ -147,6 +148,10 @@ else
     // old position; either way a workout should open at its top.
     private Guid? scrolledFor;
 
+    private ElementReference entryList;
+    private IJSObjectReference? sortable;
+    private DotNetObjectReference<WorkoutPage>? self;
+
     private void ToggleDetails() => editingDetails = !editingDetails;
 
     private string DetailsText
@@ -185,6 +190,20 @@ else
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (workout is not null && sortable is null)
+        {
+            try
+            {
+                sortable = await JS.InvokeAsync<IJSObjectReference>("import", "./js/kropp-sortable.js");
+                self = DotNetObjectReference.Create(this);
+                await sortable.InvokeVoidAsync("init", entryList, self);
+            }
+            catch (JSException ex)
+            {
+                Logger.LogWarning(ex, "Could not start drag and drop");
+            }
+        }
+
         if (!loaded || scrolledFor == Id)
             return;
         scrolledFor = Id;
@@ -197,6 +216,16 @@ else
         {
             Logger.LogDebug(ex, "Could not scroll to the top");
         }
+    }
+
+    [JSInvokable]
+    public async Task OnEntryReordered(int from, int to)
+    {
+        if (workout is null)
+            return;
+        activeEntry = null;
+        await SaveAsync(WorkoutEditing.MoveEntry(workout, from, to));
+        StateHasChanged();
     }
 
     private async Task LoadAsync()
@@ -304,5 +333,20 @@ else
         StateHasChanged();
     });
 
-    public void Dispose() => Engine.DataChanged -= OnRemoteChange;
+    public async ValueTask DisposeAsync()
+    {
+        Engine.DataChanged -= OnRemoteChange;
+        if (sortable is not null)
+        {
+            try
+            {
+                await sortable.InvokeVoidAsync("destroy", entryList);
+                await sortable.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+            }
+        }
+        self?.Dispose();
+    }
 }

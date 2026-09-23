@@ -99,14 +99,17 @@ public class WorkoutEditingTests
         var c = new WorkoutExercise { ExerciseId = Guid.NewGuid() };
         var workout = Workout(default, entries: [a with { Order = 0 }, b with { Order = 1 }, c with { Order = 2 }]);
 
-        var moved = WorkoutEditing.MoveEntry(workout, 2, -1);
-        moved.Exercises.Select(e => e.ExerciseId).ShouldBe([a.ExerciseId, c.ExerciseId, b.ExerciseId]);
+        var moved = WorkoutEditing.MoveEntry(workout, 2, 0);
+        moved.Exercises.Select(e => e.ExerciseId).ShouldBe([c.ExerciseId, a.ExerciseId, b.ExerciseId]);
         moved.Exercises.Select(e => e.Order).ShouldBe([0, 1, 2]);
 
+        WorkoutEditing.MoveEntry(moved, 0, 2).Exercises.Select(e => e.ExerciseId).ShouldBe([a.ExerciseId, b.ExerciseId, c.ExerciseId]);
+
         var removed = WorkoutEditing.RemoveEntry(moved, 0);
-        removed.Exercises.Select(e => e.ExerciseId).ShouldBe([c.ExerciseId, b.ExerciseId]);
+        removed.Exercises.Select(e => e.ExerciseId).ShouldBe([a.ExerciseId, b.ExerciseId]);
         removed.Exercises.Select(e => e.Order).ShouldBe([0, 1]);
 
-        WorkoutEditing.MoveEntry(removed, 0, -1).ShouldBeSameAs(removed);
+        WorkoutEditing.MoveEntry(removed, 0, 5).ShouldBeSameAs(removed);
+        WorkoutEditing.MoveEntry(removed, 1, 1).ShouldBeSameAs(removed);
     }
 }

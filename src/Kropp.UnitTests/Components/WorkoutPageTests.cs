@@ -101,7 +101,32 @@ public class WorkoutPageTests : ClientTestContext
     }
 
     [Fact]
-    public async Task The_menu_moves_and_removes_an_exercise()
+    public async Task Dropping_an_exercise_saves_the_new_order()
+    {
+        var module = JSInterop.SetupModule("./js/kropp-sortable.js");
+        module.SetupVoid("init", _ => true);
+        var other = new Exercise { Id = Guid.NewGuid(), Name = "Vader", Kind = ExerciseKind.Bodyweight };
+        await Repository.SaveAsync(other.Id, other);
+        var workout = await SeedAsync(new Workout
+        {
+            Id = Guid.NewGuid(), Date = new DateOnly(2026, 9, 23),
+            Exercises = [new WorkoutExercise { ExerciseId = Bench.Id }, new WorkoutExercise { ExerciseId = other.Id, Order = 1 }],
+        });
+        var page = Render<WorkoutPage>(p => p.Add(x => x.Id, workout.Id));
+        page.WaitForElements("[data-testid=drag-handle]").Count.ShouldBe(2);
+        page.WaitForAssertion(() => module.VerifyInvoke("init"));
+
+        // What kropp-sortable.js calls when a card is dropped at a new position.
+        await page.InvokeAsync(() => page.Instance.OnEntryReordered(1, 0));
+
+        page.WaitForAssertion(() => page.FindAll("[data-testid=exercise-entry] h3").Select(h => h.TextContent).ShouldBe(["Vader", "Bröst maskin"]));
+        var saved = (await ReloadAsync(workout.Id)).Exercises;
+        saved.Select(e => e.ExerciseId).ShouldBe([other.Id, Bench.Id]);
+        saved.Select(e => e.Order).ShouldBe([0, 1]);
+    }
+
+    [Fact]
+    public async Task The_menu_removes_an_exercise()
     {
         var other = new Exercise { Id = Guid.NewGuid(), Name = "Vader", Kind = ExerciseKind.Bodyweight };
         await Repository.SaveAsync(other.Id, other);
@@ -112,15 +137,13 @@ public class WorkoutPageTests : ClientTestContext
         });
         var page = Render<WorkoutPage>(p => p.Add(x => x.Id, workout.Id));
 
-        page.WaitForElements("[data-testid=more]")[1].Click();
-        page.Find("[data-testid=menu]").QuerySelectorAll("button").Single(b => b.TextContent.Trim() == "Flytta upp").Click();
-        page.WaitForAssertion(() => page.FindAll("[data-testid=exercise-entry] h3").Select(h => h.TextContent).ShouldBe(["Vader", "Bröst maskin"]));
-
-        page.FindAll("[data-testid=more]")[0].Click();
+        page.WaitForElements("[data-testid=more]")[0].Click();
+        var menu = page.Find("[data-testid=menu]").QuerySelectorAll("button").Select(b => b.TextContent.Trim()).ToList();
+        menu.ShouldNotContain("Flytta upp");
         page.Find("[data-testid=menu]").QuerySelectorAll("button").Single(b => b.TextContent.Trim() == "Ta bort övningen").Click();
 
-        page.WaitForAssertion(() => page.FindAll("[data-testid=exercise-entry] h3").Select(h => h.TextContent).ShouldBe(["Bröst maskin"]));
-        (await ReloadAsync(workout.Id)).Exercises.Single().ExerciseId.ShouldBe(Bench.Id);
+        page.WaitForAssertion(() => page.FindAll("[data-testid=exercise-entry] h3").Select(h => h.TextContent).ShouldBe(["Vader"]));
+        (await ReloadAsync(workout.Id)).Exercises.Single().ExerciseId.ShouldBe(other.Id);
     }
 
     [Fact]
