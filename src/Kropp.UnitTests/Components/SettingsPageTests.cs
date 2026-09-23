@@ -24,6 +24,10 @@ public class SettingsPageTests : ClientTestContext
     }
 
     [Fact]
+    public void Templates_are_reached_from_settings() =>
+        Render<SettingsPage>().WaitForElement("[data-testid=templates-link]").GetAttribute("href").ShouldBe("templates");
+
+    [Fact]
     public async Task Seven_a_week_is_the_most()
     {
         await Repository.SaveAsync(UserSettings.SingletonId, new UserSettings { SessionsPerWeek = 7 });

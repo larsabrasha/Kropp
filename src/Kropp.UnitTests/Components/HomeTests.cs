@@ -19,19 +19,25 @@ public class HomeTests : ClientTestContext
     }
 
     [Fact]
-    public async Task Adding_a_workout_saves_it_locally_and_opens_it()
+    public async Task An_empty_workout_is_planned_from_the_last_choice()
     {
-        await Repository.SaveAsync(Guid.NewGuid(), new Workout { Id = Guid.NewGuid(), Date = new DateOnly(2026, 9, 14), SessionNumber = 103 });
+        var template = new WorkoutTemplate { Id = Guid.NewGuid(), Name = "Bröst", Exercises = [] };
+        await Repository.SaveAsync(template.Id, template);
+        var old = new Workout { Id = Guid.NewGuid(), Date = new DateOnly(2026, 9, 14), SessionNumber = 103 };
+        await Repository.SaveAsync(old.Id, old);
         var home = Render<Home>();
-        home.WaitForElement("[data-testid=workout-list]");
 
-        home.Find("input[type=date]").Change("2026-09-21");
-        home.Find("form").Submit();
+        var choices = home.WaitForElements("[data-testid=template-choices] [role=radio]");
+        choices.Select(c => c.TextContent.Trim()).ShouldBe(["Bröst", "Tomt pass"]);
+        home.FindAll("form").ShouldBeEmpty();
+        home.Find("[data-template=empty]").Click();
+        home.Find("[data-testid=next-name]").TextContent.ShouldBe("Tomt pass");
+        home.Find("[data-testid=plan]").Click();
 
         home.WaitForAssertion(() => Services.GetRequiredService<NavigationManager>().Uri.ShouldContain("/workouts/"));
-        var added = (await Repository.GetAllAsync<Workout>()).Single(w => w.Date == new DateOnly(2026, 9, 21));
-        added.SessionNumber.ShouldBe(104);
-        added.Status.ShouldBe(WorkoutStatus.Skipped);
+        var added = (await Repository.GetAllAsync<Workout>()).Single(w => w.Id != old.Id);
+        (added.TemplateId, added.SessionNumber, added.Status).ShouldBe(((Guid?)null, (int?)104, WorkoutStatus.Planned));
+        added.Exercises.ShouldBeEmpty();
         Services.GetRequiredService<NavigationManager>().Uri.ShouldEndWith($"/workouts/{added.Id}");
     }
 
@@ -115,12 +121,13 @@ public class HomeTests : ClientTestContext
     }
 
     [Fact]
-    public async Task Without_templates_the_card_explains_and_the_blank_form_shows()
+    public void Without_templates_an_empty_workout_is_the_plan_and_templates_are_explained()
     {
         var home = Render<Home>();
 
         home.WaitForElement("[data-testid=no-templates]");
-        home.FindAll("form").Count.ShouldBe(1);
+        home.Find("[data-testid=next-name]").TextContent.ShouldBe("Tomt pass");
+        home.FindAll("[data-testid=template-choices]").ShouldBeEmpty();
     }
 
     [Fact]
@@ -147,7 +154,7 @@ public class HomeTests : ClientTestContext
         home.FindAll("[data-testid=next]").ShouldBeEmpty();
         home.Find("[data-testid=plan-card] h2").TextContent.ShouldBe("Planera nästa pass");
         home.Find("[data-testid=next-date]").TextContent.ToLowerInvariant().ShouldBe("i morgon, 24 sep.");
-        home.FindAll("[data-testid=template-choices] [role=radio]").Select(b => b.TextContent.Trim()).ShouldBe(["Bröst", "Rygg"]);
+        home.FindAll("[data-testid=template-choices] [role=radio]").Select(b => b.TextContent.Trim()).ShouldBe(["Bröst", "Rygg", "Tomt pass"]);
 
         home.Find("[data-testid=plan]").Click();
 

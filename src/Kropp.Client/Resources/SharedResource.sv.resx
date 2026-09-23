@@ -123,4 +123,5 @@
   <data name="Next.FromTemplate" xml:space="preserve"><value>Planera från mall</value></data>
   <data name="Next.PlanNext" xml:space="preserve"><value>Planera nästa pass</value></data>
   <data name="Home.MoreWeeks" xml:space="preserve"><value>Visa fler veckor ({0} äldre)</value></data>
+  <data name="Next.Empty" xml:space="preserve"><value>Tomt pass</value></data>
 </root>

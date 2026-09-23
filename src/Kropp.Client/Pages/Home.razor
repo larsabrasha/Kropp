@@ -38,71 +38,44 @@ else if (upcoming is not null)
 <section class="rounded-xl border border-blue-200 bg-blue-50/50 p-4 dark:border-blue-900 dark:bg-blue-950/30" data-testid="plan-card">
     <h2 class="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">@(upcoming is null ? L["Next.PlanNext"] : L["Next.Another"])</h2>
 
-    @if (chosen is not null)
-    {
-        <div class="flex items-center gap-3">
-            <PlanIcon Slug="@ExerciseCategories.IconFor(AsWorkout(chosen), exercises)" />
-            <span class="min-w-0 flex-1">
-                <span class="block truncate text-lg font-semibold text-gray-900 dark:text-gray-50" data-testid="next-name">@chosen.Name</span>
-                @* The whole day is the date picker: a transparent input over the text, so tapping the day opens it. *@
-                <label class="relative mt-0.5 inline-block cursor-pointer text-sm text-gray-600 underline decoration-gray-300 decoration-dotted underline-offset-4 dark:text-gray-300 dark:decoration-gray-600">
-                    <span class="first-letter:uppercase inline-block" data-testid="next-date">@DayText(planDate)</span>
-                    <input type="date" value="@planDate.ToString("yyyy-MM-dd")" @onchange="ChangePlanDate" aria-label="@L["Next.ChangeDay"]"
-                           class="absolute inset-0 size-full cursor-pointer opacity-0" />
-                </label>
-            </span>
-            <button type="button" @onclick="PlanAsync" disabled="@saving" data-testid="plan"
-                    class="inline-flex shrink-0 items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 font-medium text-white hover:bg-blue-700 disabled:opacity-60">
-                @if (saving)
-                {
-                    <svg class="size-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="3" stroke-dasharray="42 100" /></svg>
-                }
-                @L["Next.Plan"]
-            </button>
-        </div>
-        @if (templates.Count > 1)
-        {
-            <div class="mt-3 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]" role="radiogroup" aria-label="@L["Next.Templates"]" data-testid="template-choices">
-                @foreach (var template in templates)
-                {
-                    var on = template.Id == chosen.Id;
-                    <button type="button" role="radio" aria-checked="@(on ? "true" : "false")" @onclick="() => chosenId = template.Id"
-                            class="shrink-0 rounded-full border px-3 py-1.5 text-sm @(on ? "border-gray-800 bg-white font-medium text-gray-900 dark:border-gray-200 dark:bg-gray-800 dark:text-gray-100" : "border-gray-200 bg-white text-gray-600 hover:border-gray-400 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400")">
-                        @template.Name
-                    </button>
-                }
-            </div>
-        }
-    }
-    else
-    {
-        <p class="text-sm text-gray-600 dark:text-gray-300" data-testid="no-templates">@L["Next.NoTemplates"]</p>
-    }
-
-    <div class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
-        <button type="button" @onclick="() => showBlankForm = !showBlankForm" aria-expanded="@(showBlankForm ? "true" : "false")" data-testid="blank-toggle"
-                class="text-gray-500 underline underline-offset-4 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200">@L["Next.Blank"]</button>
-        <a href="templates" class="ml-auto text-gray-500 underline underline-offset-4 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200">@L["Next.ManageTemplates"]</a>
+    <div class="flex items-center gap-3">
+        <PlanIcon Slug="@ExerciseCategories.IconFor(AsWorkout(chosen), exercises)" />
+        <span class="min-w-0 flex-1">
+            <span class="block truncate text-lg font-semibold text-gray-900 dark:text-gray-50" data-testid="next-name">@chosen.Name</span>
+            @* The whole day is the date picker: a transparent input over the text, so tapping the day opens it. *@
+            <label class="relative mt-0.5 inline-block cursor-pointer text-sm text-gray-600 underline decoration-gray-300 decoration-dotted underline-offset-4 dark:text-gray-300 dark:decoration-gray-600">
+                <span class="first-letter:uppercase inline-block" data-testid="next-date">@DayText(planDate)</span>
+                <input type="date" value="@planDate.ToString("yyyy-MM-dd")" @onchange="ChangePlanDate" aria-label="@L["Next.ChangeDay"]"
+                       class="absolute inset-0 size-full cursor-pointer opacity-0" />
+            </label>
+        </span>
+        <button type="button" @onclick="PlanAsync" disabled="@saving" data-testid="plan"
+                class="inline-flex shrink-0 items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 font-medium text-white hover:bg-blue-700 disabled:opacity-60">
+            @if (saving)
+            {
+                <svg class="size-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="3" stroke-dasharray="42 100" /></svg>
+            }
+            @L["Next.Plan"]
+        </button>
     </div>
-
-    @if (showBlankForm)
+    @if (templates.Count > 0)
     {
-        <EditForm Model="form" OnValidSubmit="AddAsync" class="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end">
-            <label class="flex flex-col gap-1 text-sm">
-                <span>@L["Home.Date"]</span>
-                <InputDate @bind-Value="form.Date" class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-base dark:border-gray-700 dark:bg-gray-900" />
-            </label>
-            <label class="flex flex-1 flex-col gap-1 text-sm">
-                <span>@L["Home.Note"]</span>
-                <InputText @bind-Value="form.Note" maxlength="2000" placeholder="@L["Home.NotePlaceholder"]"
-                           class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-base dark:border-gray-700 dark:bg-gray-900" />
-            </label>
-            <button type="submit" disabled="@saving"
-                    class="inline-flex items-center justify-center gap-2 rounded-lg border border-blue-600 px-4 py-2 font-medium text-blue-700 hover:bg-blue-50 disabled:opacity-60 dark:text-blue-300 dark:hover:bg-blue-950">
-                @L["Home.Add"]
-            </button>
-        </EditForm>
+        <div class="mt-3 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]" role="radiogroup" aria-label="@L["Next.Templates"]" data-testid="template-choices">
+            @foreach (var template in templates.Append(EmptyTemplate))
+            {
+                var on = template.Id == chosen.Id;
+                <button type="button" role="radio" aria-checked="@(on ? "true" : "false")" @onclick="() => chosenId = template.Id" data-template="@(template.Id == Guid.Empty ? "empty" : template.Id)"
+                        class="shrink-0 rounded-full border px-3 py-1.5 text-sm @(on ? "border-gray-800 bg-white font-medium text-gray-900 dark:border-gray-200 dark:bg-gray-800 dark:text-gray-100" : "border-gray-200 bg-white text-gray-600 hover:border-gray-400 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400")">
+                    @template.Name
+                </button>
+            }
+        </div>
     }
+    @if (templates.Count == 0)
+    {
+        <p class="mt-3 text-sm text-gray-600 dark:text-gray-300" data-testid="no-templates">@L["Next.NoTemplates"]</p>
+    }
+
     @if (error is not null)
     {
         <p class="mt-3 text-sm text-red-600 dark:text-red-400" role="alert">@error</p>
@@ -182,13 +155,7 @@ else if (upcoming is not null)
 </section>
 
 @code {
-    private sealed class NewWorkoutForm
-    {
-        public DateOnly Date { get; set; }
-        public string? Note { get; set; }
-    }
 
-    private NewWorkoutForm form = null!;
 
     private DateOnly Today => DateOnly.FromDateTime(Time.GetLocalNow().DateTime);
     private List<Workout>? workouts;
@@ -197,17 +164,21 @@ else if (upcoming is not null)
     private Workout? upcoming;
     private Guid? chosenId;
     private DateOnly planDate;
-    private bool showBlankForm;
+
+    // An empty workout is offered as one more choice, last, with no exercises; it is never the suggestion
+    // unless there are no templates at all.
+    private WorkoutTemplate EmptyTemplate => new() { Id = Guid.Empty, Name = L["Next.Empty"] };
 
     // The chosen template, or the suggested one until another is tapped.
-    private WorkoutTemplate? chosen => templates.FirstOrDefault(t => t.Id == chosenId)
-        ?? Planning.SuggestTemplate(templates, workouts ?? [], id => exercises.GetValueOrDefault(id), Today);
+    private WorkoutTemplate chosen => chosenId == Guid.Empty ? EmptyTemplate
+        : templates.FirstOrDefault(t => t.Id == chosenId)
+          ?? Planning.SuggestTemplate(templates, workouts ?? [], id => exercises.GetValueOrDefault(id), Today)
+          ?? EmptyTemplate;
     private bool saving;
     private string? error;
 
     protected override async Task OnInitializedAsync()
     {
-        form = new NewWorkoutForm { Date = Today };
         Repository.Changed += OnDataChanged;
         Engine.DataChanged += OnDataChanged;
         await LoadAsync();
@@ -224,7 +195,6 @@ else if (upcoming is not null)
             upcoming = Planning.Upcoming(all, Today);
             var settings = await Repository.GetAsync<UserSettings>(UserSettings.SingletonId) ?? UserSettings.Default;
             planDate = upcoming is null ? Planning.SuggestDate(all, Today, settings) : Planning.SuggestDateAfter(upcoming, all, Today, settings);
-            showBlankForm = showBlankForm || templates.Count == 0;
         }
         catch (Exception ex)
         {
@@ -234,47 +204,19 @@ else if (upcoming is not null)
         }
     }
 
-    private async Task AddAsync()
+    private async Task PlanAsync()
     {
         if (saving)
             return;
-        saving = true;
-        error = null;
-
-        try
-        {
-            var workout = new Workout
-            {
-                Id = Guid.NewGuid(),
-                Date = form.Date,
-                SessionNumber = WorkoutEditing.NextSessionNumber(workouts ?? []),
-                Status = form.Date < Today ? WorkoutStatus.Skipped : WorkoutStatus.Planned,
-                Note = string.IsNullOrWhiteSpace(form.Note) ? null : form.Note.Trim(),
-            };
-            await Repository.SaveAsync(workout.Id, workout);
-            Navigation.NavigateTo($"workouts/{workout.Id}");
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Could not save workout");
-            error = L["Home.SaveFailed"];
-        }
-        finally
-        {
-            saving = false;
-        }
-    }
-
-    private async Task PlanAsync()
-    {
-        if (saving || chosen is not { } template)
-            return;
+        var template = chosen;
         saving = true;
         error = null;
         try
         {
-            var plan = WorkoutEditing.WithDerivedStatus(
-                Planning.PlanFrom(template, Guid.NewGuid(), planDate, WorkoutEditing.NextSessionNumber(workouts ?? []), workouts ?? []), Today);
+            var plan = Planning.PlanFrom(template, Guid.NewGuid(), planDate, WorkoutEditing.NextSessionNumber(workouts ?? []), workouts ?? []);
+            if (template.Id == Guid.Empty)
+                plan = plan with { TemplateId = null };
+            plan = WorkoutEditing.WithDerivedStatus(plan, Today);
             await Repository.SaveAsync(plan.Id, plan);
             Navigation.NavigateTo($"workouts/{plan.Id}");
         }

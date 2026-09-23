@@ -123,4 +123,5 @@
   <data name="Next.FromTemplate" xml:space="preserve"><value>Plan from template</value></data>
   <data name="Next.PlanNext" xml:space="preserve"><value>Plan next workout</value></data>
   <data name="Home.MoreWeeks" xml:space="preserve"><value>Show more weeks ({0} older)</value></data>
+  <data name="Next.Empty" xml:space="preserve"><value>Empty workout</value></data>
 </root>
