@@ -66,7 +66,8 @@ public class HomeTests : ClientTestContext
             link.QuerySelector("[data-testid=workout-icon]")!.GetAttribute("src").ShouldBe(Kropp.Client.Components.ExerciseIllustrations.Picture("squat"));
             link.TextContent.ShouldNotContain("Nr 101");
             link.TextContent.ShouldContain("2 övningar");
-            link.TextContent.ShouldContain("Påbörjat");
+            // Half logged, but its day has passed: it is over.
+            link.TextContent.ShouldContain("Genomfört");
         });
     }
 

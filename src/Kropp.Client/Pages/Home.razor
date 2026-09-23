@@ -84,7 +84,7 @@ else if (upcoming is not null)
                         {
                             var name = ExerciseCategories.WorkoutName(workout, exercises, L);
                             var icon = ExerciseCategories.IconFor(workout, exercises);
-                            var status = WorkoutEditing.StatusOf(workout);
+                            var status = WorkoutEditing.StatusOf(workout, Today);
                             <li @key="workout.Id">
                                 <a href="workouts/@workout.Id" class="flex items-center gap-3 rounded-xl border border-gray-200 bg-white px-3 py-2.5 hover:bg-gray-50 focus-visible:outline-2 focus-visible:outline-blue-500 dark:border-gray-800 dark:bg-gray-900 dark:hover:bg-gray-800">
                                     <span class="size-12 shrink-0 overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800" aria-hidden="true">
@@ -187,7 +187,7 @@ else if (upcoming is not null)
             var plan = Planning.PlanFrom(template, Guid.NewGuid(), planDate, WorkoutEditing.NextSessionNumber(workouts ?? []), workouts ?? []);
             if (template.Id == Guid.Empty)
                 plan = plan with { TemplateId = null };
-            plan = WorkoutEditing.WithDerivedStatus(plan);
+            plan = WorkoutEditing.WithDerivedStatus(plan, Today);
             await Repository.SaveAsync(plan.Id, plan);
             Navigation.NavigateTo($"workouts/{plan.Id}");
         }

@@ -76,12 +76,23 @@ public class WorkoutEditingTests
     {
         var entry = Entry(Bench, [.. Enumerable.Repeat(new SetResult { Reps = 8 }, sets)]);
 
-        WorkoutEditing.StatusOf(Workout(new DateOnly(2026, 9, 23), status: WorkoutStatus.Planned, entries: entry)).ShouldBe(expected);
+        WorkoutEditing.StatusOf(Workout(new DateOnly(2026, 9, 23), status: WorkoutStatus.Planned, entries: entry), new DateOnly(2026, 9, 23)).ShouldBe(expected);
     }
 
     [Fact]
     public void A_plan_stays_planned_after_its_day_and_never_turns_skipped() =>
-        WorkoutEditing.StatusOf(Workout(new DateOnly(2020, 1, 1), status: WorkoutStatus.Skipped, entries: Entry(Bench))).ShouldBe(WorkoutStatus.Planned);
+        WorkoutEditing.StatusOf(Workout(new DateOnly(2020, 1, 1), status: WorkoutStatus.Skipped, entries: Entry(Bench)), new DateOnly(2026, 9, 23)).ShouldBe(WorkoutStatus.Planned);
+
+    [Fact]
+    public void A_started_workout_is_done_once_its_day_has_passed()
+    {
+        var day = new DateOnly(2026, 9, 21);
+        var started = Workout(day, entries: [Entry(Bench, new SetResult { Reps = 8 }), Entry(Bench)]);
+
+        WorkoutEditing.StatusOf(started, day).ShouldBe(WorkoutStatus.InProgress);
+        WorkoutEditing.StatusOf(started, day.AddDays(1)).ShouldBe(WorkoutStatus.Done);
+        WorkoutEditing.StatusOf(Workout(day, entries: [Entry(Bench)]), day.AddDays(1)).ShouldBe(WorkoutStatus.Planned);
+    }
 
     [Fact]
     public void A_workout_is_done_when_every_exercise_is_finished_or_skipped()
@@ -89,10 +100,10 @@ public class WorkoutEditingTests
         var walk = new WorkoutExercise { ExerciseId = Guid.NewGuid(), DurationMinutes = 20 };
         var started = Entry(Bench, new SetResult { Reps = 8 });
 
-        WorkoutEditing.StatusOf(Workout(default, entries: [walk])).ShouldBe(WorkoutStatus.Done);
-        WorkoutEditing.StatusOf(Workout(default, entries: [walk, started])).ShouldBe(WorkoutStatus.InProgress);
-        WorkoutEditing.StatusOf(Workout(default, entries: [walk, started with { IsSkipped = true }, Entry(Bench) with { IsSkipped = true }])).ShouldBe(WorkoutStatus.Done);
-        WorkoutEditing.StatusOf(Workout(default, entries: [Entry(Bench) with { IsSkipped = true }])).ShouldBe(WorkoutStatus.Planned);
+        WorkoutEditing.StatusOf(Workout(default, entries: [walk]), default).ShouldBe(WorkoutStatus.Done);
+        WorkoutEditing.StatusOf(Workout(default, entries: [walk, started]), default).ShouldBe(WorkoutStatus.InProgress);
+        WorkoutEditing.StatusOf(Workout(default, entries: [walk, started with { IsSkipped = true }, Entry(Bench) with { IsSkipped = true }]), default).ShouldBe(WorkoutStatus.Done);
+        WorkoutEditing.StatusOf(Workout(default, entries: [Entry(Bench) with { IsSkipped = true }]), default).ShouldBe(WorkoutStatus.Planned);
     }
 
     [Fact]

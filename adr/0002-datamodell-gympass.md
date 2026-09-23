@@ -32,7 +32,9 @@ Två aggregat, båda i `Kropp.Shared/Training`:
   `SessionNumber`, `Status` (Planned, InProgress, Done), `Note` och en ordnad lista `WorkoutExercise`.
   Status väljs inte, den räknas fram (`WorkoutEditing.StatusOf`): inget loggat ger Planned, även
   när dagen har passerat; något loggat ger InProgress ("Påbörjat") tills varje övning är klar
-  eller överhoppad, och då Done. Den sparas ändå, så att listan och servern kan läsa den utan att
+  eller överhoppad, och då Done. När dagen har passerat ger något loggat alltid Done: passet är
+  över, även om inte varje planerat set loggades. Så ser det mesta ut som importerades från
+  Numbers. Den sparas ändå, så att listan och servern kan läsa den utan att
   räkna om. Skipped ("Inte gjort") räknas inte fram längre sedan 2026-09-23, men finns kvar i
   enumen så att pass som sparats med den går att läsa.
   - mål: `TargetSets`, `TargetReps`, `TargetWeightKg`, `TargetSeconds`

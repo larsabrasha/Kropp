@@ -3,6 +3,7 @@
 @inject LocalRepository Repository
 @inject SyncEngine Engine
 @inject WorkoutTrash Trash
+@inject TimeProvider Time
 @inject NavigationManager Navigation
 @inject ILogger<WorkoutPage> Logger
 @inject IJSRuntime JS
@@ -39,7 +40,7 @@ else
         <div class="min-w-0 flex-1">
             <div class="flex items-start justify-between gap-2">
                 <h1 class="min-w-0 break-words text-xl font-semibold leading-tight">@Title</h1>
-                <span class="mt-0.5"><StatusBadge Status="WorkoutEditing.StatusOf(workout)" /></span>
+                <span class="mt-0.5"><StatusBadge Status="WorkoutEditing.StatusOf(workout, Today)" /></span>
             </div>
             <button type="button" @onclick="ToggleDetails" aria-expanded="@(editingDetails ? "true" : "false")" data-testid="workout-meta"
                     class="mt-0.5 block max-w-full text-left text-sm text-gray-500 underline decoration-gray-300 decoration-dotted underline-offset-4 hover:text-gray-700 dark:text-gray-400 dark:decoration-gray-600 dark:hover:text-gray-200">
@@ -99,6 +100,7 @@ else
     [Parameter] public Guid Id { get; set; }
 
     private bool loaded;
+    private DateOnly Today => DateOnly.FromDateTime(Time.GetLocalNow().DateTime);
     private Workout? workout;
     private bool deleting;
     private List<Workout> workouts = [];
@@ -229,7 +231,7 @@ else
 
     private async Task SaveAsync(Workout next)
     {
-        next = WorkoutEditing.WithDerivedStatus(next);
+        next = WorkoutEditing.WithDerivedStatus(next, Today);
         var exercisesChanged = workout is null || !workout.Exercises.Select(e => e.ExerciseId).ToHashSet().SetEquals(next.Exercises.Select(e => e.ExerciseId));
         var previous = workout;
         workout = next;

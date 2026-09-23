@@ -160,7 +160,7 @@ public class PlanningTests
 
         var walk = plan.Exercises[0];
         (walk.TargetDurationMinutes, walk.DurationMinutes, walk.Settings).ShouldBe((5m, (decimal?)null, "60"));
-        WorkoutEditing.StatusOf(plan).ShouldBe(WorkoutStatus.Planned);
+        WorkoutEditing.StatusOf(plan, plan.Date).ShouldBe(WorkoutStatus.Planned);
     }
 
     [Fact]
@@ -193,7 +193,7 @@ public class PlanningTests
             Exercises = [new WorkoutExercise { ExerciseId = Bench.Id, TargetSets = 3, Sets = [new SetResult { Reps = 8 }] }],
         };
 
-        WorkoutEditing.StatusOf(begun).ShouldBe(WorkoutStatus.InProgress);
+        WorkoutEditing.StatusOf(begun, begun.Date).ShouldBe(WorkoutStatus.InProgress);
         Planning.Upcoming([begun], Wednesday).ShouldBe(begun);
         Planning.SuggestDate([begun], Wednesday, UserSettings.Default).ShouldBe(new DateOnly(2026, 9, 25));
     }

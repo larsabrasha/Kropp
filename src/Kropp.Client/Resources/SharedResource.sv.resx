@@ -92,7 +92,7 @@
   <data name="Entry.Categories" xml:space="preserve"><value>Kategorier</value></data>
   <data name="Picker.Categories" xml:space="preserve"><value>Tränar (minst en)</value></data>
   <data name="Home.Week" xml:space="preserve"><value>Vecka {0}</value></data>
-  <data name="Next.Heading" xml:space="preserve"><value>Nästa pass</value></data>
+  <data name="Next.Heading" xml:space="preserve"><value>Aktuellt pass</value></data>
   <data name="Next.Open" xml:space="preserve"><value>Öppna</value></data>
   <data name="Next.Plan" xml:space="preserve"><value>Lägg till</value></data>
   <data name="Next.Templates" xml:space="preserve"><value>Mallar</value></data>

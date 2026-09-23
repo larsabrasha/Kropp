@@ -63,7 +63,7 @@ public static class Planning
     public static WorkoutTemplate? SuggestTemplate(IReadOnlyList<WorkoutTemplate> templates, IEnumerable<Workout> workouts, Func<Guid, Exercise?> exercise, DateOnly today)
     {
         var history = workouts.ToList();
-        var planned = history.Where(w => w.TemplateId is not null && WorkoutEditing.StatusOf(w) == WorkoutStatus.Planned && w.Date >= today).ToList();
+        var planned = history.Where(w => w.TemplateId is not null && WorkoutEditing.StatusOf(w, today) == WorkoutStatus.Planned && w.Date >= today).ToList();
         DateOnly? PlannedFor(WorkoutTemplate t) => planned.Where(w => w.TemplateId == t.Id).Select(w => (DateOnly?)w.Date).Max();
         return templates
             .Select((t, i) => (t, i, last: Max(LastDone(t, history, exercise, today), PlannedFor(t)) ?? DateOnly.MinValue))
@@ -104,7 +104,7 @@ public static class Planning
     /// <summary>The earliest planned workout from today on, which the suggestion then is.</summary>
     public static Workout? Upcoming(IEnumerable<Workout> workouts, DateOnly today) =>
         workouts
-            .Where(w => w.Date >= today && WorkoutEditing.StatusOf(w) is WorkoutStatus.Planned or WorkoutStatus.InProgress)
+            .Where(w => w.Date >= today && WorkoutEditing.StatusOf(w, today) is WorkoutStatus.Planned or WorkoutStatus.InProgress)
             .OrderBy(w => w.Date)
             .ThenBy(w => w.SessionNumber)
             .FirstOrDefault();

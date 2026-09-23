@@ -92,7 +92,7 @@
   <data name="Entry.Categories" xml:space="preserve"><value>Categories</value></data>
   <data name="Picker.Categories" xml:space="preserve"><value>Trains (at least one)</value></data>
   <data name="Home.Week" xml:space="preserve"><value>Week {0}</value></data>
-  <data name="Next.Heading" xml:space="preserve"><value>Next workout</value></data>
+  <data name="Next.Heading" xml:space="preserve"><value>Current workout</value></data>
   <data name="Next.Open" xml:space="preserve"><value>Open</value></data>
   <data name="Next.Plan" xml:space="preserve"><value>Add</value></data>
   <data name="Next.Templates" xml:space="preserve"><value>Templates</value></data>

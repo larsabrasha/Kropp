@@ -8,19 +8,21 @@ public static class WorkoutEditing
 {
     /// <summary>
     /// The status follows from what was logged, so there is nothing to tick: nothing recorded is a
-    /// plan, whatever the date; something recorded is in progress until every exercise is finished.
+    /// plan, whatever the date; something recorded is in progress until every exercise is finished,
+    /// and done once its day has passed. A workout of an earlier day is over, even if not every
+    /// planned set was logged, as in most of the log imported from Numbers.
     /// </summary>
-    public static WorkoutStatus StatusOf(Workout workout) =>
+    public static WorkoutStatus StatusOf(Workout workout, DateOnly today) =>
         !workout.Exercises.Any(HasResult) ? WorkoutStatus.Planned
-        : CurrentEntry(workout) is null ? WorkoutStatus.Done
+        : workout.Date < today || CurrentEntry(workout) is null ? WorkoutStatus.Done
         : WorkoutStatus.InProgress;
 
     /// <summary>Started or done: the workout happened, which is what planning counts.</summary>
     public static bool HasHappened(Workout workout) => workout.Exercises.Any(HasResult);
 
     /// <summary>The workout with its stored status brought in line with <see cref="StatusOf"/>.</summary>
-    public static Workout WithDerivedStatus(Workout workout) =>
-        workout with { Status = StatusOf(workout) };
+    public static Workout WithDerivedStatus(Workout workout, DateOnly today) =>
+        workout with { Status = StatusOf(workout, today) };
 
     /// <summary>
     /// The body areas a workout trains, most exercises first, for naming it. Cardio is left out:
