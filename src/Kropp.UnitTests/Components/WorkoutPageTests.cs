@@ -113,6 +113,31 @@ public class WorkoutPageTests : ClientTestContext
     }
 
     [Fact]
+    public async Task Cardio_is_adjusted_with_the_same_buttons()
+    {
+        var walk = new Exercise { Id = Guid.NewGuid(), Name = "Gång i maskin", Kind = ExerciseKind.Cardio };
+        await Repository.SaveAsync(walk.Id, walk);
+        var workout = await SeedAsync(new Workout
+        {
+            Id = Guid.NewGuid(), Date = new DateOnly(2026, 9, 23),
+            Exercises = [new WorkoutExercise { ExerciseId = walk.Id, DurationMinutes = 3.5m, Settings = "60" }],
+        });
+        var page = Render<WorkoutPage>(p => p.Add(x => x.Id, workout.Id));
+        page.WaitForElement("[data-testid=target]").Click();
+
+        var editor = page.Find("[data-testid=target-editor]");
+        editor.QuerySelectorAll("input:not([type=number])").ShouldBeEmpty();
+        StepperFor(editor, "Minuter").QuerySelector("[data-testid=increase]")!.Click();
+        StepperFor(page.Find("[data-testid=target-editor]"), "km").QuerySelector("[data-testid=increase]")!.Click();
+        StepperFor(page.Find("[data-testid=target-editor]"), "Snittpuls").QuerySelector("[data-testid=increase]")!.Click();
+
+        page.WaitForAssertion(() => page.Find("[data-testid=target]").TextContent.Trim().ShouldBe("4 min · 1 km · 120 bpm · 60"));
+        var saved = (await ReloadAsync(workout.Id)).Exercises.Single();
+        (saved.DurationMinutes, saved.DistanceKm, saved.AvgHeartRate).ShouldBe((4m, 1m, 120));
+        (await ReloadAsync(workout.Id)).Status.ShouldBe(WorkoutStatus.Done);
+    }
+
+    [Fact]
     public async Task The_weight_step_is_chosen_per_exercise()
     {
         var workout = await SeedAsync(new Workout

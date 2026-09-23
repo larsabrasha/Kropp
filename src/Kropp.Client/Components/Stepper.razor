@@ -24,8 +24,14 @@
     [Parameter] public decimal Step { get; set; } = 1;
     [Parameter] public EventCallback<decimal?> Changed { get; set; }
 
+    /// <summary>What + gives an empty field, where one step from zero is no use (a pulse of 1).</summary>
+    [Parameter] public decimal? Start { get; set; }
+
     private Task Change(decimal delta)
     {
+        if (Value is null && delta > 0 && Start is { } start)
+            return Changed.InvokeAsync(start);
+
         // A step lands on the step's grid, so 21 + 2.5 is 22.5 rather than 23.5 after a typed value.
         var current = Value ?? 0;
         var next = delta > 0

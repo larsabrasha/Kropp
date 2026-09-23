@@ -68,12 +68,12 @@
     @if (panel == Panel.Targets)
     {
         <div class="mt-2 rounded-lg bg-gray-50 p-2 dark:bg-gray-900" data-testid="target-editor">
-            <div class="@(Kind == ExerciseKind.Cardio ? "grid grid-cols-3 gap-2" : "flex flex-col gap-2")">
+            <div class="flex flex-col gap-2">
                 @if (Kind == ExerciseKind.Cardio)
                 {
-                    <NumberField Label="@L["Entry.Minutes"]" Value="@TrainingText.Invariant(Entry.DurationMinutes)" Step="0.5" Changed="v => Change(Entry with { DurationMinutes = TrainingText.ParseDecimal(v) })" />
-                    <NumberField Label="@L["Entry.Km"]" Value="@TrainingText.Invariant(Entry.DistanceKm)" Step="0.01" Changed="v => Change(Entry with { DistanceKm = TrainingText.ParseDecimal(v) })" />
-                    <NumberField Label="@L["Entry.Pulse"]" Value="@TrainingText.Invariant(Entry.AvgHeartRate)" Changed="v => Change(Entry with { AvgHeartRate = TrainingText.ParseInt(v) })" />
+                    <Stepper Label="@L["Entry.Minutes"]" Value="Entry.DurationMinutes" Step="0.5m" Start="5" Changed="v => Change(Entry with { DurationMinutes = v })" />
+                    <Stepper Label="@L["Entry.Km"]" Value="Entry.DistanceKm" Step="0.1m" Start="1" Changed="v => Change(Entry with { DistanceKm = v })" />
+                    <Stepper Label="@L["Entry.Pulse"]" Value="Entry.AvgHeartRate" Start="120" Changed="v => Change(Entry with { AvgHeartRate = ToInt(v) })" />
                 }
                 else
                 {
