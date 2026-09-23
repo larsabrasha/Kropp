@@ -4,6 +4,7 @@
 @inject SyncEngine Engine
 @inject NavigationManager Navigation
 @inject ILogger<WorkoutPage> Logger
+@inject IJSRuntime JS
 
 <PageTitle>@L["App.Title"]</PageTitle>
 
@@ -141,6 +142,11 @@ else
     private int? activeEntry;
     private bool editingDetails;
 
+    // The workout whose first render has been scrolled to the top. The page is reused when only the
+    // id changes ("Kopiera som ny plan" is at the bottom), and a reload lets the browser restore an
+    // old position; either way a workout should open at its top.
+    private Guid? scrolledFor;
+
     private void ToggleDetails() => editingDetails = !editingDetails;
 
     private string DetailsText
@@ -168,7 +174,29 @@ else
     protected override async Task OnParametersSetAsync()
     {
         if (loaded && workout?.Id != Id)
+        {
+            activeEntry = null;
+            editingDetails = false;
+            picking = false;
+            confirmingDelete = false;
             await LoadAsync();
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!loaded || scrolledFor == Id)
+            return;
+        scrolledFor = Id;
+        try
+        {
+            await using var module = await JS.InvokeAsync<IJSObjectReference>("import", "./js/kropp-ui.js");
+            await module.InvokeVoidAsync("scrollToTop");
+        }
+        catch (JSException ex)
+        {
+            Logger.LogDebug(ex, "Could not scroll to the top");
+        }
     }
 
     private async Task LoadAsync()

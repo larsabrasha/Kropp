@@ -235,6 +235,24 @@ public class WorkoutPageTests : ClientTestContext
     }
 
     [Fact]
+    public async Task A_workout_opens_scrolled_to_the_top_also_when_the_page_is_reused()
+    {
+        var module = JSInterop.SetupModule("./js/kropp-ui.js");
+        module.SetupVoid("scrollToTop");
+        var first = await SeedAsync(new Workout { Id = Guid.NewGuid(), Date = new DateOnly(2026, 9, 21) });
+        var second = await SeedAsync(new Workout { Id = Guid.NewGuid(), Date = new DateOnly(2026, 9, 23) });
+
+        var page = Render<WorkoutPage>(p => p.Add(x => x.Id, first.Id));
+        page.WaitForAssertion(() => module.VerifyInvoke("scrollToTop", calledTimes: 1));
+
+        page.Render(p => p.Add(x => x.Id, second.Id));
+        page.WaitForAssertion(() => module.VerifyInvoke("scrollToTop", calledTimes: 2));
+
+        page.Render(p => p.Add(x => x.Id, second.Id));
+        module.VerifyInvoke("scrollToTop", calledTimes: 2);
+    }
+
+    [Fact]
     public async Task Marking_the_workout_done_saves_the_status()
     {
         var workout = await SeedAsync(new Workout { Id = Guid.NewGuid(), Date = new DateOnly(2026, 9, 23) });
