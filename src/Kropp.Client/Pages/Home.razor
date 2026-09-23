@@ -82,33 +82,7 @@ else if (upcoming is not null)
                     <ul class="flex flex-col gap-2">
                         @foreach (var workout in week.Workouts)
                         {
-                            var name = ExerciseCategories.WorkoutName(workout, exercises, L);
-                            var icon = ExerciseCategories.IconFor(workout, exercises);
-                            var status = WorkoutEditing.StatusOf(workout, Today);
-                            <li @key="workout.Id">
-                                <a href="workouts/@workout.Id" class="flex items-center gap-3 rounded-xl border border-gray-200 bg-white px-3 py-2.5 hover:bg-gray-50 focus-visible:outline-2 focus-visible:outline-blue-500 dark:border-gray-800 dark:bg-gray-900 dark:hover:bg-gray-800">
-                                    <span class="size-12 shrink-0 overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800" aria-hidden="true">
-                                        @if (icon is not null)
-                                        {
-                                            <img src="@ExerciseIllustrations.Picture(icon)" alt="" class="illustration size-full object-contain p-1" data-testid="workout-icon" />
-                                        }
-                                    </span>
-                                    <span class="min-w-0 flex-1">
-                                        <span class="flex items-baseline justify-between gap-2">
-                                            <span class="truncate font-semibold" data-testid="workout-name">@(name ?? workout.Note ?? L["Home.Heading"])</span>
-                                            <StatusBadge Status="status" />
-                                        </span>
-                                        <span class="block truncate text-sm text-gray-500 dark:text-gray-400" data-testid="workout-meta">
-                                            <span class="first-letter:uppercase inline-block">@workout.Date.ToString("dddd d MMM")</span>
-                                            <span> · @(workout.Exercises.Count == 1 ? L["Home.ExerciseCountOne"] : L["Home.ExerciseCount", workout.Exercises.Count])</span>
-                                            @if (name is not null && !string.IsNullOrWhiteSpace(workout.Note))
-                                            {
-                                                <span> · @workout.Note</span>
-                                            }
-                                        </span>
-                                    </span>
-                                </a>
-                            </li>
+                            <li @key="workout.Id"><WorkoutRow Workout="workout" Exercises="exercises" Today="Today" /></li>
                         }
                     </ul>
                 </section>

@@ -1,0 +1,38 @@
+@* One workout as a link, the same row on the home page and in the calendar. *@
+
+@{
+    var name = ExerciseCategories.WorkoutName(Workout, Exercises, L);
+    var icon = ExerciseCategories.IconFor(Workout, Exercises);
+    var status = WorkoutEditing.StatusOf(Workout, Today);
+}
+<a href="@(Href ?? $"workouts/{Workout.Id}")" class="flex items-center gap-3 rounded-xl border border-gray-200 bg-white px-3 py-2.5 hover:bg-gray-50 focus-visible:outline-2 focus-visible:outline-blue-500 dark:border-gray-800 dark:bg-gray-900 dark:hover:bg-gray-800">
+    <span class="size-12 shrink-0 overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800" aria-hidden="true">
+        @if (icon is not null)
+        {
+            <img src="@ExerciseIllustrations.Picture(icon)" alt="" class="illustration size-full object-contain p-1" data-testid="workout-icon" />
+        }
+    </span>
+    <span class="min-w-0 flex-1">
+        <span class="flex items-baseline justify-between gap-2">
+            <span class="truncate font-semibold" data-testid="workout-name">@(name ?? Workout.Note ?? L["Home.Heading"])</span>
+            <StatusBadge Status="status" />
+        </span>
+        <span class="block truncate text-sm text-gray-500 dark:text-gray-400" data-testid="workout-meta">
+            <span class="first-letter:uppercase inline-block">@Workout.Date.ToString("dddd d MMM")</span>
+            <span> · @(Workout.Exercises.Count == 1 ? L["Home.ExerciseCountOne"] : L["Home.ExerciseCount", Workout.Exercises.Count])</span>
+            @if (name is not null && !string.IsNullOrWhiteSpace(Workout.Note))
+            {
+                <span> · @Workout.Note</span>
+            }
+        </span>
+    </span>
+</a>
+
+@code {
+    [Parameter, EditorRequired] public Workout Workout { get; set; } = null!;
+    [Parameter, EditorRequired] public IReadOnlyDictionary<Guid, Exercise> Exercises { get; set; } = null!;
+    [Parameter, EditorRequired] public DateOnly Today { get; set; }
+
+    /// <summary>Where the row leads; the workout itself unless given.</summary>
+    [Parameter] public string? Href { get; set; }
+}

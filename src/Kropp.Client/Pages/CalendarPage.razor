@@ -1,0 +1,259 @@
+@page "/calendar"
+@implements IDisposable
+@inject LocalRepository Repository
+@inject SyncEngine Engine
+@inject NavigationManager Navigation
+@inject TimeProvider Time
+@inject ILogger<CalendarPage> Logger
+
+<PageTitle>@L["App.Title"]</PageTitle>
+
+<a href="" class="mb-1 inline-flex items-center gap-1 rounded-lg py-2 pr-2 text-sm text-blue-700 hover:underline dark:text-blue-300">
+    <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M15 18l-6-6 6-6" /></svg>
+    @L["Workout.Back"]
+</a>
+<h1 class="sr-only">@L["Calendar.Heading"]</h1>
+
+@* Year and month steppers around the month's name; "today" returns to the current month. *@
+<div class="flex items-center gap-1" data-testid="calendar-nav">
+    @StepButton(-12, L["Calendar.PreviousYear"], "M18 17l-5-5 5-5M11 17l-5-5 5-5", "previous-year")
+    @StepButton(-1, L["Calendar.PreviousMonth"], "M15 18l-6-6 6-6", "previous-month")
+    <h2 class="min-w-0 flex-1 truncate text-center text-lg font-semibold first-letter:uppercase" aria-live="polite" data-testid="month">@month.ToString("MMMM yyyy")</h2>
+    @StepButton(1, L["Calendar.NextMonth"], "M9 18l6-6-6-6", "next-month")
+    @StepButton(12, L["Calendar.NextYear"], "M6 17l5-5-5-5M13 17l5-5-5-5", "next-year")
+</div>
+@if (month != FirstOfMonth(Today))
+{
+    <div class="flex justify-center">
+        <button type="button" @onclick="() => Show(FirstOfMonth(Today), null)" data-testid="this-month"
+                class="min-h-9 rounded-lg px-3 text-sm font-medium text-blue-700 hover:bg-blue-50 focus-visible:outline-2 focus-visible:outline-blue-500 dark:text-blue-300 dark:hover:bg-blue-950">
+            @L["Calendar.ThisMonth"]
+        </button>
+    </div>
+}
+
+<div class="mt-2 rounded-xl border border-gray-200 bg-white p-2 dark:border-gray-800 dark:bg-gray-900">
+    <div class="grid grid-cols-[1.75rem_repeat(7,minmax(0,1fr))] gap-y-1 text-center" role="grid" aria-label="@month.ToString("MMMM yyyy")" data-testid="calendar">
+        <div role="row" class="contents">
+            <span role="columnheader" class="py-1 text-xs text-gray-400 dark:text-gray-500">@L["Calendar.WeekShort"]</span>
+            @foreach (var day in WeekDays)
+            {
+                <span role="columnheader" class="py-1 text-xs font-medium text-gray-500 dark:text-gray-400">@day</span>
+            }
+        </div>
+        @foreach (var monday in Mondays)
+        {
+            <div role="row" class="contents" @key="monday">
+                <span role="rowheader" class="flex items-center justify-center text-xs text-gray-400 dark:text-gray-500">@Planning.WeekNumber(monday)</span>
+                @for (var i = 0; i < 7; i++)
+                {
+                    var date = monday.AddDays(i);
+                    RenderDay(__builder, date);
+                }
+            </div>
+        }
+    </div>
+</div>
+
+<section class="mt-5">
+    @if (workouts is null)
+    {
+        <p class="text-sm text-gray-500 dark:text-gray-400">@L["Common.Loading"]</p>
+    }
+    else if (error is not null)
+    {
+        <p class="text-sm text-red-600 dark:text-red-400" role="alert">@error</p>
+    }
+    else if (Shown.Count == 0)
+    {
+        <div class="flex flex-col items-center gap-3 rounded-xl border border-dashed border-gray-300 px-4 py-8 text-center text-gray-500 dark:border-gray-700 dark:text-gray-400" data-testid="calendar-empty">
+            <svg class="size-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 10h18M8 3v4M16 3v4" /></svg>
+            <p>@L["Calendar.Empty", month.ToString("MMMM")]</p>
+        </div>
+    }
+    else
+    {
+        <div class="mb-2 flex min-h-9 items-center justify-between gap-2 pl-inset">
+            <h3 class="text-sm font-semibold first-letter:uppercase" data-testid="shown-heading">
+                @(selected is { } day ? day.ToString("dddd d MMMM") : L["Calendar.AllInMonth", month.ToString("MMMM"), Shown.Count])
+            </h3>
+            @if (selected is not null)
+            {
+                <button type="button" @onclick="() => Show(month, null)" data-testid="whole-month"
+                        class="rounded-lg px-3 py-1.5 text-sm font-medium text-blue-700 hover:bg-blue-50 focus-visible:outline-2 focus-visible:outline-blue-500 dark:text-blue-300 dark:hover:bg-blue-950">
+                    @L["Calendar.WholeMonth"]
+                </button>
+            }
+        </div>
+        <ul class="flex flex-col gap-2" data-testid="calendar-workouts">
+            @foreach (var workout in Shown)
+            {
+                <li @key="workout.Id"><WorkoutRow Workout="workout" Exercises="exercises" Today="Today" Href="@WorkoutHref(workout)" /></li>
+            }
+        </ul>
+    }
+</section>
+
+@code {
+    // The month and the day are in the address, so that the way back from a workout lands here again.
+    [SupplyParameterFromQuery(Name = "month")] public string? MonthParameter { get; set; }
+    [SupplyParameterFromQuery(Name = "day")] public string? DayParameter { get; set; }
+
+    private DateOnly Today => DateOnly.FromDateTime(Time.GetLocalNow().DateTime);
+    private List<Workout>? workouts;
+    private Dictionary<DateOnly, List<Workout>> byDay = [];
+    private Dictionary<Guid, Exercise> exercises = [];
+    private string? error;
+
+    /// <summary>The first day of the month shown.</summary>
+    private DateOnly month;
+    private DateOnly? selected;
+
+    private static readonly DateOnly FirstMonth = FirstOfMonth(Limits.FirstDate);
+    private static readonly DateOnly LastMonth = FirstOfMonth(Limits.LastDate);
+
+    protected override async Task OnInitializedAsync()
+    {
+        Repository.Changed += OnDataChanged;
+        Engine.DataChanged += OnDataChanged;
+        await LoadAsync();
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (DateOnly.TryParseExact(DayParameter, "yyyy-MM-dd", out var day) && Limits.IsInRange(day))
+            (month, selected) = (FirstOfMonth(day), day);
+        else if (DateOnly.TryParseExact(MonthParameter, "yyyy-MM", out var first) && Limits.IsInRange(first))
+            (month, selected) = (first, null);
+        else
+            (month, selected) = (FirstOfMonth(Today), null);
+    }
+
+    private async Task LoadAsync()
+    {
+        try
+        {
+            exercises = (await Repository.GetAllAsync<Exercise>()).ToDictionary(e => e.Id);
+            workouts = [.. (await Repository.GetAllAsync<Workout>()).OrderBy(w => w.Date).ThenBy(w => w.SessionNumber)];
+            byDay = workouts.GroupBy(w => w.Date).ToDictionary(g => g.Key, g => g.ToList());
+            error = null;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Could not read workouts");
+            workouts = [];
+            byDay = [];
+            error = L["Home.LoadFailed"];
+        }
+    }
+
+    /// <summary>The workouts under the calendar: the chosen day's, or the whole month's.</summary>
+    private List<Workout> Shown => selected is { } day
+        ? byDay.GetValueOrDefault(day) ?? []
+        : [.. (workouts ?? []).Where(w => w.Date.Year == month.Year && w.Date.Month == month.Month)];
+
+    private static DateOnly FirstOfMonth(DateOnly date) => new(date.Year, date.Month, 1);
+
+    // Weeks run Monday to Sunday, as on the home page.
+    private IEnumerable<DateOnly> Mondays
+    {
+        get
+        {
+            var last = month.AddMonths(1).AddDays(-1);
+            for (var monday = Planning.MondayOf(month); monday <= last; monday = monday.AddDays(7))
+                yield return monday;
+        }
+    }
+
+    private static IEnumerable<string> WeekDays
+    {
+        get
+        {
+            var names = System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.ShortestDayNames;
+            return Enumerable.Range(1, 7).Select(i => names[i % 7]);
+        }
+    }
+
+    private void Step(int months)
+    {
+        var target = month.AddMonths(months);
+        Show(target < FirstMonth ? FirstMonth : target > LastMonth ? LastMonth : target, null);
+    }
+
+    private void Show(DateOnly first, DateOnly? day)
+    {
+        (month, selected) = (first, day);
+        // Replace, not push: stepping through months should not fill the history.
+        var query = new Dictionary<string, object?>
+        {
+            ["month"] = day is null && first != FirstOfMonth(Today) ? first.ToString("yyyy-MM") : null,
+            ["day"] = day?.ToString("yyyy-MM-dd"),
+        };
+        Navigation.NavigateTo(Navigation.GetUriWithQueryParameters(query), replace: true);
+    }
+
+    private void Toggle(DateOnly day) => Show(month, selected == day ? null : day);
+
+    private string WorkoutHref(Workout workout) =>
+        $"workouts/{workout.Id}?back={Uri.EscapeDataString(selected is { } day ? $"calendar?day={day:yyyy-MM-dd}" : $"calendar?month={month:yyyy-MM}")}";
+
+    private static string DotColour(WorkoutStatus status) => status switch
+    {
+        WorkoutStatus.InProgress => "bg-amber-500",
+        WorkoutStatus.Done => "bg-green-600 dark:bg-green-500",
+        _ => "bg-blue-500",
+    };
+
+    private RenderFragment StepButton(int months, string label, string path, string testId)
+    {
+        var disabled = months < 0 ? month <= FirstMonth : month >= LastMonth;
+        return @<button type="button" @onclick="() => Step(months)" disabled="@disabled" aria-label="@label" title="@label" data-testid="@testId"
+                        class="flex size-11 shrink-0 items-center justify-center rounded-lg text-gray-700 hover:bg-gray-200 focus-visible:outline-2 focus-visible:outline-blue-500 disabled:opacity-30 dark:text-gray-300 dark:hover:bg-gray-800">
+                    <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="@path" /></svg>
+                </button>;
+    }
+
+    /// <summary>A day: a button when it has workouts, plain text when it has none or lies outside the month.</summary>
+    private void RenderDay(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder, DateOnly date)
+    {
+        var inMonth = date.Month == month.Month;
+        var dayWorkouts = inMonth ? byDay.GetValueOrDefault(date) : null;
+        var isToday = date == Today;
+        var todayRing = isToday ? "ring-2 ring-inset ring-accent-600" : "";
+        if (dayWorkouts is { Count: > 0 })
+        {
+            var on = selected == date;
+            var label = $"{date:dddd d MMMM}: {(dayWorkouts.Count == 1 ? L["Calendar.OneWorkout"] : L["Calendar.Workouts", dayWorkouts.Count])}";
+            <span role="gridcell" class="flex justify-center">
+                <button type="button" @onclick="() => Toggle(date)" aria-pressed="@(on ? "true" : "false")" aria-label="@label" data-testid="day" data-date="@date.ToString("yyyy-MM-dd")"
+                        class="flex h-12 w-full max-w-12 flex-col items-center justify-center gap-1 rounded-lg font-semibold focus-visible:outline-2 focus-visible:outline-blue-500 @todayRing @(on ? "bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900" : "bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700")">
+                    <span class="text-sm leading-none">@date.Day</span>
+                    <span class="flex gap-0.5" aria-hidden="true">
+                        @foreach (var workout in dayWorkouts.Take(3))
+                        {
+                            <span class="size-1.5 rounded-full @DotColour(WorkoutEditing.StatusOf(workout, Today))" data-status="@WorkoutEditing.StatusOf(workout, Today)"></span>
+                        }
+                    </span>
+                </button>
+            </span>
+        }
+        else
+        {
+            <span role="gridcell" class="flex justify-center">
+                <span class="flex h-12 w-full max-w-12 items-center justify-center rounded-lg text-sm @todayRing @(inMonth ? "text-gray-700 dark:text-gray-300" : "text-gray-300 dark:text-gray-700")">@date.Day</span>
+            </span>
+        }
+    }
+
+    private void OnDataChanged() => _ = InvokeAsync(async () =>
+    {
+        await LoadAsync();
+        StateHasChanged();
+    });
+
+    public void Dispose()
+    {
+        Repository.Changed -= OnDataChanged;
+        Engine.DataChanged -= OnDataChanged;
+    }
+}

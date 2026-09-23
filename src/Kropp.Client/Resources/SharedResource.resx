@@ -164,4 +164,16 @@
   <data name="Trash.DeletedSoon" xml:space="preserve"><value>Deleted for good within a day</value></data>
   <data name="Next.PlanAnother" xml:space="preserve"><value>Add a workout</value></data>
   <data name="Next.HidePlanning" xml:space="preserve"><value>Hide planning</value></data>
+  <data name="Calendar.Heading" xml:space="preserve"><value>Calendar</value></data>
+  <data name="Calendar.PreviousYear" xml:space="preserve"><value>Previous year</value></data>
+  <data name="Calendar.NextYear" xml:space="preserve"><value>Next year</value></data>
+  <data name="Calendar.PreviousMonth" xml:space="preserve"><value>Previous month</value></data>
+  <data name="Calendar.NextMonth" xml:space="preserve"><value>Next month</value></data>
+  <data name="Calendar.ThisMonth" xml:space="preserve"><value>Back to this month</value></data>
+  <data name="Calendar.WeekShort" xml:space="preserve"><value>Wk</value></data>
+  <data name="Calendar.Empty" xml:space="preserve"><value>No workouts in {0}.</value></data>
+  <data name="Calendar.AllInMonth" xml:space="preserve"><value>All workouts in {0} ({1})</value></data>
+  <data name="Calendar.WholeMonth" xml:space="preserve"><value>Show the whole month</value></data>
+  <data name="Calendar.OneWorkout" xml:space="preserve"><value>1 workout</value></data>
+  <data name="Calendar.Workouts" xml:space="preserve"><value>{0} workouts</value></data>
 </root>

@@ -164,4 +164,16 @@
   <data name="Trash.DeletedSoon" xml:space="preserve"><value>Raderas för gott inom ett dygn</value></data>
   <data name="Next.PlanAnother" xml:space="preserve"><value>Lägg till ett träningspass</value></data>
   <data name="Next.HidePlanning" xml:space="preserve"><value>Dölj planeringen</value></data>
+  <data name="Calendar.Heading" xml:space="preserve"><value>Kalender</value></data>
+  <data name="Calendar.PreviousYear" xml:space="preserve"><value>Föregående år</value></data>
+  <data name="Calendar.NextYear" xml:space="preserve"><value>Nästa år</value></data>
+  <data name="Calendar.PreviousMonth" xml:space="preserve"><value>Föregående månad</value></data>
+  <data name="Calendar.NextMonth" xml:space="preserve"><value>Nästa månad</value></data>
+  <data name="Calendar.ThisMonth" xml:space="preserve"><value>Tillbaka till denna månad</value></data>
+  <data name="Calendar.WeekShort" xml:space="preserve"><value>v.</value></data>
+  <data name="Calendar.Empty" xml:space="preserve"><value>Inga pass i {0}.</value></data>
+  <data name="Calendar.AllInMonth" xml:space="preserve"><value>Alla pass i {0} ({1} st)</value></data>
+  <data name="Calendar.WholeMonth" xml:space="preserve"><value>Visa hela månaden</value></data>
+  <data name="Calendar.OneWorkout" xml:space="preserve"><value>1 pass</value></data>
+  <data name="Calendar.Workouts" xml:space="preserve"><value>{0} pass</value></data>
 </root>
