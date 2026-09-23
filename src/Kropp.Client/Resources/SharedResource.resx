@@ -119,7 +119,7 @@
   <data name="Templates.NotFound" xml:space="preserve"><value>This template does not exist, or has been deleted.</value></data>
   <data name="Templates.DeleteTemplate" xml:space="preserve"><value>Delete template</value></data>
   <data name="Templates.DeleteConfirm" xml:space="preserve"><value>Delete this template? Workouts planned from it stay.</value></data>
-  <data name="Next.Another" xml:space="preserve"><value>Plan another</value></data>
+  <data name="Next.Another" xml:space="preserve"><value>Plan a workout</value></data>
   <data name="Next.FromTemplate" xml:space="preserve"><value>Plan from template</value></data>
   <data name="Next.PlanNext" xml:space="preserve"><value>Plan next workout</value></data>
 </root>

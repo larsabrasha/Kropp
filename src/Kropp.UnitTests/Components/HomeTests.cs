@@ -171,7 +171,7 @@ public class HomeTests : ClientTestContext
 
         home.WaitForElement("[data-testid=upcoming]").GetAttribute("href").ShouldBe($"workouts/{planned.Id}");
         home.Find("[data-testid=next]").ShouldNotBeNull();
-        home.Find("[data-testid=plan-card] h2").TextContent.ShouldBe("Planera ett till");
+        home.Find("[data-testid=plan-card] h2").TextContent.ShouldBe("Planera ett pass");
     }
 
     [Fact]
