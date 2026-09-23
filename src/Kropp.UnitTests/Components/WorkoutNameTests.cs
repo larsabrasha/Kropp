@@ -26,9 +26,12 @@ public class WorkoutNameTests
         return e.Id;
     }
 
-    private string? Name(params Guid[] ids) => ExerciseCategories.WorkoutName(
-        new Workout { Id = Guid.NewGuid(), Date = new DateOnly(2026, 9, 23), Exercises = [.. ids.Select((id, i) => new WorkoutExercise { ExerciseId = id, Order = i })] },
-        exercises, L);
+    private static Workout Workout(params Guid[] ids) =>
+        new() { Id = Guid.NewGuid(), Date = new DateOnly(2026, 9, 23), Exercises = [.. ids.Select((id, i) => new WorkoutExercise { ExerciseId = id, Order = i })] };
+
+    private string? Name(params Guid[] ids) => ExerciseCategories.WorkoutName(Workout(ids), exercises, L);
+
+    private string? Icon(params Guid[] ids) => ExerciseCategories.IconFor(Workout(ids), exercises);
 
     [Fact]
     public void Areas_are_named_most_exercises_first()
@@ -54,6 +57,26 @@ public class WorkoutNameTests
 
         Name(squat, pull, sit, calf, pull2, curl, shrug).ShouldBe("Ben, rygg och mage");
     }
+
+    [Fact]
+    public void A_tie_goes_to_the_area_the_workout_comes_to_first()
+    {
+        var walk = Add("Gång i maskin", ExerciseKind.Cardio);
+        var pull = Add("Pull down maskin");
+        var squat = Add("Benböj lår framsida");
+        var calf = Add("Vader");
+        var sit = Add("Sit ups");
+        var pull2 = Add("Pull down maskin 2");
+
+        // Two back and two leg exercises: the walk does not count, the pull down comes first.
+        Name(walk, pull, squat, calf, sit, pull2).ShouldBe("Rygg, ben och mage");
+        Icon(walk, pull, squat, calf, sit, pull2).ShouldBe("lat-pulldown");
+        Icon(walk, squat, pull, calf, sit, pull2).ShouldBe("squat");
+    }
+
+    [Fact]
+    public void The_most_exercises_win_over_coming_first() =>
+        Icon(Add("Bröst hantlar"), Add("Benböj lår maskin"), Add("Vader"), Add("Bröstpress maskin"), Add("Squats med kettlebell till huvud")).ShouldBe("squat");
 
     [Fact]
     public void Two_areas_are_joined_with_och() =>

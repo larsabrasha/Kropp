@@ -33,16 +33,18 @@ public static class WorkoutEditing
     /// <summary>
     /// The body areas a workout trains, most exercises first, for naming it. Cardio is left out:
     /// the walk that warms up nearly every session would otherwise make every session "legs".
-    /// Ties keep the order of <see cref="BodyArea"/>.
+    /// Ties go to the area the workout comes to first, as a session tends to start with what it is
+    /// for; areas of the same exercise keep the order of <see cref="BodyArea"/>.
     /// </summary>
     public static IReadOnlyList<BodyArea> AreasOf(Workout workout, Func<Guid, Exercise?> exercise, Func<Exercise, IReadOnlyList<BodyArea>> categories) =>
         [.. workout.Exercises
             .Select(e => exercise(e.ExerciseId))
             .OfType<Exercise>()
             .Where(e => e.Kind != ExerciseKind.Cardio)
-            .SelectMany(categories)
-            .GroupBy(a => a)
+            .SelectMany((e, index) => categories(e).Select(area => (area, index)))
+            .GroupBy(x => x.area)
             .OrderByDescending(g => g.Count())
+            .ThenBy(g => g.Min(x => x.index))
             .ThenBy(g => g.Key)
             .Select(g => g.Key)];
 
