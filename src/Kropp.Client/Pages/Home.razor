@@ -33,60 +33,33 @@ else if (upcoming is not null)
     </section>
 }
 
-@if (workouts is not null)
+@if (workouts is not null && upcoming is null)
 {
-<section class="rounded-xl border border-blue-200 bg-blue-50 p-4 dark:border-blue-900 dark:bg-blue-950/30" data-testid="plan-card">
-    <h2 class="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">@(upcoming is null ? L["Next.PlanNext"] : L["Next.Another"])</h2>
-
-    <div class="flex items-center gap-3">
-        <PlanIcon Slug="@ExerciseCategories.IconFor(AsWorkout(chosen), exercises)" />
-        <span class="min-w-0 flex-1">
-            <span class="block truncate text-lg font-semibold text-gray-900 dark:text-gray-50" data-testid="next-name">@chosen.Name</span>
-            @* The whole day is the date picker: a transparent input over the text, so tapping the day opens it. *@
-            <label class="relative mt-0.5 inline-block cursor-pointer text-sm text-gray-600 underline decoration-gray-300 decoration-dotted underline-offset-4 dark:text-gray-300 dark:decoration-gray-600">
-                <span class="first-letter:uppercase inline-block" data-testid="next-date">@DayText(planDate)</span>
-                <input type="date" value="@planDate.ToString("yyyy-MM-dd")" @onchange="ChangePlanDate" aria-label="@L["Next.ChangeDay"]"
-                       class="absolute inset-0 size-full cursor-pointer opacity-0" />
-            </label>
-        </span>
-        <button type="button" @onclick="PlanAsync" disabled="@saving" data-testid="plan"
-                class="inline-flex shrink-0 items-center gap-2 rounded-lg bg-accent-600 px-4 py-2.5 font-medium text-white hover:bg-accent-700 disabled:opacity-60">
-            @if (saving)
-            {
-                <svg class="size-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="3" stroke-dasharray="42 100" /></svg>
-            }
-            @L["Next.Plan"]
-        </button>
-    </div>
-    @if (templates.Count > 0)
-    {
-        <div class="mt-3 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]" role="radiogroup" aria-label="@L["Next.Templates"]" data-testid="template-choices">
-            @* The chosen one is a deeper blue than the card with a border that holds 3:1 against it, never
-               bolder: a bolder name is wider and moves the rest. *@
-            @foreach (var template in templates.Append(EmptyTemplate))
-            {
-                var on = template.Id == chosen.Id;
-                <button type="button" role="radio" aria-checked="@(on ? "true" : "false")" @onclick="() => chosenId = template.Id" data-template="@(template.Id == Guid.Empty ? "empty" : template.Id)"
-                        class="shrink-0 rounded-full border px-3 py-1.5 text-sm @(on ? "border-accent-600 bg-blue-200 text-blue-950 dark:border-blue-400 dark:bg-blue-900 dark:text-blue-50" : "border-gray-300 bg-white text-gray-700 hover:border-gray-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-300")">
-                    @template.Name
-                </button>
-            }
-        </div>
-    }
-    @if (templates.Count == 0)
-    {
-        <p class="mt-3 text-sm text-gray-600 dark:text-gray-300" data-testid="no-templates">@L["Next.NoTemplates"]</p>
-    }
-
-    @if (error is not null)
-    {
-        <p class="mt-3 text-sm text-red-600 dark:text-red-400" role="alert">@error</p>
-    }
-</section>
+    RenderPlanCard(__builder);
 }
 
 <section class="mt-6">
     <h2 class="mb-3 pl-inset text-base font-semibold">@L["Home.Heading"]</h2>
+
+    @* With a workout already planned, adding another is the exception: it waits behind a quiet
+       button under the list's heading instead of competing with the green card. *@
+    @if (workouts is not null && upcoming is not null)
+    {
+        <div class="mb-5">
+            @if (planningOpen)
+            {
+                RenderPlanCard(__builder);
+            }
+            else
+            {
+                <button type="button" @onclick="() => planningOpen = true" aria-expanded="false" data-testid="open-planning"
+                        class="flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-gray-300 px-4 text-sm font-medium text-gray-600 hover:bg-white focus-visible:outline-2 focus-visible:outline-blue-500 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-900">
+                    <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+                    @L["Next.PlanAnother"]
+                </button>
+            }
+        </div>
+    }
 
     @if (workouts is null)
     {
@@ -165,6 +138,7 @@ else if (upcoming is not null)
     private List<WorkoutTemplate> templates = [];
     private Workout? upcoming;
     private Guid? chosenId;
+    private bool planningOpen;
     private DateOnly planDate;
 
     // An empty workout is offered as one more choice, last, with no exercises; it is never the suggestion
@@ -277,4 +251,72 @@ else if (upcoming is not null)
         Repository.Changed -= OnDataChanged;
         Engine.DataChanged -= OnDataChanged;
     }
+
+    /// <summary>The planning card: at the top when nothing is planned, under the list's heading otherwise.</summary>
+    private void RenderPlanCard(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder)
+    {
+        <section class="rounded-xl border border-blue-200 bg-blue-50 p-4 dark:border-blue-900 dark:bg-blue-950/30" data-testid="plan-card">
+            <div class="mb-2 flex items-center justify-between gap-2">
+                <h2 class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">@(upcoming is null ? L["Next.PlanNext"] : L["Next.Another"])</h2>
+                @if (upcoming is not null)
+                {
+                    <button type="button" @onclick="() => planningOpen = false" aria-label="@L["Next.HidePlanning"]" title="@L["Next.HidePlanning"]" aria-expanded="true" data-testid="close-planning"
+                            class="-my-2 -mr-2 flex size-9 items-center justify-center rounded-lg text-gray-500 hover:bg-blue-100 focus-visible:outline-2 focus-visible:outline-blue-500 dark:text-gray-400 dark:hover:bg-blue-900">
+                        <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+                    </button>
+                }
+            </div>
+
+            <div class="flex items-center gap-3">
+                <PlanIcon Slug="@ExerciseCategories.IconFor(AsWorkout(chosen), exercises)" />
+                <span class="min-w-0 flex-1">
+                    <span class="block truncate text-lg font-semibold text-gray-900 dark:text-gray-50" data-testid="next-name">@chosen.Name</span>
+                    @* The whole day is the date picker: a transparent input over the text. A click on a date
+                       input's text only focuses a part of the date in desktop browsers, so the click opens the
+                       picker itself. *@
+                    <label class="relative mt-1 inline-flex min-h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-blue-200 bg-white px-2.5 text-sm text-gray-700 hover:bg-blue-50 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-blue-500 dark:border-blue-900 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800">
+                        <svg class="size-4 shrink-0 text-blue-700 dark:text-blue-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 10h18M8 3v4M16 3v4" /></svg>
+                        <span class="first-letter:uppercase inline-block whitespace-nowrap" data-testid="next-date">@DayText(planDate)</span>
+                        <svg class="size-4 shrink-0 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+                        <input type="date" value="@planDate.ToString("yyyy-MM-dd")" @onchange="ChangePlanDate" aria-label="@L["Next.ChangeDay"]"
+                               onclick="try { this.showPicker(); } catch { }" data-testid="plan-date"
+                               class="absolute inset-0 size-full cursor-pointer opacity-0" />
+                    </label>
+                </span>
+                <button type="button" @onclick="PlanAsync" disabled="@saving" data-testid="plan"
+                        class="inline-flex shrink-0 items-center gap-2 rounded-lg bg-accent-600 px-4 py-2.5 font-medium text-white hover:bg-accent-700 disabled:opacity-60">
+                    @if (saving)
+                    {
+                        <svg class="size-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="3" stroke-dasharray="42 100" /></svg>
+                    }
+                    @L["Next.Plan"]
+                </button>
+            </div>
+            @if (templates.Count > 0)
+            {
+                <div class="mt-3 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]" role="radiogroup" aria-label="@L["Next.Templates"]" data-testid="template-choices">
+                    @* The chosen one is a deeper blue than the card with a border that holds 3:1 against it, never
+                       bolder: a bolder name is wider and moves the rest. *@
+                    @foreach (var template in templates.Append(EmptyTemplate))
+                    {
+                        var on = template.Id == chosen.Id;
+                        <button type="button" role="radio" aria-checked="@(on ? "true" : "false")" @onclick="() => chosenId = template.Id" data-template="@(template.Id == Guid.Empty ? "empty" : template.Id)"
+                                class="shrink-0 rounded-full border px-3 py-1.5 text-sm @(on ? "border-accent-600 bg-blue-200 text-blue-950 dark:border-blue-400 dark:bg-blue-900 dark:text-blue-50" : "border-gray-300 bg-white text-gray-700 hover:border-gray-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-300")">
+                            @template.Name
+                        </button>
+                    }
+                </div>
+            }
+            @if (templates.Count == 0)
+            {
+                <p class="mt-3 text-sm text-gray-600 dark:text-gray-300" data-testid="no-templates">@L["Next.NoTemplates"]</p>
+            }
+
+            @if (error is not null)
+            {
+                <p class="mt-3 text-sm text-red-600 dark:text-red-400" role="alert">@error</p>
+            }
+        </section>
+    }
+
 }

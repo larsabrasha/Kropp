@@ -95,7 +95,7 @@
   <data name="Home.Week" xml:space="preserve"><value>Vecka {0}</value></data>
   <data name="Next.Heading" xml:space="preserve"><value>Nästa pass</value></data>
   <data name="Next.Open" xml:space="preserve"><value>Öppna</value></data>
-  <data name="Next.Plan" xml:space="preserve"><value>Planera</value></data>
+  <data name="Next.Plan" xml:space="preserve"><value>Lägg till</value></data>
   <data name="Next.Templates" xml:space="preserve"><value>Mallar</value></data>
   <data name="Next.NoTemplates" xml:space="preserve"><value>Inga mallar än. Skapa en med ”Ny mall” under Inställningar → Mallar.</value></data>
   <data name="Next.Blank" xml:space="preserve"><value>Nytt tomt pass</value></data>
@@ -115,7 +115,7 @@
   <data name="Templates.NotFound" xml:space="preserve"><value>Mallen finns inte, eller har tagits bort.</value></data>
   <data name="Templates.DeleteTemplate" xml:space="preserve"><value>Ta bort mallen</value></data>
   <data name="Templates.DeleteConfirm" xml:space="preserve"><value>Ta bort mallen? Pass som planerats från den finns kvar.</value></data>
-  <data name="Next.Another" xml:space="preserve"><value>Planera ett pass</value></data>
+  <data name="Next.Another" xml:space="preserve"><value>Lägg till ett träningspass</value></data>
   <data name="Next.FromTemplate" xml:space="preserve"><value>Planera från mall</value></data>
   <data name="Next.PlanNext" xml:space="preserve"><value>Planera nästa pass</value></data>
   <data name="Home.MoreWeeks" xml:space="preserve"><value>Visa fler veckor ({0} äldre)</value></data>
@@ -163,4 +163,6 @@
   <data name="Trash.DeleteConfirm" xml:space="preserve"><value>Radera passet för gott, på alla enheter? Det går inte att ångra.</value></data>
   <data name="Trash.DeletedInDays" xml:space="preserve"><value>Raderas för gott om {0} dagar</value></data>
   <data name="Trash.DeletedSoon" xml:space="preserve"><value>Raderas för gott inom ett dygn</value></data>
+  <data name="Next.PlanAnother" xml:space="preserve"><value>Lägg till ett träningspass</value></data>
+  <data name="Next.HidePlanning" xml:space="preserve"><value>Dölj planeringen</value></data>
 </root>

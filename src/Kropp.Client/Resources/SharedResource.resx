@@ -95,7 +95,7 @@
   <data name="Home.Week" xml:space="preserve"><value>Week {0}</value></data>
   <data name="Next.Heading" xml:space="preserve"><value>Next workout</value></data>
   <data name="Next.Open" xml:space="preserve"><value>Open</value></data>
-  <data name="Next.Plan" xml:space="preserve"><value>Plan</value></data>
+  <data name="Next.Plan" xml:space="preserve"><value>Add</value></data>
   <data name="Next.Templates" xml:space="preserve"><value>Templates</value></data>
   <data name="Next.NoTemplates" xml:space="preserve"><value>No templates yet. Create one with “New template” under Settings → Templates.</value></data>
   <data name="Next.Blank" xml:space="preserve"><value>New empty workout</value></data>
@@ -115,7 +115,7 @@
   <data name="Templates.NotFound" xml:space="preserve"><value>This template does not exist, or has been deleted.</value></data>
   <data name="Templates.DeleteTemplate" xml:space="preserve"><value>Delete template</value></data>
   <data name="Templates.DeleteConfirm" xml:space="preserve"><value>Delete this template? Workouts planned from it stay.</value></data>
-  <data name="Next.Another" xml:space="preserve"><value>Plan a workout</value></data>
+  <data name="Next.Another" xml:space="preserve"><value>Add a workout</value></data>
   <data name="Next.FromTemplate" xml:space="preserve"><value>Plan from template</value></data>
   <data name="Next.PlanNext" xml:space="preserve"><value>Plan next workout</value></data>
   <data name="Home.MoreWeeks" xml:space="preserve"><value>Show more weeks ({0} older)</value></data>
@@ -163,4 +163,6 @@
   <data name="Trash.DeleteConfirm" xml:space="preserve"><value>Delete the workout for good, on every device? This cannot be undone.</value></data>
   <data name="Trash.DeletedInDays" xml:space="preserve"><value>Deleted for good in {0} days</value></data>
   <data name="Trash.DeletedSoon" xml:space="preserve"><value>Deleted for good within a day</value></data>
+  <data name="Next.PlanAnother" xml:space="preserve"><value>Add a workout</value></data>
+  <data name="Next.HidePlanning" xml:space="preserve"><value>Hide planning</value></data>
 </root>

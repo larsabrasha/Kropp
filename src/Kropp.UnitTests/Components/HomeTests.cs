@@ -197,7 +197,14 @@ public class HomeTests : ClientTestContext
 
         home.WaitForElement("[data-testid=upcoming]").GetAttribute("href").ShouldBe($"workouts/{planned.Id}");
         home.Find("[data-testid=next]").ShouldNotBeNull();
-        home.Find("[data-testid=plan-card] h2").TextContent.ShouldBe("Planera ett pass");
+
+        // Planning another waits behind a quiet button, and folds away again.
+        home.FindAll("[data-testid=plan-card]").ShouldBeEmpty();
+        home.Find("[data-testid=open-planning]").TextContent.Trim().ShouldBe("Lägg till ett träningspass");
+        home.Find("[data-testid=open-planning]").Click();
+        home.Find("[data-testid=plan-card] h2").TextContent.ShouldBe("Lägg till ett träningspass");
+        home.Find("[data-testid=close-planning]").Click();
+        home.FindAll("[data-testid=plan-card]").ShouldBeEmpty();
     }
 
     [Fact]
@@ -211,7 +218,7 @@ public class HomeTests : ClientTestContext
         await Repository.SaveAsync(planned.Id, planned);
         var home = Render<Home>();
 
-        home.WaitForElement("[data-testid=upcoming]");
+        home.WaitForElement("[data-testid=open-planning]").Click();
         home.Find("[data-testid=next-name]").TextContent.ShouldBe("Bröst");
         home.Find("[data-testid=next-date]").TextContent.ToLowerInvariant().ShouldBe("fredag 25 sep.");
         home.Find("[data-testid=plan]").Click();
