@@ -77,11 +77,76 @@ public class WorkoutPageTests : ClientTestContext
 
         page.WaitForElement("[data-testid=target]").Click();
         page.FindAll("[data-testid=target-editor] input")[2].Change("25");
-        page.Find("[data-testid=target-editor] button").Click();
+        page.Find("[data-testid=target-editor]").QuerySelectorAll("button").Single(b => b.TextContent.Trim() == "Klar").Click();
 
         page.WaitForAssertion(() => page.Find("[data-testid=target]").TextContent.Trim().ShouldBe("3 × 8 @ 25 kg"));
         page.FindAll("[data-testid=target-editor]").ShouldBeEmpty();
         (await ReloadAsync(workout.Id)).Exercises.Single().TargetWeightKg.ShouldBe(25);
+    }
+
+    private static AngleSharp.Dom.IElement StepperFor(AngleSharp.Dom.IElement scope, string label) =>
+        scope.QuerySelectorAll("[data-testid=stepper]").Single(s => s.GetAttribute("data-label") == label);
+
+    [Fact]
+    public async Task Plus_and_minus_adjust_the_plan_by_one_rep_and_the_exercise_weight_step()
+    {
+        var workout = await SeedAsync(new Workout
+        {
+            Id = Guid.NewGuid(), Date = new DateOnly(2026, 9, 23),
+            Exercises = [new WorkoutExercise { ExerciseId = Bench.Id, TargetSets = 3, TargetReps = 8, TargetWeightKg = 20 }],
+        });
+        var page = Render<WorkoutPage>(p => p.Add(x => x.Id, workout.Id));
+        page.WaitForElement("[data-testid=target]").Click();
+
+        StepperFor(page.Find("[data-testid=target-editor]"), "Rep").QuerySelector("[data-testid=increase]")!.Click();
+        page.WaitForAssertion(() => page.Find("[data-testid=target]").TextContent.Trim().ShouldBe("3 × 9 @ 20 kg"));
+
+        StepperFor(page.Find("[data-testid=target-editor]"), "kg").QuerySelector("[data-testid=increase]")!.Click();
+        page.WaitForAssertion(() => page.Find("[data-testid=target]").TextContent.Trim().ShouldBe("3 × 9 @ 22,5 kg"));
+
+        StepperFor(page.Find("[data-testid=target-editor]"), "kg").QuerySelector("[data-testid=decrease]")!.Click();
+        StepperFor(page.Find("[data-testid=target-editor]"), "kg").QuerySelector("[data-testid=decrease]")!.Click();
+        page.WaitForAssertion(() => page.Find("[data-testid=target]").TextContent.Trim().ShouldBe("3 × 9 @ 17,5 kg"));
+
+        var saved = (await ReloadAsync(workout.Id)).Exercises.Single();
+        (saved.TargetReps, saved.TargetWeightKg).ShouldBe((9, 17.5m));
+    }
+
+    [Fact]
+    public async Task The_weight_step_is_chosen_per_exercise()
+    {
+        var workout = await SeedAsync(new Workout
+        {
+            Id = Guid.NewGuid(), Date = new DateOnly(2026, 9, 23),
+            Exercises = [new WorkoutExercise { ExerciseId = Bench.Id, TargetSets = 3, TargetReps = 8, TargetWeightKg = 20 }],
+        });
+        var page = Render<WorkoutPage>(p => p.Add(x => x.Id, workout.Id));
+        page.WaitForElement("[data-testid=target]").Click();
+
+        page.Find("[data-testid=weight-step]").Change("1");
+        page.WaitForAssertion(() => page.Find("[data-testid=weight-step]").GetAttribute("value").ShouldBe("1"));
+        StepperFor(page.Find("[data-testid=target-editor]"), "kg").QuerySelector("[data-testid=increase]")!.Click();
+
+        page.WaitForAssertion(() => page.Find("[data-testid=target]").TextContent.Trim().ShouldBe("3 × 8 @ 21 kg"));
+        (await Repository.GetAllAsync<Exercise>()).Single(e => e.Id == Bench.Id).WeightStepKg.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task A_done_set_is_corrected_with_the_same_buttons()
+    {
+        var workout = await SeedAsync(new Workout
+        {
+            Id = Guid.NewGuid(), Date = new DateOnly(2026, 9, 23),
+            Exercises = [new WorkoutExercise { ExerciseId = Bench.Id, TargetSets = 3, TargetReps = 8, TargetWeightKg = 20, Sets = [new SetResult { Reps = 8, WeightKg = 20 }] }],
+        });
+        var page = Render<WorkoutPage>(p => p.Add(x => x.Id, workout.Id));
+
+        page.WaitForElement("[data-testid=set-done]").Click();
+        StepperFor(page.Find("[data-testid=set-editor]"), "Rep").QuerySelector("[data-testid=decrease]")!.Click();
+        StepperFor(page.Find("[data-testid=set-editor]"), "Rep").QuerySelector("[data-testid=decrease]")!.Click();
+
+        page.WaitForAssertion(() => page.Find("[data-testid=set-done]").TextContent.Trim().ShouldBe("6"));
+        (await ReloadAsync(workout.Id)).Exercises.Single().Sets.Single().Reps.ShouldBe(6);
     }
 
     [Fact]

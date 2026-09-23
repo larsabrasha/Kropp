@@ -85,6 +85,8 @@ public static partial class AggregateValidator
             return "The exercise name is too long.";
         if (exercise.SettingsNote?.Length > MaxText)
             return "The settings note is too long.";
+        if (exercise.WeightStepKg is { } step && (step <= 0 || step > 50))
+            return "The weight step is out of range.";
         if (exercise.Illustration is { } illustration && !IllustrationPattern().IsMatch(illustration))
             return "The illustration is not a valid name.";
         return null;

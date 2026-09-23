@@ -81,4 +81,7 @@
   <data name="Illustration.Search" xml:space="preserve"><value>Search pictures (English names)</value></data>
   <data name="Illustration.Count" xml:space="preserve"><value>{0} pictures</value></data>
   <data name="Illustration.Credit" xml:space="preserve"><value>Pictures:</value></data>
+  <data name="Stepper.Decrease" xml:space="preserve"><value>Decrease {0}</value></data>
+  <data name="Stepper.Increase" xml:space="preserve"><value>Increase {0}</value></data>
+  <data name="Entry.WeightStep" xml:space="preserve"><value>Step</value></data>
 </root>

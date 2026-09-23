@@ -68,7 +68,7 @@
     @if (panel == Panel.Targets)
     {
         <div class="mt-2 rounded-lg bg-gray-50 p-2 dark:bg-gray-900" data-testid="target-editor">
-            <div class="grid grid-cols-3 gap-2">
+            <div class="@(Kind == ExerciseKind.Cardio ? "grid grid-cols-3 gap-2" : "flex flex-col gap-2")">
                 @if (Kind == ExerciseKind.Cardio)
                 {
                     <NumberField Label="@L["Entry.Minutes"]" Value="@TrainingText.Invariant(Entry.DurationMinutes)" Step="0.5" Changed="v => Change(Entry with { DurationMinutes = TrainingText.ParseDecimal(v) })" />
@@ -77,18 +77,28 @@
                 }
                 else
                 {
-                    <NumberField Label="@L["Entry.Sets"]" Value="@TrainingText.Invariant(Entry.TargetSets)" Changed="v => Change(Entry with { TargetSets = TrainingText.ParseInt(v) })" />
+                    <Stepper Label="@L["Entry.Sets"]" Value="Entry.TargetSets" Changed="v => Change(Entry with { TargetSets = ToInt(v) })" />
                     @if (Kind == ExerciseKind.Timed)
                     {
-                        <NumberField Label="@L["Entry.Seconds"]" Value="@TrainingText.Invariant(Entry.TargetSeconds)" Changed="v => Change(Entry with { TargetSeconds = TrainingText.ParseInt(v) })" />
+                        <Stepper Label="@L["Entry.Seconds"]" Value="Entry.TargetSeconds" Step="5" Changed="v => Change(Entry with { TargetSeconds = ToInt(v) })" />
                     }
                     else
                     {
-                        <NumberField Label="@L["Entry.Reps"]" Value="@TrainingText.Invariant(Entry.TargetReps)" Changed="v => Change(Entry with { TargetReps = TrainingText.ParseInt(v) })" />
+                        <Stepper Label="@L["Entry.Reps"]" Value="Entry.TargetReps" Changed="v => Change(Entry with { TargetReps = ToInt(v) })" />
                     }
                     @if (Kind == ExerciseKind.Strength)
                     {
-                        <NumberField Label="@L["Entry.Kg"]" Value="@TrainingText.Invariant(Entry.TargetWeightKg)" Step="0.5" Changed="v => Change(Entry with { TargetWeightKg = TrainingText.ParseDecimal(v) })" />
+                        <Stepper Label="@L["Entry.Kg"]" Value="Entry.TargetWeightKg" Step="WeightStep" Changed="v => Change(Entry with { TargetWeightKg = v })" />
+                        <label class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                            <span class="w-20 shrink-0">@L["Entry.WeightStep"]</span>
+                            <select value="@TrainingText.Invariant(WeightStep)" @onchange="ChangeWeightStep" data-testid="weight-step"
+                                    class="rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-base text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100">
+                                @foreach (var step in Exercise.WeightSteps)
+                                {
+                                    <option value="@TrainingText.Invariant(step)">@TrainingText.Number(step) kg</option>
+                                }
+                            </select>
+                        </label>
                     }
                 }
             </div>
@@ -146,18 +156,18 @@
             var e = setIndex;
             var set = Entry.Sets[e];
             <div class="mt-2 rounded-lg bg-gray-50 p-2 dark:bg-gray-900" data-testid="set-editor">
-                <div class="grid grid-cols-3 gap-2">
+                <div class="flex flex-col gap-2">
                     @if (Kind == ExerciseKind.Timed)
                     {
-                        <NumberField Label="@L["Entry.Seconds"]" Value="@TrainingText.Invariant(set.Seconds)" Changed="v => Change(WorkoutEditing.ReplaceSet(Entry, e, set with { Seconds = TrainingText.ParseInt(v) }))" />
+                        <Stepper Label="@L["Entry.Seconds"]" Value="set.Seconds" Step="5" Changed="v => Change(WorkoutEditing.ReplaceSet(Entry, e, set with { Seconds = ToInt(v) }))" />
                     }
                     else
                     {
-                        <NumberField Label="@L["Entry.Reps"]" Value="@TrainingText.Invariant(set.Reps)" Changed="v => Change(WorkoutEditing.ReplaceSet(Entry, e, set with { Reps = TrainingText.ParseInt(v) }))" />
+                        <Stepper Label="@L["Entry.Reps"]" Value="set.Reps" Changed="v => Change(WorkoutEditing.ReplaceSet(Entry, e, set with { Reps = ToInt(v) }))" />
                     }
                     @if (Kind == ExerciseKind.Strength)
                     {
-                        <NumberField Label="@L["Entry.Kg"]" Value="@TrainingText.Invariant(set.WeightKg)" Step="0.5" Changed="v => Change(WorkoutEditing.ReplaceSet(Entry, e, set with { WeightKg = TrainingText.ParseDecimal(v) }))" />
+                        <Stepper Label="@L["Entry.Kg"]" Value="set.WeightKg" Step="WeightStep" Changed="v => Change(WorkoutEditing.ReplaceSet(Entry, e, set with { WeightKg = v }))" />
                     }
                 </div>
                 <DoneRow OnDone="Close">
@@ -207,6 +217,16 @@
     private bool choosingIllustration;
 
     private string? Slug => ExerciseIllustrations.SlugFor(Exercise);
+
+    private decimal WeightStep => Exercise?.WeightStepKg ?? Exercise.DefaultWeightStepKg;
+
+    private static int? ToInt(decimal? value) => value is { } v ? (int)Math.Round(v) : null;
+
+    private async Task ChangeWeightStep(ChangeEventArgs e)
+    {
+        if (Exercise is not null && TrainingText.ParseDecimal(e.Value) is { } step && Exercise.WeightSteps.Contains(step))
+            await OnExerciseChange.InvokeAsync(Exercise with { WeightStepKg = step == Exercise.DefaultWeightStepKg ? null : step });
+    }
     private int setIndex;
 
     private Panel panel => Active ? openPanel : Panel.None;

@@ -25,7 +25,8 @@ Två aggregat, båda i `Kropp.Shared/Training`:
 
 - **`Exercise`**: övningsregistret. `Name`, `Kind` (Strength, Bodyweight, Timed, Cardio),
   `SettingsNote` för inställningar som gäller varje gång (till exempel "Sitthöjd 11") och
-  `IsArchived`. Ett pass pekar på en övning via id, så ett namnbyte skriver inte om gamla pass.
+  `IsArchived`, `Illustration` (bild) och `WeightStepKg` (hur mycket − och + ändrar vikten,
+  standard 2,5 kg). Ett pass pekar på en övning via id, så ett namnbyte skriver inte om gamla pass.
 - **`Workout`**: ett pass. `Date` är `DateOnly`, så en tidszon aldrig kan flytta passet en dag.
   `SessionNumber`, `Status` (Planned, Done, Skipped), `Note` och en ordnad lista `WorkoutExercise`.
   Status väljs inte, den räknas fram (`WorkoutEditing.StatusOf`): något loggat ger Done, inget

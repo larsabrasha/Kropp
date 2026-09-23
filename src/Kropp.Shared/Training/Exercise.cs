@@ -37,4 +37,12 @@ public sealed record Exercise
     public string? Illustration { get; init; }
 
     public const string NoIllustration = "none";
+
+    /// <summary>How much − and + change the weight; null for <see cref="DefaultWeightStepKg"/>.</summary>
+    public decimal? WeightStepKg { get; init; }
+
+    public const decimal DefaultWeightStepKg = 2.5m;
+
+    /// <summary>The steps offered: plates and machines mostly go by 2.5, dumbbells by 1 or 2.</summary>
+    public static readonly IReadOnlyList<decimal> WeightSteps = [0.5m, 1m, 1.25m, 2m, 2.5m, 5m];
 }
