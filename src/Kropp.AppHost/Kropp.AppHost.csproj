@@ -1,0 +1,18 @@
+<Project Sdk="Aspire.AppHost.Sdk/13.1.2">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <UserSecretsId>d608d3a1-d978-4e44-b6ac-0e7fe433ab6f</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.PostgreSQL" />
+    <PackageReference Include="MessagePack" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Kropp.Api\Kropp.Api.csproj" />
+    <ProjectReference Include="..\Kropp.MigrationService\Kropp.MigrationService.csproj" />
+  </ItemGroup>
+
+</Project>

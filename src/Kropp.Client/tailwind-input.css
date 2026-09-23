@@ -1,0 +1,8 @@
+@import "tailwindcss";
+
+@source "./";
+
+@layer base {
+    /* iOS zooms into any focused field with text smaller than 16px. */
+    input, select, textarea { font-size: max(16px, 1em); }
+}

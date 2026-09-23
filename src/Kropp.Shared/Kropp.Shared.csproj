@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Pure code shared by the browser client and the server: the training model, the sync wire
+       contract and the sync engine. Nothing in here may depend on a browser or a database, so the
+       engine is testable in plain xunit and the WebAssembly bundle stays small. -->
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Kropp.UnitTests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+  </ItemGroup>
+
+</Project>

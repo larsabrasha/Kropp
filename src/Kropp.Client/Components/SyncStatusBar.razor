@@ -1,0 +1,62 @@
+@implements IDisposable
+@inject SyncEngine Engine
+@inject Kropp.Client.Sync.SyncCoordinator Coordinator
+
+<div class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400" role="status" aria-live="polite">
+    <span class="size-2 shrink-0 rounded-full @DotClass" aria-hidden="true"></span>
+    <span data-testid="sync-status">@Text</span>
+    <button type="button"
+            class="rounded-md p-1.5 hover:bg-gray-100 focus-visible:outline-2 focus-visible:outline-blue-500 disabled:opacity-40 dark:hover:bg-gray-800"
+            aria-label="@L["Sync.SyncNow"]" title="@L["Sync.SyncNow"]"
+            disabled="@(status.State == SyncState.Syncing)"
+            @onclick="Coordinator.SyncNowAsync">
+        <svg class="size-4 @(status.State == SyncState.Syncing ? "animate-spin" : "")" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+            <path d="M21 3v6h-6" />
+        </svg>
+    </button>
+</div>
+
+@code {
+    private SyncStatus status = SyncStatus.Initial;
+
+    protected override void OnInitialized()
+    {
+        status = Engine.Status;
+        Engine.StatusChanged += OnStatusChanged;
+    }
+
+    private void OnStatusChanged(SyncStatus next)
+    {
+        status = next;
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    private string DotClass => status.State switch
+    {
+        SyncState.Offline => "bg-gray-400",
+        SyncState.Failed => "bg-red-500",
+        SyncState.Syncing => "bg-blue-500",
+        _ when status.PendingCount > 0 => "bg-amber-500",
+        _ => "bg-green-500",
+    };
+
+    private string Text
+    {
+        get
+        {
+            var main = status.State switch
+            {
+                SyncState.Offline => L["Sync.Offline"].Value,
+                SyncState.Failed => L["Sync.Failed"].Value,
+                SyncState.Syncing => L["Sync.Syncing"].Value,
+                _ when status.PendingCount > 0 => L["Sync.SavedLocally"].Value,
+                _ when status.LastSyncedAt is { } at => L["Sync.Synced", at.ToLocalTime().ToString("t")].Value,
+                _ => L["Sync.NotSynced"].Value,
+            };
+            return status.PendingCount > 0 ? $"{main} · {L["Sync.Pending", status.PendingCount]}" : main;
+        }
+    }
+
+    public void Dispose() => Engine.StatusChanged -= OnStatusChanged;
+}

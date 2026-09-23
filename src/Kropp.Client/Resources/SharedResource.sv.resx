@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="App.Title" xml:space="preserve"><value>Kropp</value></data>
+  <data name="Common.Loading" xml:space="preserve"><value>Laddar…</value></data>
+  <data name="Home.Heading" xml:space="preserve"><value>Träningspass</value></data>
+  <data name="Home.NewWorkout" xml:space="preserve"><value>Nytt pass</value></data>
+  <data name="Home.Date" xml:space="preserve"><value>Datum</value></data>
+  <data name="Home.Note" xml:space="preserve"><value>Anteckning</value></data>
+  <data name="Home.NotePlaceholder" xml:space="preserve"><value>t.ex. Ben och bröst</value></data>
+  <data name="Home.Add" xml:space="preserve"><value>Lägg till</value></data>
+  <data name="Home.Empty" xml:space="preserve"><value>Inga pass än. Lägg till ditt första ovan.</value></data>
+  <data name="Home.SaveFailed" xml:space="preserve"><value>Passet kunde inte sparas på enheten. Försök igen.</value></data>
+  <data name="Home.LoadFailed" xml:space="preserve"><value>Passen kunde inte läsas från enheten.</value></data>
+  <data name="Workout.Status.Planned" xml:space="preserve"><value>Planerat</value></data>
+  <data name="Workout.Status.Done" xml:space="preserve"><value>Genomfört</value></data>
+  <data name="Workout.Status.Skipped" xml:space="preserve"><value>Hoppat över</value></data>
+  <data name="Sync.Offline" xml:space="preserve"><value>Offline</value></data>
+  <data name="Sync.Syncing" xml:space="preserve"><value>Synkar…</value></data>
+  <data name="Sync.Failed" xml:space="preserve"><value>Kunde inte synka</value></data>
+  <data name="Sync.Synced" xml:space="preserve"><value>Synkad {0}</value></data>
+  <data name="Sync.NotSynced" xml:space="preserve"><value>Inte synkad än</value></data>
+  <data name="Sync.SavedLocally" xml:space="preserve"><value>Sparat lokalt</value></data>
+  <data name="Sync.Pending" xml:space="preserve"><value>{0} väntar</value></data>
+  <data name="Sync.SyncNow" xml:space="preserve"><value>Synka nu</value></data>
+</root>
