@@ -110,4 +110,9 @@
   <data name="Templates.Delete" xml:space="preserve"><value>Ta bort</value></data>
   <data name="Workout.SaveAsTemplate" xml:space="preserve"><value>Spara som mall</value></data>
   <data name="Workout.TemplateSaved" xml:space="preserve"><value>Sparad som ”{0}”</value></data>
+  <data name="Settings.Heading" xml:space="preserve"><value>Inställningar</value></data>
+  <data name="Settings.Planning" xml:space="preserve"><value>Planering</value></data>
+  <data name="Settings.SessionsPerWeek" xml:space="preserve"><value>Pass per vecka</value></data>
+  <data name="Settings.Effect" xml:space="preserve"><value>Nästa pass föreslås {0} dagar efter det senaste, och på måndag när veckan är full.</value></data>
+  <data name="Settings.EffectOneDay" xml:space="preserve"><value>Nästa pass föreslås dagen efter det senaste, och på måndag när veckan är full.</value></data>
 </root>

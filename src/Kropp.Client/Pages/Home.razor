@@ -208,7 +208,8 @@
             workouts = [.. all.OrderByDescending(w => w.Date).ThenByDescending(w => w.SessionNumber)];
             templates = [.. (await Repository.GetAllAsync<WorkoutTemplate>()).OrderBy(t => t.Name, StringComparer.CurrentCultureIgnoreCase)];
             upcoming = Planning.Upcoming(all, Today);
-            planDate = Planning.SuggestDate(all, Today);
+            var settings = await Repository.GetAsync<UserSettings>(UserSettings.SingletonId) ?? UserSettings.Default;
+            planDate = Planning.SuggestDate(all, Today, settings);
             showBlankForm = showBlankForm || templates.Count == 0;
         }
         catch (Exception ex)

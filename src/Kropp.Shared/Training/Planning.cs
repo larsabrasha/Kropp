@@ -5,11 +5,6 @@ namespace Kropp.Shared.Training;
 /// <summary>What to do next and when: templates, the suggested next template and the suggested day.</summary>
 public static class Planning
 {
-    public const int SessionsPerWeek = 3;
-
-    /// <summary>Days between sessions the suggestion aims for: every other day fits three a week.</summary>
-    public const int RestDays = 2;
-
     /// <summary>A workout counts as one of a template's when this share of their exercises match.</summary>
     private const double SimilarityThreshold = 0.5;
 
@@ -84,17 +79,18 @@ public static class Planning
     }
 
     /// <summary>
-    /// Two days after the last session, but not before today. When that week already holds
-    /// <see cref="SessionsPerWeek"/> sessions, the Monday after it.
+    /// <see cref="UserSettings.DaysBetweenSessions"/> after the last session, but not before today.
+    /// When that week already holds <see cref="UserSettings.SessionsPerWeek"/> sessions, the Monday after it.
     /// </summary>
-    public static DateOnly SuggestDate(IEnumerable<Workout> workouts, DateOnly today)
+    public static DateOnly SuggestDate(IEnumerable<Workout> workouts, DateOnly today, UserSettings settings)
     {
         var done = workouts.Where(w => WorkoutEditing.StatusOf(w, today) == WorkoutStatus.Done).Select(w => w.Date).ToList();
-        var candidate = done.Count > 0 && done.Max().AddDays(RestDays) > today ? done.Max().AddDays(RestDays) : today;
+        var next = done.Count > 0 ? done.Max().AddDays(settings.DaysBetweenSessions) : today;
+        var candidate = next > today ? next : today;
 
         var monday = MondayOf(candidate);
         var inWeek = done.Count(d => d >= monday && d < monday.AddDays(7));
-        return inWeek >= SessionsPerWeek ? monday.AddDays(7) : candidate;
+        return inWeek >= settings.SessionsPerWeek ? monday.AddDays(7) : candidate;
     }
 
     /// <summary>The earliest planned workout from today on, which the suggestion then is.</summary>

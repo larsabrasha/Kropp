@@ -21,3 +21,7 @@ html { background: #fff; color-scheme: light dark; }
 /* The illustrations are white figures made for a dark ground: dark ink in light mode, white in dark. */
 img.illustration { filter: invert(1); }
 @media (prefers-color-scheme: dark) { img.illustration { filter: none; } }
+
+/* The router moves focus to the page heading for screen readers; the heading is not interactive,
+   so it needs no focus ring. */
+h1:focus { outline: none; }

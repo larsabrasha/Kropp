@@ -3,7 +3,7 @@
 
 <div class="flex items-center gap-2" data-testid="stepper" data-label="@Label">
     <span class="w-20 shrink-0 text-sm text-gray-600 dark:text-gray-400">@Label</span>
-    <button type="button" @onclick="() => Change(-Step)" disabled="@(Value is null or <= 0)"
+    <button type="button" @onclick="() => Change(-Step)" disabled="@(Value is null || Value <= Min)"
             aria-label="@L["Stepper.Decrease", Label]" title="@L["Stepper.Decrease", Label]" data-testid="decrease"
             class="flex size-11 shrink-0 items-center justify-center rounded-xl bg-gray-200 text-2xl font-medium text-gray-800 hover:bg-gray-300 active:bg-gray-400 disabled:opacity-40 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">
         −
@@ -11,9 +11,9 @@
     <input type="number" inputmode="decimal" min="0" step="@TrainingText.Invariant(Step)" value="@TrainingText.Invariant(Value)" aria-label="@Label"
            @onchange="e => Changed.InvokeAsync(TrainingText.ParseDecimal(e.Value))"
            class="h-11 w-full min-w-0 rounded-xl border border-gray-300 bg-white text-center text-lg font-semibold tabular-nums text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100" />
-    <button type="button" @onclick="() => Change(Step)"
+    <button type="button" @onclick="() => Change(Step)" disabled="@(Max is { } max && Value >= max)"
             aria-label="@L["Stepper.Increase", Label]" title="@L["Stepper.Increase", Label]" data-testid="increase"
-            class="flex size-11 shrink-0 items-center justify-center rounded-xl bg-gray-200 text-2xl font-medium text-gray-800 hover:bg-gray-300 active:bg-gray-400 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">
+            class="flex size-11 shrink-0 items-center justify-center rounded-xl bg-gray-200 text-2xl font-medium text-gray-800 hover:bg-gray-300 active:bg-gray-400 disabled:opacity-40 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">
         +
     </button>
 </div>
@@ -23,6 +23,12 @@
     [Parameter] public decimal? Value { get; set; }
     [Parameter] public decimal Step { get; set; } = 1;
     [Parameter] public EventCallback<decimal?> Changed { get; set; }
+
+    /// <summary>The highest value + goes to.</summary>
+    [Parameter] public decimal? Max { get; set; }
+
+    /// <summary>The lowest value − goes to.</summary>
+    [Parameter] public decimal Min { get; set; }
 
     /// <summary>What + gives an empty field, where one step from zero is no use (a pulse of 1).</summary>
     [Parameter] public decimal? Start { get; set; }
@@ -37,6 +43,9 @@
         var next = delta > 0
             ? Math.Floor(current / Step) * Step + Step
             : Math.Ceiling(current / Step) * Step - Step;
-        return Changed.InvokeAsync(Math.Max(0, Math.Round(next, 2)));
+        next = Math.Max(Min, Math.Round(next, 2));
+        if (Max is { } max)
+            next = Math.Min(max, next);
+        return Changed.InvokeAsync(next);
     }
 }

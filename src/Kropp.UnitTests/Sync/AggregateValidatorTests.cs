@@ -61,6 +61,19 @@ public class AggregateValidatorTests
     public void Malformed_json_is_refused() =>
         AggregateValidator.Validate(new SyncChange(AggregateTypes.Workout, Guid.NewGuid(), Now, false, "{not json")).ShouldNotBeNull();
 
+    [Theory]
+    [InlineData(3, true, true)]
+    [InlineData(0, true, false)]
+    [InlineData(8, true, false)]
+    [InlineData(3, false, false)]
+    public void Settings_are_validated(int perWeek, bool fixedId, bool valid)
+    {
+        var id = fixedId ? UserSettings.SingletonId : Guid.NewGuid();
+        var json = JsonSerializer.Serialize(new UserSettings { Id = id, SessionsPerWeek = perWeek }, KroppJson.Options);
+
+        (AggregateValidator.Validate(new SyncChange(AggregateTypes.Settings, id, Now, false, json)) is null).ShouldBe(valid);
+    }
+
     [Fact]
     public void A_negative_weight_is_refused()
     {

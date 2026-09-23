@@ -20,6 +20,13 @@ public sealed class LocalRepository(ILocalStore store, TimeProvider? time = null
             .Select(r => JsonSerializer.Deserialize<T>(r.Data!, KroppJson.Options)!)];
     }
 
+    /// <summary>One aggregate by id, or null when there is none or it was deleted.</summary>
+    public async Task<T?> GetAsync<T>(Guid id) where T : class
+    {
+        var record = await store.GetAsync(LocalRecord.KeyOf(AggregateTypes.Of<T>(), id));
+        return record is { IsDeleted: false, Data: { } data } ? JsonSerializer.Deserialize<T>(data, KroppJson.Options) : null;
+    }
+
     public Task SaveAsync<T>(Guid id, T aggregate) =>
         PutAsync(AggregateTypes.Of<T>(), id, JsonSerializer.Serialize(aggregate, KroppJson.Options), isDeleted: false);
 

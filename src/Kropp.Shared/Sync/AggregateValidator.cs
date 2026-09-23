@@ -35,6 +35,7 @@ public static partial class AggregateValidator
                 AggregateTypes.Workout => ValidateWorkout(change.Id, Deserialize<Workout>(change.Data)),
                 AggregateTypes.Exercise => ValidateExercise(change.Id, Deserialize<Exercise>(change.Data)),
                 AggregateTypes.Template => ValidateTemplate(change.Id, Deserialize<WorkoutTemplate>(change.Data)),
+                AggregateTypes.Settings => ValidateSettings(change.Id, Deserialize<UserSettings>(change.Data)),
                 _ => null,
             };
         }
@@ -66,6 +67,15 @@ public static partial class AggregateValidator
         if (string.IsNullOrWhiteSpace(template.Name) || template.Name.Length > MaxName)
             return "The template needs a name of at most 200 characters.";
         return ValidateEntries(template.Exercises);
+    }
+
+    private static string? ValidateSettings(Guid id, UserSettings settings)
+    {
+        if (id != UserSettings.SingletonId || settings.Id != id)
+            return "Settings are stored under their fixed id only.";
+        if (settings.SessionsPerWeek is < UserSettings.MinSessionsPerWeek or > UserSettings.MaxSessionsPerWeek)
+            return "Sessions per week must be between 1 and 7.";
+        return null;
     }
 
     private static string? ValidateEntries(List<WorkoutExercise> entries)

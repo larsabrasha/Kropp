@@ -30,20 +30,39 @@ public class PlanningTests
 
     [Fact]
     public void The_next_day_is_two_days_after_the_last_session() =>
-        Planning.SuggestDate([Done(new DateOnly(2026, 9, 21), Bench)], new DateOnly(2026, 9, 22)).ShouldBe(Wednesday);
+        Planning.SuggestDate([Done(new DateOnly(2026, 9, 21), Bench)], new DateOnly(2026, 9, 22), UserSettings.Default).ShouldBe(Wednesday);
 
     [Fact]
     public void The_next_day_is_never_in_the_past() =>
-        Planning.SuggestDate([Done(new DateOnly(2026, 9, 14), Bench)], Wednesday).ShouldBe(Wednesday);
+        Planning.SuggestDate([Done(new DateOnly(2026, 9, 14), Bench)], Wednesday, UserSettings.Default).ShouldBe(Wednesday);
 
     [Fact]
     public void A_week_with_three_sessions_moves_the_next_to_monday() =>
-        Planning.SuggestDate([Done(new DateOnly(2026, 9, 21), Bench), Done(new DateOnly(2026, 9, 23), Bench), Done(new DateOnly(2026, 9, 25), Bench)], new DateOnly(2026, 9, 25))
+        Planning.SuggestDate([Done(new DateOnly(2026, 9, 21), Bench), Done(new DateOnly(2026, 9, 23), Bench), Done(new DateOnly(2026, 9, 25), Bench)], new DateOnly(2026, 9, 25), UserSettings.Default)
             .ShouldBe(new DateOnly(2026, 9, 28));
 
     [Fact]
     public void With_no_history_the_next_day_is_today() =>
-        Planning.SuggestDate([], Wednesday).ShouldBe(Wednesday);
+        Planning.SuggestDate([], Wednesday, UserSettings.Default).ShouldBe(Wednesday);
+
+    [Theory]
+    [InlineData(1, 7)]
+    [InlineData(2, 3)]
+    [InlineData(3, 2)]
+    [InlineData(4, 1)]
+    [InlineData(7, 1)]
+    public void The_days_between_sessions_follow_from_sessions_a_week(int perWeek, int days) =>
+        new UserSettings { SessionsPerWeek = perWeek }.DaysBetweenSessions.ShouldBe(days);
+
+    [Fact]
+    public void Two_sessions_a_week_suggest_three_days_later_and_fill_the_week_sooner()
+    {
+        var twice = new UserSettings { SessionsPerWeek = 2 };
+
+        Planning.SuggestDate([Done(new DateOnly(2026, 9, 21), Bench)], new DateOnly(2026, 9, 22), twice).ShouldBe(new DateOnly(2026, 9, 24));
+        Planning.SuggestDate([Done(new DateOnly(2026, 9, 21), Bench), Done(new DateOnly(2026, 9, 24), Bench)], new DateOnly(2026, 9, 24), twice)
+            .ShouldBe(new DateOnly(2026, 9, 28));
+    }
 
     [Fact]
     public void The_template_done_longest_ago_is_suggested()
