@@ -229,7 +229,7 @@ public class WorkoutPageTests : ClientTestContext
         page.WaitForAssertion(() => module.VerifyInvoke("init"));
 
         // What kropp-sortable.js calls when a card is dropped at a new position.
-        await page.InvokeAsync(() => page.Instance.OnEntryReordered(1, 0));
+        await page.InvokeAsync(() => page.FindComponent<Kropp.Client.Components.ExerciseList>().Instance.OnEntryReordered(1, 0));
 
         page.WaitForAssertion(() => page.FindAll("[data-testid=exercise-entry] h3").Select(h => h.TextContent).ShouldBe(["Vader", "Bröst maskin"]));
         var saved = (await ReloadAsync(workout.Id)).Exercises;

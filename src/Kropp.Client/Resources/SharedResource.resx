@@ -116,4 +116,7 @@
   <data name="Settings.Effect" xml:space="preserve"><value>The next workout is suggested {0} days after the last one, and on Monday once the week is full.</value></data>
   <data name="Settings.EffectOneDay" xml:space="preserve"><value>The next workout is suggested the day after the last one, and on Monday once the week is full.</value></data>
   <data name="Next.ChangeDay" xml:space="preserve"><value>Change day</value></data>
+  <data name="Templates.NotFound" xml:space="preserve"><value>This template does not exist, or has been deleted.</value></data>
+  <data name="Templates.DeleteTemplate" xml:space="preserve"><value>Delete template</value></data>
+  <data name="Templates.DeleteConfirm" xml:space="preserve"><value>Delete this template? Workouts planned from it stay.</value></data>
 </root>

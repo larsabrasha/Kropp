@@ -34,24 +34,17 @@ else
     <ul class="mt-4 flex flex-col gap-2" data-testid="templates">
         @foreach (var template in templates)
         {
-            <li @key="template.Id" class="rounded-xl border border-gray-200 p-3 dark:border-gray-800">
-                <div class="flex items-end gap-2">
-                    <div class="min-w-0 flex-1">
-                        <TextField Label="@L["Templates.Name"]" Value="@template.Name" Changed="v => RenameAsync(template, v)" />
-                    </div>
-                    @if (confirming == template.Id)
-                    {
-                        <button type="button" @onclick="() => DeleteAsync(template)" class="rounded-lg bg-red-600 px-3 py-2 text-sm font-medium text-white">@L["Templates.Delete"]</button>
-                        <button type="button" @onclick="() => confirming = null" class="rounded-lg px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800">@L["Common.Cancel"]</button>
-                    }
-                    else
-                    {
-                        <button type="button" @onclick="() => confirming = template.Id" class="rounded-lg px-3 py-2 text-sm text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950">@L["Templates.Delete"]</button>
-                    }
-                </div>
-                <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                    @string.Join(", ", template.Exercises.Select(e => exercises.GetValueOrDefault(e.ExerciseId)?.Name ?? L["Exercise.Unknown"]))
-                </p>
+            <li @key="template.Id">
+                <a href="templates/@template.Id" class="flex items-center gap-3 rounded-xl border border-gray-200 p-3 hover:bg-gray-50 focus-visible:outline-2 focus-visible:outline-blue-500 dark:border-gray-800 dark:hover:bg-gray-900">
+                    <PlanIcon Slug="@ExerciseCategories.IconFor(new Workout { Id = template.Id, Date = default, Exercises = template.Exercises }, exercises)" />
+                    <span class="min-w-0 flex-1">
+                        <span class="block truncate font-semibold">@template.Name</span>
+                        <span class="block truncate text-sm text-gray-500 dark:text-gray-400">
+                            @string.Join(", ", template.Exercises.Select(e => exercises.GetValueOrDefault(e.ExerciseId)?.Name ?? L["Exercise.Unknown"]))
+                        </span>
+                    </span>
+                    <svg class="size-5 shrink-0 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
+                </a>
             </li>
         }
     </ul>
@@ -60,7 +53,6 @@ else
 @code {
     private List<WorkoutTemplate>? templates;
     private Dictionary<Guid, Exercise> exercises = [];
-    private Guid? confirming;
     private string? error;
 
     protected override async Task OnInitializedAsync()
@@ -81,42 +73,6 @@ else
             Logger.LogError(ex, "Could not read templates");
             templates = [];
             error = L["Home.LoadFailed"];
-        }
-    }
-
-    private async Task RenameAsync(WorkoutTemplate template, string? name)
-    {
-        if (string.IsNullOrWhiteSpace(name))
-            return;
-        await SaveAsync(template with { Name = name.Trim() });
-    }
-
-    private async Task SaveAsync(WorkoutTemplate template)
-    {
-        try
-        {
-            await Repository.SaveAsync(template.Id, template);
-            await LoadAsync();
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Could not save template");
-            error = L["Home.SaveFailed"];
-        }
-    }
-
-    private async Task DeleteAsync(WorkoutTemplate template)
-    {
-        confirming = null;
-        try
-        {
-            await Repository.DeleteAsync<WorkoutTemplate>(template.Id);
-            await LoadAsync();
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Could not delete template");
-            error = L["Home.SaveFailed"];
         }
     }
 

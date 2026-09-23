@@ -1,0 +1,141 @@
+@* The exercises of a workout or a template: the cards, drag and drop, and adding from the
+   register. Shared by the workout page and the template page, which only differ in what they
+   show around it and how they save. Edits are raised as a whole new list for the page to save. *@
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+@inject ILogger<ExerciseList> Logger
+
+<section class="flex flex-col gap-2">
+    @if (Owner.Exercises.Count == 0 && !picking)
+    {
+        <div class="flex flex-col items-center gap-3 rounded-xl border border-dashed border-gray-300 px-4 py-8 text-center text-gray-500 dark:border-gray-700 dark:text-gray-400" data-testid="no-exercises">
+            <svg class="size-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11" /></svg>
+            <p>@L["Workout.NoExercises"]</p>
+        </div>
+    }
+
+    <div @ref="entryList" class="flex flex-col gap-2" data-testid="entry-list">
+        @for (var i = 0; i < Owner.Exercises.Count; i++)
+        {
+            var index = i;
+            var entry = Owner.Exercises[index];
+            <ExerciseEntryCard @key="(entry.ExerciseId, entry.Order)"
+                               ForTemplate="ForTemplate"
+                               Entry="entry"
+                               Exercise="Exercises.GetValueOrDefault(entry.ExerciseId)"
+                               LastTime="@(ForTemplate ? null : WorkoutEditing.LastTime(History, Owner, entry.ExerciseId))"
+                               Active="activeEntry == index"
+                               OnActivate="() => activeEntry = index"
+                               OnChange="next => OnChange.InvokeAsync(WorkoutEditing.ReplaceEntry(Owner, index, next))"
+                               OnRemove="() => RemoveAsync(index)"
+                               OnExerciseChange="OnExerciseChange" />
+        }
+    </div>
+
+    @if (picking)
+    {
+        <ExercisePicker Exercises="[.. Exercises.Values]" OnPick="AddAsync" OnCreate="CreateAsync" OnCancel="() => picking = false" />
+    }
+    else
+    {
+        <button type="button" @onclick="() => picking = true" data-testid="add-exercise"
+                class="rounded-xl border-2 border-dashed border-blue-300 px-4 py-4 font-medium text-blue-700 hover:bg-blue-50 focus-visible:outline-2 focus-visible:outline-blue-500 dark:border-blue-800 dark:text-blue-300 dark:hover:bg-blue-950">
+            + @L["Workout.AddExercise"]
+        </button>
+    }
+</section>
+
+@code {
+    /// <summary>The list as a workout; a template passes its exercises in one.</summary>
+    [Parameter, EditorRequired] public Workout Owner { get; set; } = default!;
+
+    [Parameter] public IReadOnlyDictionary<Guid, Exercise> Exercises { get; set; } = new Dictionary<Guid, Exercise>();
+
+    /// <summary>Every workout, for "last time" and for the targets an added exercise starts from.</summary>
+    [Parameter] public IReadOnlyList<Workout> History { get; set; } = [];
+
+    [Parameter] public bool ForTemplate { get; set; }
+
+    [Parameter] public EventCallback<Workout> OnChange { get; set; }
+
+    /// <summary>Raised with an exercise changed or created in the register, for the page to save.</summary>
+    [Parameter] public EventCallback<Exercise> OnExerciseChange { get; set; }
+
+    private int? activeEntry;
+    private bool picking;
+    private Guid? ownerId;
+    private ElementReference entryList;
+    private IJSObjectReference? sortable;
+    private DotNetObjectReference<ExerciseList>? self;
+
+    protected override void OnParametersSet()
+    {
+        // Another workout in the same page: start with everything closed.
+        if (ownerId != Owner.Id)
+        {
+            ownerId = Owner.Id;
+            activeEntry = null;
+            picking = false;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+            return;
+        try
+        {
+            sortable = await JS.InvokeAsync<IJSObjectReference>("import", "./js/kropp-sortable.js");
+            self = DotNetObjectReference.Create(this);
+            await sortable.InvokeVoidAsync("init", entryList, self);
+        }
+        catch (JSException ex)
+        {
+            Logger.LogWarning(ex, "Could not start drag and drop");
+        }
+    }
+
+    /// <summary>Called by kropp-sortable.js when a card is dropped at a new position.</summary>
+    [JSInvokable]
+    public async Task OnEntryReordered(int from, int to)
+    {
+        activeEntry = null;
+        await OnChange.InvokeAsync(WorkoutEditing.MoveEntry(Owner, from, to));
+        StateHasChanged();
+    }
+
+    private Task RemoveAsync(int index)
+    {
+        activeEntry = null;
+        return OnChange.InvokeAsync(WorkoutEditing.RemoveEntry(Owner, index));
+    }
+
+    private Task AddAsync(Exercise exercise)
+    {
+        picking = false;
+        return OnChange.InvokeAsync(WorkoutEditing.AddExercise(Owner, exercise, WorkoutEditing.LastTime(History, Owner, exercise.Id)));
+    }
+
+    private async Task CreateAsync((string Name, ExerciseKind Kind, List<BodyArea> Categories) request)
+    {
+        var exercise = new Exercise { Id = Guid.NewGuid(), Name = request.Name, Kind = request.Kind, Categories = request.Categories };
+        await OnExerciseChange.InvokeAsync(exercise);
+        await AddAsync(exercise);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (sortable is not null)
+        {
+            try
+            {
+                await sortable.InvokeVoidAsync("destroy", entryList);
+                await sortable.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+            }
+        }
+        self?.Dispose();
+    }
+}

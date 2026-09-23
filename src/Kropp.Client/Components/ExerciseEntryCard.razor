@@ -34,7 +34,7 @@
     @if (panel == Panel.Menu)
     {
         <div class="mt-2 flex flex-wrap gap-1" data-testid="menu">
-            <MenuButton OnClick="() => Toggle(Panel.Notes)">@L["Entry.EditNotes"]</MenuButton>
+            <MenuButton OnClick="() => Toggle(Panel.Notes)">@(ForTemplate ? L["Entry.Settings"] : L["Entry.EditNotes"])</MenuButton>
             <MenuButton OnClick="() => Toggle(Panel.Categories)">@L["Entry.Categories"]</MenuButton>
             <MenuButton OnClick="OnRemove" Danger="true">@L["Entry.Remove"]</MenuButton>
         </div>
@@ -115,7 +115,7 @@
         </div>
     }
 
-    @if (Kind != ExerciseKind.Cardio)
+    @if (Kind != ExerciseKind.Cardio && !ForTemplate)
     {
         <div class="mt-2 flex gap-2" data-testid="sets">
             @for (var i = 0; i < PlannedSlots; i++)
@@ -191,7 +191,10 @@
         <div class="mt-2 rounded-lg bg-gray-50 p-2 dark:bg-gray-900" data-testid="notes-editor">
             <div class="grid gap-2 sm:grid-cols-2">
                 <TextField Label="@L["Entry.Settings"]" Value="@Entry.Settings" Placeholder="@L["Entry.SettingsPlaceholder"]" Changed="v => Change(Entry with { Settings = v })" />
-                <TextField Label="@L["Entry.Comment"]" Value="@Entry.Comment" Placeholder="@L["Entry.CommentPlaceholder"]" Changed="v => Change(Entry with { Comment = v })" />
+                @if (!ForTemplate)
+                {
+                    <TextField Label="@L["Entry.Comment"]" Value="@Entry.Comment" Placeholder="@L["Entry.CommentPlaceholder"]" Changed="v => Change(Entry with { Comment = v })" />
+                }
             </div>
             <DoneRow OnDone="Close" />
         </div>
@@ -216,6 +219,9 @@
     [Parameter] public bool Active { get; set; }
 
     [Parameter] public EventCallback OnActivate { get; set; }
+
+    /// <summary>In a template: only the plan, no sets, no comment and no "last time".</summary>
+    [Parameter] public bool ForTemplate { get; set; }
     [Parameter] public EventCallback<WorkoutExercise> OnChange { get; set; }
     [Parameter] public EventCallback OnRemove { get; set; }
 
@@ -266,7 +272,7 @@
                 parts.Add(Exercise.SettingsNote);
             if (Kind != ExerciseKind.Cardio && !string.IsNullOrWhiteSpace(Entry.Settings))
                 parts.Add(Entry.Settings);
-            if (!string.IsNullOrWhiteSpace(Entry.Comment))
+            if (!ForTemplate && !string.IsNullOrWhiteSpace(Entry.Comment))
                 parts.Add($"”{Entry.Comment}”");
             return parts;
         }

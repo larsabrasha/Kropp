@@ -116,4 +116,7 @@
   <data name="Settings.Effect" xml:space="preserve"><value>Nästa pass föreslås {0} dagar efter det senaste, och på måndag när veckan är full.</value></data>
   <data name="Settings.EffectOneDay" xml:space="preserve"><value>Nästa pass föreslås dagen efter det senaste, och på måndag när veckan är full.</value></data>
   <data name="Next.ChangeDay" xml:space="preserve"><value>Ändra dag</value></data>
+  <data name="Templates.NotFound" xml:space="preserve"><value>Mallen finns inte, eller har tagits bort.</value></data>
+  <data name="Templates.DeleteTemplate" xml:space="preserve"><value>Ta bort mallen</value></data>
+  <data name="Templates.DeleteConfirm" xml:space="preserve"><value>Ta bort mallen? Pass som planerats från den finns kvar.</value></data>
 </root>
