@@ -9,10 +9,17 @@
     <ul class="mt-3 flex max-h-72 flex-col gap-1 overflow-y-auto">
         @foreach (var exercise in Matches)
         {
+            var slug = ExerciseIllustrations.SlugFor(exercise);
             <li @key="exercise.Id">
                 <button type="button" @onclick="() => OnPick.InvokeAsync(exercise)"
-                        class="flex w-full items-center justify-between rounded-lg px-3 py-3 text-left hover:bg-gray-100 focus-visible:outline-2 focus-visible:outline-blue-500 dark:hover:bg-gray-800">
-                    <span>@exercise.Name</span>
+                        class="flex w-full items-center gap-3 rounded-lg px-2 py-1.5 text-left hover:bg-gray-100 focus-visible:outline-2 focus-visible:outline-blue-500 dark:hover:bg-gray-800">
+                    <span class="size-10 shrink-0 overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800" aria-hidden="true">
+                        @if (slug is not null)
+                        {
+                            <img src="@ExerciseIllustrations.Picture(slug)" alt="" loading="lazy" class="illustration size-full object-contain p-0.5" data-testid="picker-thumbnail" />
+                        }
+                    </span>
+                    <span class="min-w-0 flex-1 truncate">@exercise.Name</span>
                     <span class="text-xs text-gray-500 dark:text-gray-400">@L[$"Exercise.Kind.{exercise.Kind}"]</span>
                 </button>
             </li>

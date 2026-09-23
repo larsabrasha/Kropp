@@ -276,6 +276,7 @@ public class WorkoutPageTests : ClientTestContext
         page.WaitForElement("[data-testid=add-exercise]").Click();
         page.Find("[data-testid=exercise-picker] input[type=search]").Input("bröst");
         page.FindAll("[data-testid=exercise-picker] li").Count.ShouldBe(1);
+        page.Find("[data-testid=exercise-picker] li [data-testid=picker-thumbnail]").GetAttribute("src").ShouldBe(ExerciseIllustrations.Picture("machine-chest-press"));
         page.Find("[data-testid=exercise-picker] li button").Click();
 
         page.WaitForAssertion(() => page.Find("[data-testid=exercise-entry] h3").TextContent.ShouldBe("Bröst maskin"));
