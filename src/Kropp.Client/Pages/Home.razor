@@ -129,7 +129,7 @@ else if (upcoming is not null)
     else
     {
         <div class="flex flex-col gap-5" data-testid="workout-list">
-            @foreach (var week in Weeks)
+            @foreach (var week in Weeks.Take(weeksShown))
             {
                 <section @key="week.Key" data-testid="week">
                     <h3 class="mb-2 flex items-baseline gap-2 text-sm">
@@ -169,6 +169,13 @@ else if (upcoming is not null)
                         }
                     </ul>
                 </section>
+            }
+            @if (Weeks.Count > weeksShown)
+            {
+                <button type="button" @onclick="() => weeksShown += WeeksPerPage" data-testid="more-weeks"
+                        class="rounded-xl border border-gray-200 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:text-gray-300 dark:hover:bg-gray-900">
+                    @L["Home.MoreWeeks", Weeks.Count - weeksShown]
+                </button>
             }
         </div>
     }
@@ -293,6 +300,11 @@ else if (upcoming is not null)
 
     private static Workout AsWorkout(WorkoutTemplate template) =>
         new() { Id = template.Id, Date = default, Exercises = template.Exercises };
+
+    // The list opens with the latest weeks; older ones are a tap away. All of it is local already,
+    // so this only keeps the page short.
+    private const int WeeksPerPage = 4;
+    private int weeksShown = WeeksPerPage;
 
     private sealed record Week(string Key, int Number, DateOnly Monday, List<Workout> Workouts);
 

@@ -84,6 +84,25 @@ public class HomeTests : ClientTestContext
     }
 
     [Fact]
+    public async Task The_list_shows_four_weeks_and_more_on_request()
+    {
+        for (var week = 0; week < 6; week++)
+        {
+            var w = new Workout { Id = Guid.NewGuid(), Date = new DateOnly(2026, 9, 21).AddDays(-7 * week) };
+            await Repository.SaveAsync(w.Id, w);
+        }
+        var home = Render<Home>();
+
+        home.WaitForAssertion(() => home.FindAll("[data-testid=week]").Count.ShouldBe(4));
+        home.Find("[data-testid=more-weeks]").TextContent.ShouldContain("2 äldre");
+
+        home.Find("[data-testid=more-weeks]").Click();
+
+        home.FindAll("[data-testid=week]").Count.ShouldBe(6);
+        home.FindAll("[data-testid=more-weeks]").ShouldBeEmpty();
+    }
+
+    [Fact]
     public async Task One_exercise_is_singular()
     {
         var workout = new Workout { Id = Guid.NewGuid(), Date = new DateOnly(2026, 9, 21), Exercises = [new WorkoutExercise { ExerciseId = Guid.NewGuid() }] };
