@@ -28,6 +28,10 @@ public class TemplatesPageTests : ClientTestContext
 
     private async Task<WorkoutTemplate> ReloadAsync(Guid id) => (await Repository.GetAsync<WorkoutTemplate>(id))!;
 
+    // For WaitForAssertion, which retries only a synchronous assertion: an async lambda there
+    // becomes async void, and a failing assertion in it is never seen.
+    private WorkoutTemplate Reload(Guid id) => ReloadAsync(id).GetAwaiter().GetResult();
+
     [Fact]
     public void Without_templates_it_explains_how_to_make_one() =>
         Render<TemplatesPage>().WaitForElement("[data-testid=templates-empty]");
@@ -129,9 +133,9 @@ public class TemplatesPageTests : ClientTestContext
         page.Find("[data-testid=target-editor]").QuerySelectorAll("[data-testid=stepper]")
             .Single(s => s.GetAttribute("data-label") == "Minuter").QuerySelector("[data-testid=increase]")!.Click();
 
-        page.WaitForAssertion(async () =>
+        page.WaitForAssertion(() =>
         {
-            var entry = (await ReloadAsync(template.Id)).Exercises.Single();
+            var entry = (Reload(template.Id)).Exercises.Single();
             (entry.TargetDurationMinutes, entry.DurationMinutes).ShouldBe((5.5m, (decimal?)null));
         });
     }

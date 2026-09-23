@@ -29,6 +29,10 @@ public class ExercisePageTests : ClientTestContext
 
     private async Task<Exercise> ReloadAsync(Guid id) => (await Repository.GetAsync<Exercise>(id))!;
 
+    // For WaitForAssertion, which retries only a synchronous assertion: an async lambda there
+    // becomes async void, and a failing assertion in it is never seen.
+    private Exercise Reload(Guid id) => ReloadAsync(id).GetAwaiter().GetResult();
+
     [Fact]
     public void Without_exercises_the_list_says_where_they_come_from() =>
         Render<ExercisesPage>().WaitForElement("[data-testid=exercises-empty]");
@@ -66,7 +70,7 @@ public class ExercisePageTests : ClientTestContext
         chips.QuerySelector("[data-area=Chest]")!.HasAttribute("disabled").ShouldBeTrue();
         chips.QuerySelector("[data-area=Arms]")!.Click();
 
-        page.WaitForAssertion(async () => (await ReloadAsync(Bench.Id)).Categories.ShouldBe([BodyArea.Chest, BodyArea.Arms]));
+        page.WaitForAssertion(() => (Reload(Bench.Id)).Categories.ShouldBe([BodyArea.Chest, BodyArea.Arms]));
         (await Store.GetPendingAsync()).ShouldContain(c => c.Type == AggregateTypes.Exercise && c.Id == Bench.Id);
 
         var workoutPage = Render<WorkoutPage>(p => p.Add(x => x.Id, workout.Id));
@@ -84,9 +88,9 @@ public class ExercisePageTests : ClientTestContext
         page.Find("[data-testid=weight-step]").Change("1");
         page.Find("[data-testid=archived]").Change(true);
 
-        page.WaitForAssertion(async () =>
+        page.WaitForAssertion(() =>
         {
-            var saved = await ReloadAsync(Bench.Id);
+            var saved = Reload(Bench.Id);
             (saved.Name, saved.SettingsNote, saved.WeightStepKg, saved.IsArchived).ShouldBe(("Bröstpress", "Sitthöjd 11", (decimal?)1, true));
         });
         page.Find("h1").TextContent.ShouldBe("Bröstpress");
@@ -153,7 +157,7 @@ public class ExercisePageTests : ClientTestContext
 
         page.WaitForElement("[data-testid=time-only]").Change(true);
 
-        page.WaitForAssertion(async () => (await ReloadAsync(Walk.Id)).MeasuresTimeOnly.ShouldBeTrue());
+        page.WaitForAssertion(() => (Reload(Walk.Id)).MeasuresTimeOnly.ShouldBeTrue());
     }
 
     [Fact]
@@ -180,7 +184,7 @@ public class ExercisePageTests : ClientTestContext
 
         page.WaitForElement("[data-testid=kind]").Change("Bodyweight");
 
-        page.WaitForAssertion(async () => (await ReloadAsync(Bench.Id)).Kind.ShouldBe(ExerciseKind.Bodyweight));
+        page.WaitForAssertion(() => (Reload(Bench.Id)).Kind.ShouldBe(ExerciseKind.Bodyweight));
         page.FindAll("[data-testid=weight-step]").ShouldBeEmpty();
         var workoutPage = Render<WorkoutPage>(p => p.Add(x => x.Id, workout.Id));
         workoutPage.WaitForElement("[data-testid=target]").TextContent.Trim().ShouldBe("3 × 20");
