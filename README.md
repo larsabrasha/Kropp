@@ -114,13 +114,14 @@ GitHub Actions bygger en image när testerna går igenom på `main`:
 Imagen finns för både amd64 och arm64. Den innehåller API:t och migreringarna, så de kommer
 alltid från samma commit.
 
-`docker-compose.yaml` startar tre tjänster:
+`docker-compose.yaml` startar fyra tjänster:
 
 | Tjänst | Vad |
 | --- | --- |
 | `db` | Postgres 17 med en beständig volym |
 | `migrations` | Kör migreringarna och avslutar. API:t startar först när den lyckats. |
 | `api` | API:t, som även serverar appen, över vanlig HTTP på port 8080 |
+| `backup` | En dump av databasen varje natt |
 
 HTTPS kommer från Caddy på routern (OPNsense). På servern behövs `docker-compose.yaml` och en `.env`:
 
@@ -145,11 +146,28 @@ Uppdatera med `docker compose pull && docker compose up -d`.
 Om paketet på GitHub är privat måste servern logga in först: `docker login ghcr.io` med en token
 som har `read:packages`. Paketet innehåller inga data, så det går också bra att göra det publikt.
 
-Säkerhetskopiera databasen, till exempel varje natt:
+Tjänsten `backup` tar en `pg_dump` när den startar och sedan varje natt kl. 03:00. Dumparna
+hamnar i `KROPP_BACKUP_DIR` (standard `./backups`) och sparas i `KROPP_BACKUP_KEEP_DAYS` dagar
+(standard 30). De innehåller hälsodata. Lägg dem helst på en annan disk än databasen, till
+exempel en NAS-share som är monterad på servern. Kontrollera att den senaste gick bra:
 
 ```shell
-docker compose exec -T db pg_dump -U kropp kropp | gzip > kropp-$(date +%F).sql.gz
+docker compose logs backup
 ```
+
+Återställ en dump. Den ersätter allt som finns i databasen:
+
+```shell
+docker compose stop api
+docker compose exec -T db pg_restore -U kropp -d kropp --clean --if-exists --no-owner < backups/kropp-2026-09-24-0300.dump
+docker compose exec -T db psql -U kropp -d kropp -c "select setval('sync_seq', (select coalesce(max(\"ServerSeq\"), 0) from \"SyncDocuments\") + 1000000);"
+docker compose start api
+```
+
+Steget med `setval` behövs. Dumpen sätter tillbaka räknaren för `ServerSeq` till dumpens nivå, och
+telefonerna hämtar bara nummer över det de redan sett. Utan hoppet får nya ändringar nummer som
+telefonerna redan passerat, och de hämtas aldrig. Det som synkats efter dumpen finns kvar bara i
+telefonerna och skickas inte till servern igen.
 
 Den gamla träningsloggen importeras mot servern med `--server https://kropp.example.se`.
 

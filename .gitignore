@@ -424,3 +424,6 @@ imports/
 .env.*
 !.env.example
 appsettings.secret.json
+
+# Database dumps from docker-compose.yaml hold health data.
+/backups/

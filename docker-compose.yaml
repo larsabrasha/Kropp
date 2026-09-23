@@ -47,5 +47,47 @@ services:
       migrations:
         condition: service_completed_successfully
 
+  # A pg_dump when it starts and every night at 03:00, kept for KROPP_BACKUP_KEEP_DAYS days.
+  # The dumps hold health data: point KROPP_BACKUP_DIR at a disk other than the database's.
+  backup:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      TZ: Europe/Stockholm
+      PGHOST: db
+      PGDATABASE: kropp
+      PGUSER: kropp
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      KEEP_DAYS: ${KROPP_BACKUP_KEEP_DAYS:-30}
+    volumes:
+      - ${KROPP_BACKUP_DIR:-./backups}:/backups
+    depends_on:
+      db:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -u
+        dump() {
+          file=/backups/kropp-$$(date +%F-%H%M).dump
+          # Written under another name first, so a failed dump never looks like a good one.
+          if pg_dump --format=custom --file="$$file.partial"; then
+            mv "$$file.partial" "$$file"
+            echo "backup: wrote $$file ($$(du -h "$$file" | cut -f1))"
+            find /backups -name 'kropp-*.dump' -mtime +"$$KEEP_DAYS" -print -delete
+          else
+            rm -f "$$file.partial"
+            echo "backup: FAILED" >&2
+          fi
+        }
+        dump
+        while :; do
+          now=$$(date +%s)
+          next=$$(date -d 'today 03:00' +%s)
+          [ "$$next" -gt "$$now" ] || next=$$(date -d 'tomorrow 03:00' +%s)
+          sleep $$((next - now))
+          dump
+        done
+
 volumes:
   db-data:
