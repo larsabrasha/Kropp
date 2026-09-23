@@ -94,4 +94,5 @@
   <data name="Workout.CardioOnly" xml:space="preserve"><value>Cardio</value></data>
   <data name="Entry.Categories" xml:space="preserve"><value>Categories</value></data>
   <data name="Picker.Categories" xml:space="preserve"><value>Trains (at least one)</value></data>
+  <data name="Home.Week" xml:space="preserve"><value>Week {0}</value></data>
 </root>

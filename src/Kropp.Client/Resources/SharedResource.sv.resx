@@ -94,4 +94,5 @@
   <data name="Workout.CardioOnly" xml:space="preserve"><value>Kondition</value></data>
   <data name="Entry.Categories" xml:space="preserve"><value>Kategorier</value></data>
   <data name="Picker.Categories" xml:space="preserve"><value>Tränar (minst en)</value></data>
+  <data name="Home.Week" xml:space="preserve"><value>Vecka {0}</value></data>
 </root>

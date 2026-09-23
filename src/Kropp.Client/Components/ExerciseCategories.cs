@@ -100,6 +100,32 @@ internal static class ExerciseCategories
         : Defaults.TryGetValue(exercise.Name.Trim(), out var areas) ? areas
         : [];
 
+    /// <summary>
+    /// The picture that stands for a body area in the workout list: one exercise illustration per
+    /// area, so the icons match the exercise pictures and are cached the same way.
+    /// </summary>
+    private static readonly Dictionary<BodyArea, string> AreaIcons = new()
+    {
+        [Legs] = "squat",
+        [Chest] = "bench-press",
+        [Back] = "lat-pulldown",
+        [Core] = "crunch",
+        [Arms] = "bicep-curl",
+        [Shoulders] = "overhead-press",
+    };
+
+    private const string CardioIcon = "running";
+
+    /// <summary>The icon for a workout: its dominant area, the first in its name; null when none is known.</summary>
+    public static string? IconFor(Workout workout, IReadOnlyDictionary<Guid, Exercise> exercises)
+    {
+        Exercise? Find(Guid id) => exercises.GetValueOrDefault(id);
+        if (WorkoutEditing.IsCardioOnly(workout, Find))
+            return CardioIcon;
+        var areas = WorkoutEditing.AreasOf(workout, Find, For);
+        return areas.Count > 0 ? AreaIcons[areas[0]] : null;
+    }
+
     /// <summary>"Ben, rygg och mage" — or "Kondition", or null when nothing is known yet.</summary>
     public static string? WorkoutName(Workout workout, IReadOnlyDictionary<Guid, Exercise> exercises, IStringLocalizer<SharedResource> L)
     {

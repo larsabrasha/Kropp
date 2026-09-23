@@ -56,11 +56,31 @@ public class HomeTests : ClientTestContext
         {
             var link = home.Find("[data-testid=workout-list] a");
             link.GetAttribute("href").ShouldBe($"workouts/{workout.Id}");
-            link.TextContent.ShouldContain("Måndag 21 september 2026", Case.Insensitive);
             link.QuerySelector("[data-testid=workout-name]")!.TextContent.ShouldBe("Ben och bröst");
+            link.QuerySelector("[data-testid=workout-meta]")!.TextContent.ShouldContain("måndag 21 sep", Case.Insensitive);
+            link.QuerySelector("[data-testid=workout-icon]")!.GetAttribute("src").ShouldBe(Kropp.Client.Components.ExerciseIllustrations.Picture("squat"));
             link.TextContent.ShouldContain("Nr 101");
             link.TextContent.ShouldContain("2 övningar");
             link.TextContent.ShouldContain("Genomfört");
+        });
+    }
+
+    [Fact]
+    public async Task Workouts_are_grouped_by_weeks_that_start_on_monday()
+    {
+        foreach (var day in new[] { new DateOnly(2026, 9, 20), new DateOnly(2026, 9, 21), new DateOnly(2026, 9, 23), new DateOnly(2026, 9, 14) })
+        {
+            var w = new Workout { Id = Guid.NewGuid(), Date = day };
+            await Repository.SaveAsync(w.Id, w);
+        }
+
+        var home = Render<Home>();
+
+        home.WaitForAssertion(() =>
+        {
+            var weeks = home.FindAll("[data-testid=week]");
+            weeks.Select(w => string.Join(" ", w.QuerySelectorAll("h3 span").Select(x => x.TextContent.Trim()))).ShouldBe(["Vecka 39 21–27 september", "Vecka 38 14–20 september"]);
+            weeks.Select(w => w.QuerySelectorAll("li").Length).ShouldBe([2, 2]);
         });
     }
 

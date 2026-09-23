@@ -62,35 +62,53 @@
     }
     else
     {
-        <ul class="flex flex-col gap-2" data-testid="workout-list">
-            @foreach (var workout in workouts)
+        <div class="flex flex-col gap-5" data-testid="workout-list">
+            @foreach (var week in Weeks)
             {
-                <li @key="workout.Id">
-                    <a href="workouts/@workout.Id" class="block rounded-xl border border-gray-200 px-4 py-3 hover:bg-gray-50 focus-visible:outline-2 focus-visible:outline-blue-500 dark:border-gray-800 dark:hover:bg-gray-900">
-                        <div class="flex items-baseline justify-between gap-3">
-                            <span class="font-medium first-letter:uppercase">@workout.Date.ToString("dddd d MMMM yyyy")</span>
-                            @{ var status = WorkoutEditing.StatusOf(workout, Today); }
-                            <span class="shrink-0 rounded-full px-2 py-0.5 text-xs @StatusClass(status)">@L[$"Workout.Status.{status}"]</span>
-                        </div>
-                        <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
-                            @if (ExerciseCategories.WorkoutName(workout, exercises, L) is { } name)
-                            {
-                                <span class="font-medium text-gray-800 dark:text-gray-100" data-testid="workout-name">@name</span><span> · </span>
-                            }
-                            @if (workout.SessionNumber is { } number)
-                            {
-                                <span>@L["Home.SessionShort", number] · </span>
-                            }
-                            @(workout.Exercises.Count == 1 ? L["Home.ExerciseCountOne"] : L["Home.ExerciseCount", workout.Exercises.Count])
-                            @if (!string.IsNullOrWhiteSpace(workout.Note))
-                            {
-                                <span> · @workout.Note</span>
-                            }
-                        </p>
-                    </a>
-                </li>
+                <section @key="week.Key" data-testid="week">
+                    <h3 class="mb-2 flex items-baseline gap-2 text-sm">
+                        <span class="font-semibold">@L["Home.Week", week.Number]</span>
+                        <span class="text-gray-500 dark:text-gray-400">@WeekRange(week.Monday)</span>
+                    </h3>
+                    <ul class="flex flex-col gap-2">
+                        @foreach (var workout in week.Workouts)
+                        {
+                            var name = ExerciseCategories.WorkoutName(workout, exercises, L);
+                            var icon = ExerciseCategories.IconFor(workout, exercises);
+                            var status = WorkoutEditing.StatusOf(workout, Today);
+                            <li @key="workout.Id">
+                                <a href="workouts/@workout.Id" class="flex items-center gap-3 rounded-xl border border-gray-200 px-3 py-2.5 hover:bg-gray-50 focus-visible:outline-2 focus-visible:outline-blue-500 dark:border-gray-800 dark:hover:bg-gray-900">
+                                    <span class="size-12 shrink-0 overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800" aria-hidden="true">
+                                        @if (icon is not null)
+                                        {
+                                            <img src="@ExerciseIllustrations.Picture(icon)" alt="" class="illustration size-full object-contain p-1" data-testid="workout-icon" />
+                                        }
+                                    </span>
+                                    <span class="min-w-0 flex-1">
+                                        <span class="flex items-baseline justify-between gap-2">
+                                            <span class="truncate font-semibold" data-testid="workout-name">@(name ?? workout.Note ?? L["Home.Heading"])</span>
+                                            <span class="shrink-0 rounded-full px-2 py-0.5 text-xs @StatusClass(status)">@L[$"Workout.Status.{status}"]</span>
+                                        </span>
+                                        <span class="block truncate text-sm text-gray-500 dark:text-gray-400" data-testid="workout-meta">
+                                            <span class="first-letter:uppercase inline-block">@workout.Date.ToString("dddd d MMM")</span>
+                                            @if (workout.SessionNumber is { } number)
+                                            {
+                                                <span> · @L["Home.SessionShort", number]</span>
+                                            }
+                                            <span> · @(workout.Exercises.Count == 1 ? L["Home.ExerciseCountOne"] : L["Home.ExerciseCount", workout.Exercises.Count])</span>
+                                            @if (name is not null && !string.IsNullOrWhiteSpace(workout.Note))
+                                            {
+                                                <span> · @workout.Note</span>
+                                            }
+                                        </span>
+                                    </span>
+                                </a>
+                            </li>
+                        }
+                    </ul>
+                </section>
             }
-        </ul>
+        </div>
     }
 </section>
 
@@ -188,6 +206,22 @@
         {
             saving = false;
         }
+    }
+
+    private sealed record Week(string Key, int Number, DateOnly Monday, List<Workout> Workouts);
+
+    // Weeks run Monday to Sunday and are numbered by ISO 8601, as Swedish calendars are.
+    private List<Week> Weeks => [.. (workouts ?? [])
+        .GroupBy(w => w.Date.AddDays(-(((int)w.Date.DayOfWeek + 6) % 7)))
+        .OrderByDescending(g => g.Key)
+        .Select(g => new Week(g.Key.ToString("yyyy-MM-dd"), System.Globalization.ISOWeek.GetWeekOfYear(g.Key.ToDateTime(TimeOnly.MinValue)), g.Key, [.. g]))];
+
+    private static string WeekRange(DateOnly monday)
+    {
+        var sunday = monday.AddDays(6);
+        return monday.Month == sunday.Month
+            ? $"{monday.Day}–{sunday.Day} {sunday:MMMM}"
+            : $"{monday:d MMM} – {sunday:d MMM}";
     }
 
     private static string StatusClass(WorkoutStatus status) => status switch
