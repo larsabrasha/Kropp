@@ -36,6 +36,7 @@ public static partial class AggregateValidator
                 AggregateTypes.Exercise => ValidateExercise(change.Id, Deserialize<Exercise>(change.Data)),
                 AggregateTypes.Template => ValidateTemplate(change.Id, Deserialize<WorkoutTemplate>(change.Data)),
                 AggregateTypes.Settings => ValidateSettings(change.Id, Deserialize<UserSettings>(change.Data)),
+                AggregateTypes.TrashedWorkout => ValidateTrashedWorkout(change.Id, Deserialize<TrashedWorkout>(change.Data)),
                 _ => null,
             };
         }
@@ -58,6 +59,15 @@ public static partial class AggregateValidator
         if (workout.Note?.Length > MaxText)
             return "The note is too long.";
         return ValidateEntries(workout.Exercises);
+    }
+
+    private static string? ValidateTrashedWorkout(Guid id, TrashedWorkout trashed)
+    {
+        if (trashed.Id != id)
+            return "The document's id does not match the change's id.";
+        if (trashed.DeletedAt.Year is < 2000 or > 2100)
+            return "The deletion time is out of range.";
+        return ValidateWorkout(id, trashed.Workout);
     }
 
     private static string? ValidateTemplate(Guid id, WorkoutTemplate template)

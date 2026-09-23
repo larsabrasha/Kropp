@@ -1,4 +1,5 @@
 using Kropp.Shared.Sync;
+using Kropp.Shared.Training;
 using Microsoft.JSInterop;
 
 namespace Kropp.Client.Sync;
@@ -8,7 +9,7 @@ namespace Kropp.Client.Sync;
 /// a few seconds after a local save, and every minute while open. iOS offers no background sync,
 /// so a closed app catches up the next time it is opened.
 /// </summary>
-internal sealed class SyncCoordinator(SyncEngine engine, LocalRepository repository, IJSRuntime js, ILogger<SyncCoordinator> logger)
+internal sealed class SyncCoordinator(SyncEngine engine, LocalRepository repository, WorkoutTrash trash, IJSRuntime js, ILogger<SyncCoordinator> logger)
     : IAsyncDisposable
 {
     internal static readonly TimeSpan SaveDebounce = TimeSpan.FromSeconds(3);
@@ -28,6 +29,7 @@ internal sealed class SyncCoordinator(SyncEngine engine, LocalRepository reposit
         await module.InvokeAsync<bool>("requestPersistentStorage");
 
         repository.Changed += OnLocalChange;
+        await PurgeTrashAsync();
         await engine.RefreshPendingCountAsync();
 
         _ = RunPeriodicAsync(stopping.Token);
@@ -35,6 +37,19 @@ internal sealed class SyncCoordinator(SyncEngine engine, LocalRepository reposit
         // Not awaited: on a weak signal the first round can take until the HTTP timeout, and the
         // app must open at once from local data.
         _ = RequestSyncAsync();
+    }
+
+    /// <summary>Before the first sync, so what is deleted for good goes out with it.</summary>
+    private async Task PurgeTrashAsync()
+    {
+        try
+        {
+            await trash.PurgeAsync();
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Could not empty the trash");
+        }
     }
 
     [JSInvokable]

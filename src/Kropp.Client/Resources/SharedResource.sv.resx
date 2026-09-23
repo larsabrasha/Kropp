@@ -38,7 +38,7 @@
   <data name="Workout.NoExercises" xml:space="preserve"><value>Inga övningar än. Lägg till den första nedan.</value></data>
   <data name="Workout.AddExercise" xml:space="preserve"><value>Lägg till övning</value></data>
   <data name="Workout.Delete" xml:space="preserve"><value>Ta bort passet</value></data>
-  <data name="Workout.DeleteConfirm" xml:space="preserve"><value>Ta bort passet på alla enheter?</value></data>
+  <data name="Workout.DeleteConfirm" xml:space="preserve"><value>Flytta passet till papperskorgen? Det raderas för gott efter 30 dagar.</value></data>
   <data name="Exercise.Unknown" xml:space="preserve"><value>Okänd övning</value></data>
   <data name="Exercise.Kind.Strength" xml:space="preserve"><value>Vikter</value></data>
   <data name="Exercise.Kind.Bodyweight" xml:space="preserve"><value>Kroppsvikt</value></data>
@@ -155,4 +155,12 @@
   <data name="Entry.LastComment" xml:space="preserve"><value>Kommentar förra gången</value></data>
   <data name="Exercises.Kind" xml:space="preserve"><value>Typ</value></data>
   <data name="Exercises.KindHelp" xml:space="preserve"><value>Gamla pass visas efter den nya typen.</value></data>
+  <data name="Trash.Heading" xml:space="preserve"><value>Papperskorg</value></data>
+  <data name="Trash.Help" xml:space="preserve"><value>Borttagna pass ligger här i 30 dagar. Sedan raderas de för gott.</value></data>
+  <data name="Trash.Empty" xml:space="preserve"><value>Papperskorgen är tom.</value></data>
+  <data name="Trash.Restore" xml:space="preserve"><value>Återställ</value></data>
+  <data name="Trash.DeleteNow" xml:space="preserve"><value>Radera nu</value></data>
+  <data name="Trash.DeleteConfirm" xml:space="preserve"><value>Radera passet för gott, på alla enheter? Det går inte att ångra.</value></data>
+  <data name="Trash.DeletedInDays" xml:space="preserve"><value>Raderas för gott om {0} dagar</value></data>
+  <data name="Trash.DeletedSoon" xml:space="preserve"><value>Raderas för gott inom ett dygn</value></data>
 </root>

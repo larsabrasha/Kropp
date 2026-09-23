@@ -2,6 +2,7 @@ using Kropp.Client;
 using Kropp.Client.Storage;
 using Kropp.Client.Sync;
 using Kropp.Shared.Sync;
+using Kropp.Shared.Training;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 
@@ -24,6 +25,7 @@ builder.Services.AddScoped<ILocalStore, IndexedDbLocalStore>();
 builder.Services.AddScoped<ISyncApi, HttpSyncApi>();
 builder.Services.AddScoped<LocalRepository>();
 builder.Services.AddScoped<SyncEngine>();
+builder.Services.AddScoped<WorkoutTrash>();
 builder.Services.AddScoped<SyncCoordinator>();
 
 var host = builder.Build();

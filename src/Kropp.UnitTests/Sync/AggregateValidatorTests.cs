@@ -35,6 +35,21 @@ public class AggregateValidatorTests
     public void A_complete_workout_is_valid() =>
         AggregateValidator.Validate(WorkoutChange(ValidWorkout())).ShouldBeNull();
 
+    private static SyncChange TrashChange(TrashedWorkout trashed) =>
+        new(AggregateTypes.TrashedWorkout, trashed.Id, Now, false, JsonSerializer.Serialize(trashed, KroppJson.Options));
+
+    [Fact]
+    public void A_trashed_workout_is_valid_and_its_workout_is_checked_too()
+    {
+        var workout = ValidWorkout();
+        var trashed = new TrashedWorkout { Id = workout.Id, DeletedAt = Now, Workout = workout };
+
+        AggregateValidator.Validate(TrashChange(trashed)).ShouldBeNull();
+        AggregateValidator.Validate(TrashChange(trashed with { Workout = workout with { Id = Guid.NewGuid() } })).ShouldNotBeNull();
+        AggregateValidator.Validate(TrashChange(trashed with { Workout = workout with { Note = new string('x', 2001) } })).ShouldNotBeNull();
+        AggregateValidator.Validate(new SyncChange(AggregateTypes.TrashedWorkout, workout.Id, Now, false, "{\"id\":\"" + workout.Id + "\"}")).ShouldNotBeNull();
+    }
+
     [Fact]
     public void An_exercise_is_valid() =>
         AggregateValidator.Validate(new SyncChange(AggregateTypes.Exercise, Guid.Parse("11111111-1111-1111-1111-111111111111"), Now, false,

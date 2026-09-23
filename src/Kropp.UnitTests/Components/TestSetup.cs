@@ -1,6 +1,7 @@
 using System.Globalization;
 using Bunit;
 using Kropp.Shared.Sync;
+using Kropp.Shared.Training;
 using Kropp.UnitTests.Sync;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -11,6 +12,7 @@ public abstract class ClientTestContext : BunitContext
 {
     protected readonly MemoryLocalStore Store = new();
     protected readonly LocalRepository Repository;
+    private protected readonly ManualTimeProvider Time = new(new DateTimeOffset(2026, 9, 23, 10, 0, 0, TimeSpan.Zero));
 
     protected ClientTestContext()
     {
@@ -18,8 +20,9 @@ public abstract class ClientTestContext : BunitContext
         Repository = new LocalRepository(Store);
         Services.AddLocalization();
         // Tests name dates around 23 September 2026; the pages read "today" from this.
-        Services.AddSingleton<TimeProvider>(new ManualTimeProvider(new DateTimeOffset(2026, 9, 23, 10, 0, 0, TimeSpan.Zero)));
+        Services.AddSingleton<TimeProvider>(Time);
         Services.AddSingleton(Repository);
+        Services.AddSingleton(new WorkoutTrash(Repository, Time));
         Services.AddSingleton(new SyncEngine(Store, new FakeSyncApi()));
         JSInterop.Mode = JSRuntimeMode.Loose;
     }

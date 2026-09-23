@@ -32,6 +32,10 @@ public class SettingsPageTests : ClientTestContext
         Render<SettingsPage>().WaitForElement("[data-testid=exercises-link]").GetAttribute("href").ShouldBe("exercises");
 
     [Fact]
+    public void The_trash_is_reached_from_settings() =>
+        Render<SettingsPage>().WaitForElement("[data-testid=trash-link]").GetAttribute("href").ShouldBe("trash");
+
+    [Fact]
     public async Task Seven_a_week_is_the_most()
     {
         await Repository.SaveAsync(UserSettings.SingletonId, new UserSettings { SessionsPerWeek = 7 });

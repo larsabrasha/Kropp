@@ -530,7 +530,7 @@ public class WorkoutPageTests : ClientTestContext
     }
 
     [Fact]
-    public async Task Deleting_asks_first_and_then_leaves_a_tombstone()
+    public async Task Deleting_asks_first_and_then_moves_the_workout_to_the_trash()
     {
         var workout = await SeedAsync(new Workout { Id = Guid.NewGuid(), Date = new DateOnly(2026, 9, 23) });
         var page = Render<WorkoutPage>(p => p.Add(x => x.Id, workout.Id));
@@ -541,6 +541,7 @@ public class WorkoutPageTests : ClientTestContext
 
         page.WaitForAssertion(() => Repository.GetAllAsync<Workout>().Result.ShouldBeEmpty());
         (await Store.GetAsync($"workout:{workout.Id}")).ShouldNotBeNull().IsDeleted.ShouldBeTrue();
+        (await Repository.GetAsync<TrashedWorkout>(workout.Id)).ShouldNotBeNull().Workout.Id.ShouldBe(workout.Id);
     }
 
     [Fact]

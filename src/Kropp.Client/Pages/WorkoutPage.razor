@@ -2,6 +2,7 @@
 @implements IDisposable
 @inject LocalRepository Repository
 @inject SyncEngine Engine
+@inject WorkoutTrash Trash
 @inject NavigationManager Navigation
 @inject ILogger<WorkoutPage> Logger
 @inject IJSRuntime JS
@@ -81,7 +82,7 @@ else
         {
             <div class="flex items-center gap-2" role="alertdialog" aria-label="@L["Workout.DeleteConfirm"]">
                 <span class="text-sm">@L["Workout.DeleteConfirm"]</span>
-                <button type="button" @onclick="DeleteAsync" class="rounded-lg bg-red-600 px-4 py-2.5 font-medium text-white hover:bg-red-700">@L["Workout.Delete"]</button>
+                <button type="button" @onclick="DeleteAsync" disabled="@deleting" class="rounded-lg bg-red-600 px-4 py-2.5 font-medium text-white hover:bg-red-700 disabled:opacity-60">@(deleting ? L["Common.Loading"] : L["Workout.Delete"])</button>
                 <button type="button" @onclick="() => confirmingDelete = false" class="rounded-lg px-4 py-2.5 hover:bg-gray-100 dark:hover:bg-gray-800">@L["Common.Cancel"]</button>
             </div>
         }
@@ -99,6 +100,7 @@ else
 
     private bool loaded;
     private Workout? workout;
+    private bool deleting;
     private List<Workout> workouts = [];
     private Dictionary<Guid, Exercise> exercises = [];
     private bool editingDetails;
@@ -254,15 +256,23 @@ else
 
     private async Task DeleteAsync()
     {
+        if (deleting)
+            return;
+        deleting = true;
         try
         {
-            await Repository.DeleteAsync<Workout>(Id);
+            if (workout is not null)
+                await Trash.MoveToTrashAsync(workout);
             Navigation.NavigateTo("");
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Could not delete workout");
             error = L["Home.SaveFailed"];
+        }
+        finally
+        {
+            deleting = false;
         }
     }
 

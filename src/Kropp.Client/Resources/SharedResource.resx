@@ -38,7 +38,7 @@
   <data name="Workout.NoExercises" xml:space="preserve"><value>No exercises yet. Add the first one below.</value></data>
   <data name="Workout.AddExercise" xml:space="preserve"><value>Add exercise</value></data>
   <data name="Workout.Delete" xml:space="preserve"><value>Delete workout</value></data>
-  <data name="Workout.DeleteConfirm" xml:space="preserve"><value>Delete this workout on every device?</value></data>
+  <data name="Workout.DeleteConfirm" xml:space="preserve"><value>Move the workout to the trash? It is deleted for good after 30 days.</value></data>
   <data name="Exercise.Unknown" xml:space="preserve"><value>Unknown exercise</value></data>
   <data name="Exercise.Kind.Strength" xml:space="preserve"><value>Weights</value></data>
   <data name="Exercise.Kind.Bodyweight" xml:space="preserve"><value>Bodyweight</value></data>
@@ -155,4 +155,12 @@
   <data name="Entry.LastComment" xml:space="preserve"><value>Comment last time</value></data>
   <data name="Exercises.Kind" xml:space="preserve"><value>Type</value></data>
   <data name="Exercises.KindHelp" xml:space="preserve"><value>Old workouts are shown by the new type.</value></data>
+  <data name="Trash.Heading" xml:space="preserve"><value>Trash</value></data>
+  <data name="Trash.Help" xml:space="preserve"><value>Deleted workouts stay here for 30 days, then they are deleted for good.</value></data>
+  <data name="Trash.Empty" xml:space="preserve"><value>The trash is empty.</value></data>
+  <data name="Trash.Restore" xml:space="preserve"><value>Restore</value></data>
+  <data name="Trash.DeleteNow" xml:space="preserve"><value>Delete now</value></data>
+  <data name="Trash.DeleteConfirm" xml:space="preserve"><value>Delete the workout for good, on every device? This cannot be undone.</value></data>
+  <data name="Trash.DeletedInDays" xml:space="preserve"><value>Deleted for good in {0} days</value></data>
+  <data name="Trash.DeletedSoon" xml:space="preserve"><value>Deleted for good within a day</value></data>
 </root>

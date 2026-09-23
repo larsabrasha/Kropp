@@ -51,6 +51,24 @@ public sealed class SyncEndpointTests(KroppApiFixture api) : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Trashing_and_deleting_for_good_leave_no_workout_data_on_the_server()
+    {
+        var workout = NewWorkout("Ben");
+        await PushAsync(Change(workout, T0));
+        var trashed = new TrashedWorkout { Id = workout.Id, DeletedAt = T0.AddMinutes(1), Workout = workout };
+
+        (await PushAsync(
+            new SyncChange(AggregateTypes.TrashedWorkout, workout.Id, T0.AddMinutes(1), false, JsonSerializer.Serialize(trashed, KroppJson.Options)),
+            new SyncChange(AggregateTypes.Workout, workout.Id, T0.AddMinutes(1), true, null))).Rejected.ShouldBeEmpty();
+        var inTrash = (await PullAsync(0)).Changes.Single(c => c.Type == AggregateTypes.TrashedWorkout);
+        JsonSerializer.Deserialize<TrashedWorkout>(inTrash.Data!, KroppJson.Options)!.Workout.Note.ShouldBe("Ben");
+
+        await PushAsync(new SyncChange(AggregateTypes.TrashedWorkout, workout.Id, T0.AddDays(31), true, null));
+
+        (await PullAsync(0)).Changes.ShouldAllBe(c => c.IsDeleted && c.Data == null);
+    }
+
+    [Fact]
     public async Task Pushing_the_same_batch_twice_changes_nothing()
     {
         var change = Change(NewWorkout("Ben"), T0);

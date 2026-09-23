@@ -69,3 +69,19 @@ Vikt och blodtryck blir senare ett eget aggregat, `Measurement`.
 - **Nästa dag** är två dagar efter senaste passet, men tidigast i dag. Har veckan (måndag–söndag)
   redan tre gjorda pass blir det måndagen efter. Tre pass i veckan är fast i koden (`Planning`).
 - Finns redan ett planerat pass från i dag och framåt, visas det i stället för ett förslag.
+
+## Tillägg: papperskorg (2026-09-23)
+
+- "Ta bort passet" flyttar passet till papperskorgen. Där ligger det i 30 dagar och går att
+  återställa. Sedan raderas det för gott.
+- **`TrashedWorkout`** är ett eget aggregat (`trashedWorkout`) med samma id som passet, hela
+  passet och `DeletedAt`. Att flytta dit sparar det och lägger en tombstone på passet. Att
+  återställa gör tvärtom. Ett fält `DeletedAt` på `Workout` valdes bort: då skulle varje vy och
+  planeringen behöva filtrera, och en äldre app som inte känner fältet skulle visa passet igen.
+- **Radera för gott** är en tombstone på `TrashedWorkout`. Servern skriver då över datat med
+  null, så inga träningsdata finns kvar någonstans, bara id och tid. Raden tas inte bort helt,
+  eftersom en enhet som varit offline annars aldrig får veta att passet är borta.
+- Rensningen görs av klienten (`WorkoutTrash.PurgeAsync`) när appen startar och när
+  papperskorgen öppnas, inte av servern. En enhet som aldrig öppnas rensar alltså inte, men
+  nästa enhet som öppnas gör det för alla. Har passet ändrats på en annan enhet efter att det
+  lades i papperskorgen, vinner ändringen och kopian i papperskorgen tas bort.

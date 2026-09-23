@@ -154,6 +154,35 @@ public class SyncEngineTests
     }
 
     [Fact]
+    public async Task A_trashed_workout_reaches_another_device_and_its_data_is_gone_everywhere_after_30_days()
+    {
+        var other = new MemoryLocalStore();
+        var otherRepository = new LocalRepository(other, time);
+        var otherEngine = new SyncEngine(other, api, time);
+        var workout = NewWorkout("Ben");
+        await repository.SaveAsync(workout.Id, workout);
+        await engine.SyncAsync();
+        await otherEngine.SyncAsync();
+        time.Advance(TimeSpan.FromSeconds(1));
+
+        await new WorkoutTrash(repository, time).MoveToTrashAsync(workout);
+        await engine.SyncAsync();
+        await otherEngine.SyncAsync();
+
+        (await otherRepository.GetAllAsync<Workout>()).ShouldBeEmpty();
+        (await otherRepository.GetAllAsync<TrashedWorkout>()).Single().Workout.Note.ShouldBe("Ben");
+
+        time.Advance(WorkoutTrash.Retention);
+        await new WorkoutTrash(otherRepository, time).PurgeAsync();
+        await otherEngine.SyncAsync();
+        await engine.SyncAsync();
+
+        api.Documents.ShouldAllBe(d => d.IsDeleted && d.Data == null);
+        (await repository.GetAllAsync<TrashedWorkout>()).ShouldBeEmpty();
+        (await store.GetAsync(LocalRecord.KeyOf(AggregateTypes.TrashedWorkout, workout.Id)))!.Data.ShouldBeNull();
+    }
+
+    [Fact]
     public async Task A_server_error_is_reported_as_failed_not_offline()
     {
         api.FailWith = FakeSyncApi.ServerError();
