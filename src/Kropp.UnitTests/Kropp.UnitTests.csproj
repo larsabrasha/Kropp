@@ -27,6 +27,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Kropp.Shared\Kropp.Shared.csproj" />
     <ProjectReference Include="..\Kropp.Client\Kropp.Client.csproj" />
+    <ProjectReference Include="..\Kropp.Import\Kropp.Import.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- One-off import of the old training log (a CSV export of the Numbers document) through the
+       same sync API the app uses. Reads files from outside the repository; never commit them. -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Kropp.UnitTests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Kropp.Shared\Kropp.Shared.csproj" />
+  </ItemGroup>
+
+</Project>

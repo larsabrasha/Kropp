@@ -21,6 +21,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kropp.IntegrationTests", "K
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kropp.UnitTests", "Kropp.UnitTests\Kropp.UnitTests.csproj", "{8A02A944-DB94-42D4-8F02-5265D17FCB2C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kropp.Import", "Kropp.Import\Kropp.Import.csproj", "{3ED2000C-D848-46EE-901C-E2227CE415A8}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -139,6 +141,18 @@ Global
 		{8A02A944-DB94-42D4-8F02-5265D17FCB2C}.Release|x64.Build.0 = Release|Any CPU
 		{8A02A944-DB94-42D4-8F02-5265D17FCB2C}.Release|x86.ActiveCfg = Release|Any CPU
 		{8A02A944-DB94-42D4-8F02-5265D17FCB2C}.Release|x86.Build.0 = Release|Any CPU
+		{3ED2000C-D848-46EE-901C-E2227CE415A8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3ED2000C-D848-46EE-901C-E2227CE415A8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3ED2000C-D848-46EE-901C-E2227CE415A8}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{3ED2000C-D848-46EE-901C-E2227CE415A8}.Debug|x64.Build.0 = Debug|Any CPU
+		{3ED2000C-D848-46EE-901C-E2227CE415A8}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{3ED2000C-D848-46EE-901C-E2227CE415A8}.Debug|x86.Build.0 = Debug|Any CPU
+		{3ED2000C-D848-46EE-901C-E2227CE415A8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3ED2000C-D848-46EE-901C-E2227CE415A8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3ED2000C-D848-46EE-901C-E2227CE415A8}.Release|x64.ActiveCfg = Release|Any CPU
+		{3ED2000C-D848-46EE-901C-E2227CE415A8}.Release|x64.Build.0 = Release|Any CPU
+		{3ED2000C-D848-46EE-901C-E2227CE415A8}.Release|x86.ActiveCfg = Release|Any CPU
+		{3ED2000C-D848-46EE-901C-E2227CE415A8}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

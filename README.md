@@ -40,6 +40,7 @@ fristående Blazor WebAssembly-PWA i stället för Blazor Server, eftersom den m
 | `Kropp.Data` | EF Core-kontext och migreringar |
 | `Kropp.MigrationService` | Kör migreringarna och avslutar |
 | `Kropp.AppHost` | Aspire: Postgres, pgweb, migreringar, API |
+| `Kropp.Import` | Engångsimport av den gamla träningsloggen från Numbers (CSV) |
 | `Kropp.UnitTests` | Sync-motorn, validering, sidor (bUnit) |
 | `Kropp.IntegrationTests` | API:t mot riktig Postgres (Testcontainers) |
 
@@ -86,6 +87,25 @@ ConnectionStrings__kroppdb="Host=localhost;Database=kropp;Username=postgres;Pass
 ```
 
 Öppna sidan en gång, slå av nätet och ladda om.
+
+## Importera den gamla träningsloggen
+
+`Kropp.Import` läser en CSV-export av Numbers-dokumentet och skickar passen via samma sync-API
+som appen. Exportera till en mapp utanför repot (Numbers → Arkiv → Exportera till → CSV) och kör:
+
+```shell
+cd src
+dotnet run --project Kropp.Import -- ~/Downloads/kropp/csv            # torrkörning, skickar inget
+dotnet run --project Kropp.Import -- ~/Downloads/kropp/csv --push     # skickar till localhost:5260
+```
+
+Torrkörningen visar vad som importeras, vilka datum som slås ihop och vilka kommentarer som inte
+kunde tolkas. Id:n räknas fram ur övningsnamn och datum, och allt stämplas 2020-01-01. En andra
+körning ändrar därför ingenting, och den skriver aldrig över det du ändrat i appen. `--overwrite`
+stämplar med nuvarande tid, för när själva importen var fel. `--server URL` pekar ut en annan server.
+
+Reglerna för hur kolumner och kommentarer tolkas finns i `ExerciseCatalog` och `CommentParser`,
+och testerna i `NumbersImportTests` visar dem med påhittade rader.
 
 ## På telefonen
 
