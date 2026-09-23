@@ -84,6 +84,7 @@ else
                                    OnActivate="() => activeEntry = index"
                                    OnChange="next => SaveAsync(WorkoutEditing.ReplaceEntry(workout, index, next))"
                                    OnRemove="() => SaveAsync(WorkoutEditing.RemoveEntry(workout, index))"
+                                   OnExerciseChange="SaveExerciseAsync"
                                    />
             }
         </div>
@@ -200,6 +201,7 @@ else
         if (!loaded || scrolledFor == Id)
             return;
         scrolledFor = Id;
+        _ = PrefetchIllustrationsAsync();
         try
         {
             await using var module = await JS.InvokeAsync<IJSObjectReference>("import", "./js/kropp-ui.js");
@@ -208,6 +210,46 @@ else
         catch (JSException ex)
         {
             Logger.LogDebug(ex, "Could not scroll to the top");
+        }
+    }
+
+    private async Task SaveExerciseAsync(Exercise exercise)
+    {
+        try
+        {
+            await Repository.SaveAsync(exercise.Id, exercise);
+            exercises[exercise.Id] = exercise;
+            await PrefetchIllustrationsAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Could not save exercise {Id}", exercise.Id);
+            error = L["Home.SaveFailed"];
+        }
+    }
+
+    // Loads every frame of this workout's pictures while there is a network, so the service worker
+    // has them when there is none. Only the pictures in use are fetched, never the whole catalog.
+    private async Task PrefetchIllustrationsAsync()
+    {
+        if (workout is null)
+            return;
+        var urls = workout.Exercises
+            .Select(e => ExerciseIllustrations.SlugFor(exercises.GetValueOrDefault(e.ExerciseId)))
+            .OfType<string>()
+            .Distinct()
+            .SelectMany(ExerciseIllustrations.Frames)
+            .ToArray();
+        if (urls.Length == 0)
+            return;
+        try
+        {
+            await using var module = await JS.InvokeAsync<IJSObjectReference>("import", "./js/kropp-ui.js");
+            await module.InvokeVoidAsync("prefetch", (object)urls);
+        }
+        catch (JSException ex)
+        {
+            Logger.LogDebug(ex, "Could not prefetch illustrations");
         }
     }
 
@@ -268,6 +310,7 @@ else
     {
         picking = false;
         await SaveAsync(WorkoutEditing.AddExercise(workout!, exercise, WorkoutEditing.LastTime(workouts, workout!, exercise.Id)));
+        await PrefetchIllustrationsAsync();
     }
 
     private async Task CreateExerciseAsync((string Name, ExerciseKind Kind) request)

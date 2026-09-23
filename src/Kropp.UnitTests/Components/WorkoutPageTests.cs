@@ -147,6 +147,50 @@ public class WorkoutPageTests : ClientTestContext
     }
 
     [Fact]
+    public async Task The_picture_shows_small_animates_large_and_can_be_changed()
+    {
+        var workout = await SeedAsync(new Workout
+        {
+            Id = Guid.NewGuid(), Date = new DateOnly(2026, 9, 23),
+            Exercises = [new WorkoutExercise { ExerciseId = Bench.Id, TargetSets = 3, TargetReps = 8 }],
+        });
+        var page = Render<WorkoutPage>(p => p.Add(x => x.Id, workout.Id));
+
+        var thumbnail = page.WaitForElement("[data-testid=thumbnail]");
+        thumbnail.QuerySelector("img")!.GetAttribute("src").ShouldBe("exercises/machine-chest-press/frame-1.svg");
+
+        thumbnail.Click();
+        page.Find("[data-testid=illustration] .illustration-frames").QuerySelectorAll("img").Select(i => i.GetAttribute("src"))
+            .ShouldBe(["exercises/machine-chest-press/frame-1.svg", "exercises/machine-chest-press/frame-2.svg", "exercises/machine-chest-press/frame-3.svg"]);
+
+        page.Find("[data-testid=change-illustration]").Click();
+        page.Find("[data-testid=illustration-picker] input").Input("pec deck");
+        page.Find("[data-testid=illustration-picker] [data-slug=pec-deck]").Click();
+
+        page.WaitForAssertion(() => page.Find("[data-testid=thumbnail] img").GetAttribute("src").ShouldBe("exercises/pec-deck/frame-1.svg"));
+        (await Repository.GetAllAsync<Exercise>()).Single(e => e.Id == Bench.Id).Illustration.ShouldBe("pec-deck");
+    }
+
+    [Fact]
+    public async Task A_workout_prefetches_only_the_pictures_it_uses()
+    {
+        var module = JSInterop.SetupModule("./js/kropp-ui.js");
+        module.SetupVoid("scrollToTop");
+        module.SetupVoid("prefetch", _ => true);
+        var workout = await SeedAsync(new Workout
+        {
+            Id = Guid.NewGuid(), Date = new DateOnly(2026, 9, 23),
+            Exercises = [new WorkoutExercise { ExerciseId = Bench.Id }],
+        });
+
+        var page = Render<WorkoutPage>(p => p.Add(x => x.Id, workout.Id));
+
+        JSRuntimeInvocation call = default;
+        page.WaitForAssertion(() => call = module.VerifyInvoke("prefetch"));
+        ((string[])call.Arguments[0]!).ShouldBe(["exercises/machine-chest-press/frame-1.svg", "exercises/machine-chest-press/frame-2.svg", "exercises/machine-chest-press/frame-3.svg"]);
+    }
+
+    [Fact]
     public async Task A_done_set_can_be_corrected()
     {
         var workout = await SeedAsync(new Workout

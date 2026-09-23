@@ -115,6 +115,16 @@ HTTPS-adress, till exempel `tailscale serve` på en dator hemma. Öppna adressen
 
 Det finns ingen inloggning än. Lägg därför inte API:t öppet mot internet.
 
+## Övningsbilder
+
+Varje övning kan ha en bild. De 302 övningarna × 3 lägen kommer från
+[Workout Guide](https://github.com/bryllim/workout-guide) (Bryl Lim, byggd på Everkinetic) och
+ligger i `src/Kropp.Client/wwwroot/exercises/`. De importerade övningarna får en bild efter namn
+(`ExerciseIllustrations.Catalog.cs`); i appen byts den genom att trycka på bilden.
+
+Telefonen cachar inte katalogen i förväg. Service workern sparar en bild första gången den visas,
+och ett pass hämtar alla lägen för sina övningars bilder när det öppnas, så de finns offline.
+
 ## Licens
 
-MIT
+Koden är MIT. Övningsbilderna är CC BY-SA 4.0, se [ATTRIBUTION.md](ATTRIBUTION.md).

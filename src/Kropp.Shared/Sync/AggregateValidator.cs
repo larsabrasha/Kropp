@@ -7,7 +7,7 @@ namespace Kropp.Shared.Sync;
 /// Checks a change before it is stored. Used by the server on every push; the client never
 /// relies on it for anything the server does not check again.
 /// </summary>
-public static class AggregateValidator
+public static partial class AggregateValidator
 {
     private const int MaxText = 2000;
     private const int MaxName = 200;
@@ -85,8 +85,13 @@ public static class AggregateValidator
             return "The exercise name is too long.";
         if (exercise.SettingsNote?.Length > MaxText)
             return "The settings note is too long.";
+        if (exercise.Illustration is { } illustration && !IllustrationPattern().IsMatch(illustration))
+            return "The illustration is not a valid name.";
         return null;
     }
+
+    [System.Text.RegularExpressions.GeneratedRegex("^[a-z0-9-]{1,80}$")]
+    private static partial System.Text.RegularExpressions.Regex IllustrationPattern();
 
     private static bool IsNegative(params int?[] values) => values.Any(v => v < 0);
     private static bool IsNegative(params decimal?[] values) => values.Any(v => v < 0);

@@ -9,7 +9,10 @@ self.addEventListener('fetch', event => event.respondWith(onFetch(event)));
 const cacheNamePrefix = 'offline-cache-';
 const cacheName = `${cacheNamePrefix}${self.assetsManifest.version}`;
 const offlineAssetsInclude = [ /\.dll$/, /\.pdb$/, /\.wasm/, /\.html/, /\.js$/, /\.json$/, /\.css$/, /\.woff$/, /\.png$/, /\.jpe?g$/, /\.gif$/, /\.ico$/, /\.blat$/, /\.dat$/, /\.webmanifest$/ ];
-const offlineAssetsExclude = [ /^service-worker\.js$/ ];
+// The exercise illustrations are left out of the install: there are hundreds, and a phone needs
+// only the few its exercises use. They are cached on first use instead, see onFetch.
+const offlineAssetsExclude = [ /^service-worker\.js$/, /^exercises\// ];
+const illustrationCache = 'exercise-illustrations';
 
 // Replace with your base path if you are hosting on a subfolder. Ensure there is a trailing '/'.
 const base = "/";
@@ -38,6 +41,18 @@ async function onActivate(event) {
 }
 
 async function onFetch(event) {
+    const url = new URL(event.request.url);
+    if (event.request.method === 'GET' && url.origin === self.origin && url.pathname.startsWith(base + 'exercises/')) {
+        // Cache first, filled on use. Kept across app versions (it is not an offline-cache-* cache),
+        // since an illustration's path never changes its content.
+        const cache = await caches.open(illustrationCache);
+        const hit = await cache.match(event.request);
+        if (hit) return hit;
+        const response = await fetch(event.request);
+        if (response.ok) await cache.put(event.request, response.clone());
+        return response;
+    }
+
     let cachedResponse = null;
     if (event.request.method === 'GET') {
         // For all navigation requests, try to serve index.html from cache,

@@ -29,4 +29,12 @@ public sealed record Exercise
     public string? SettingsNote { get; init; }
 
     public bool IsArchived { get; init; }
+
+    /// <summary>
+    /// The picture chosen for the exercise, by its folder name in the client's illustrations; null
+    /// for the client's default by name, <see cref="NoIllustration"/> for none at all.
+    /// </summary>
+    public string? Illustration { get; init; }
+
+    public const string NoIllustration = "none";
 }
