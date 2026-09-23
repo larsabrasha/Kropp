@@ -228,7 +228,7 @@ else
         }
     }
 
-    // Loads every frame of this workout's pictures while there is a network, so the service worker
+    // Loads this workout's pictures while there is a network, so the service worker
     // has them when there is none. Only the pictures in use are fetched, never the whole catalog.
     private async Task PrefetchIllustrationsAsync()
     {
@@ -238,7 +238,7 @@ else
             .Select(e => ExerciseIllustrations.SlugFor(exercises.GetValueOrDefault(e.ExerciseId)))
             .OfType<string>()
             .Distinct()
-            .SelectMany(ExerciseIllustrations.Frames)
+            .Select(ExerciseIllustrations.Picture)
             .ToArray();
         if (urls.Length == 0)
             return;

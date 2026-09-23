@@ -3,10 +3,10 @@ using Kropp.Shared.Training;
 namespace Kropp.Client.Components;
 
 /// <summary>Which picture an exercise shows, and where its frames are.</summary>
+internal sealed record Illustration(string Name, int Frame);
+
 internal static partial class ExerciseIllustrations
 {
-    public const int FrameCount = 3;
-
     /// <returns>The folder under wwwroot/exercises, or null for no picture.</returns>
     public static string? SlugFor(Exercise? exercise)
     {
@@ -17,7 +17,8 @@ internal static partial class ExerciseIllustrations
         return Defaults.GetValueOrDefault(exercise.Name.Trim());
     }
 
-    public static string Frame(string slug, int frame) => $"exercises/{slug}/frame-{frame}.svg";
+    /// <summary>The file shown for an illustration: its most legible frame.</summary>
+    public static string Picture(string slug) => $"exercises/{slug}/frame-{Catalog[slug].Frame}.svg";
 
-    public static IEnumerable<string> Frames(string slug) => Enumerable.Range(1, FrameCount).Select(n => Frame(slug, n));
+    public static string NameOf(string slug) => Catalog.TryGetValue(slug, out var illustration) ? illustration.Name : slug;
 }

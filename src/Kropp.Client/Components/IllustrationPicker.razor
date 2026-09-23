@@ -15,7 +15,7 @@
         {
             <button type="button" @key="slug" @onclick="() => OnPick.InvokeAsync(slug)" title="@name" aria-label="@name" data-slug="@slug"
                     class="aspect-square rounded-lg bg-gray-100 p-1 dark:bg-gray-800 @(Selected == slug ? "ring-2 ring-blue-500" : "")">
-                <img src="@ExerciseIllustrations.Frame(slug, 1)" alt="" loading="lazy" class="illustration size-full object-contain" />
+                <img src="@ExerciseIllustrations.Picture(slug)" alt="" loading="lazy" class="illustration size-full object-contain" />
             </button>
         }
     </div>
@@ -28,7 +28,7 @@
     private string query = string.Empty;
 
     private List<(string Slug, string Name)> Matches => [.. ExerciseIllustrations.Catalog
-        .Where(kv => kv.Value.Contains(query.Trim(), StringComparison.OrdinalIgnoreCase) || kv.Key.Contains(query.Trim().Replace(' ', '-'), StringComparison.OrdinalIgnoreCase))
-        .OrderBy(kv => kv.Value, StringComparer.OrdinalIgnoreCase)
-        .Select(kv => (kv.Key, kv.Value))];
+        .Where(kv => kv.Value.Name.Contains(query.Trim(), StringComparison.OrdinalIgnoreCase) || kv.Key.Contains(query.Trim().Replace(' ', '-'), StringComparison.OrdinalIgnoreCase))
+        .OrderBy(kv => kv.Value.Name, StringComparer.OrdinalIgnoreCase)
+        .Select(kv => (kv.Key, kv.Value.Name))];
 }

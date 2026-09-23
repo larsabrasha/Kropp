@@ -1,3 +1,4 @@
+using Kropp.Client.Components;
 using Bunit;
 using Kropp.Client.Pages;
 using Kropp.Shared.Training;
@@ -147,7 +148,7 @@ public class WorkoutPageTests : ClientTestContext
     }
 
     [Fact]
-    public async Task The_picture_shows_small_animates_large_and_can_be_changed()
+    public async Task The_picture_shows_small_and_large_and_can_be_changed()
     {
         var workout = await SeedAsync(new Workout
         {
@@ -157,17 +158,17 @@ public class WorkoutPageTests : ClientTestContext
         var page = Render<WorkoutPage>(p => p.Add(x => x.Id, workout.Id));
 
         var thumbnail = page.WaitForElement("[data-testid=thumbnail]");
-        thumbnail.QuerySelector("img")!.GetAttribute("src").ShouldBe("exercises/machine-chest-press/frame-1.svg");
+        var picture = ExerciseIllustrations.Picture("machine-chest-press");
+        thumbnail.QuerySelector("img")!.GetAttribute("src").ShouldBe(picture);
 
         thumbnail.Click();
-        page.Find("[data-testid=illustration] .illustration-frames").QuerySelectorAll("img").Select(i => i.GetAttribute("src"))
-            .ShouldBe(["exercises/machine-chest-press/frame-1.svg", "exercises/machine-chest-press/frame-2.svg", "exercises/machine-chest-press/frame-3.svg"]);
+        page.Find("[data-testid=illustration-large] img").GetAttribute("src").ShouldBe(picture);
 
         page.Find("[data-testid=change-illustration]").Click();
         page.Find("[data-testid=illustration-picker] input").Input("pec deck");
         page.Find("[data-testid=illustration-picker] [data-slug=pec-deck]").Click();
 
-        page.WaitForAssertion(() => page.Find("[data-testid=thumbnail] img").GetAttribute("src").ShouldBe("exercises/pec-deck/frame-1.svg"));
+        page.WaitForAssertion(() => page.Find("[data-testid=thumbnail] img").GetAttribute("src").ShouldBe(ExerciseIllustrations.Picture("pec-deck")));
         (await Repository.GetAllAsync<Exercise>()).Single(e => e.Id == Bench.Id).Illustration.ShouldBe("pec-deck");
     }
 
@@ -187,7 +188,7 @@ public class WorkoutPageTests : ClientTestContext
 
         JSRuntimeInvocation call = default;
         page.WaitForAssertion(() => call = module.VerifyInvoke("prefetch"));
-        ((string[])call.Arguments[0]!).ShouldBe(["exercises/machine-chest-press/frame-1.svg", "exercises/machine-chest-press/frame-2.svg", "exercises/machine-chest-press/frame-3.svg"]);
+        ((string[])call.Arguments[0]!).ShouldBe([ExerciseIllustrations.Picture("machine-chest-press")]);
     }
 
     [Fact]

@@ -122,8 +122,11 @@ Varje övning kan ha en bild. De 302 övningarna × 3 lägen kommer från
 ligger i `src/Kropp.Client/wwwroot/exercises/`. De importerade övningarna får en bild efter namn
 (`ExerciseIllustrations.Catalog.cs`); i appen byts den genom att trycka på bilden.
 
+De tre lägena för en övning är ritade i olika stil, så appen visar bara ett: det som syns
+tydligast i 48 px (starkast linjer). Valet mättes en gång för alla 906 lägen och står i katalogen.
+
 Telefonen cachar inte katalogen i förväg. Service workern sparar en bild första gången den visas,
-och ett pass hämtar alla lägen för sina övningars bilder när det öppnas, så de finns offline.
+och ett pass hämtar sina övningars bilder när det öppnas, så de finns offline.
 
 ## Licens
 

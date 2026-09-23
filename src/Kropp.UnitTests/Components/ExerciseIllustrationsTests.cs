@@ -38,16 +38,21 @@ public class ExerciseIllustrationsTests
     }
 
     [Fact]
-    public void Every_picture_in_the_catalog_has_its_three_frames_on_disk()
+    public void Every_picture_in_the_catalog_is_on_disk()
     {
         var folder = ExercisesFolder();
         ExerciseIllustrations.Catalog.Count.ShouldBe(302);
+        ExerciseIllustrations.Catalog.Values.ShouldAllBe(i => i.Frame >= 1 && i.Frame <= 3);
         var missing = ExerciseIllustrations.Catalog.Keys
-            .SelectMany(ExerciseIllustrations.Frames)
-            .Where(frame => !File.Exists(Path.Combine(folder, "..", frame)))
+            .Select(ExerciseIllustrations.Picture)
+            .Where(picture => !File.Exists(Path.Combine(folder, "..", picture)))
             .ToList();
         missing.ShouldBeEmpty();
     }
+
+    [Fact]
+    public void The_most_legible_frame_is_shown() =>
+        ExerciseIllustrations.Picture("lat-pulldown").ShouldBe("exercises/lat-pulldown/frame-2.svg");
 
     [Fact]
     public void No_picture_carries_script_or_external_references()
