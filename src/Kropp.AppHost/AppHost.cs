@@ -18,10 +18,15 @@ var migrations = builder
     .WithReference(database)
     .WaitFor(database);
 
-builder
+var api = builder
     .AddProject<Projects.Kropp_Api>("api")
     .WithReference(database)
     .WaitForCompletion(migrations)
     .WithExternalHttpEndpoints();
+
+// `dotnet run -- --Lan=true` opens the app to the local network, to try it on a phone. Off by
+// default: the API has no sign-in and holds health data.
+if (bool.TryParse(builder.Configuration["Lan"], out var lan) && lan)
+    api.WithEndpoint("http", endpoint => endpoint.TargetHost = "0.0.0.0");
 
 builder.Build().Run();

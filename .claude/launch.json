@@ -4,19 +4,43 @@
     {
       "name": "AppHost (Aspire)",
       "runtimeExecutable": "dotnet",
-      "runtimeArgs": ["run", "--project", "src/Kropp.AppHost"],
+      "runtimeArgs": [
+        "run",
+        "--project",
+        "src/Kropp.AppHost"
+      ],
+      "port": 17210
+    },
+    {
+      "name": "AppHost (Aspire, nätverk)",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": [
+        "run",
+        "--project",
+        "src/Kropp.AppHost",
+        "--",
+        "--Lan=true"
+      ],
       "port": 17210
     },
     {
       "name": "Kropp.Api",
       "runtimeExecutable": "dotnet",
-      "runtimeArgs": ["watch", "run", "--non-interactive", "--project", "src/Kropp.Api"],
+      "runtimeArgs": [
+        "watch",
+        "run",
+        "--non-interactive",
+        "--project",
+        "src/Kropp.Api"
+      ],
       "port": 5260
     },
     {
       "name": "Tailwind CSS Watcher",
       "runtimeExecutable": "zsh",
-      "runtimeArgs": ["./src/Kropp.Client/tailwind-watch.sh"],
+      "runtimeArgs": [
+        "./src/Kropp.Client/tailwind-watch.sh"
+      ],
       "port": 0
     }
   ]
