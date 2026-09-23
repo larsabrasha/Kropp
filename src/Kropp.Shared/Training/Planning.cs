@@ -66,12 +66,17 @@ public static class Planning
             .Max();
     }
 
-    /// <summary>The template done longest ago; one never done comes first. Ties keep the given order.</summary>
+    /// <summary>
+    /// The template done longest ago; one never done comes first. Ties keep the given order. A template
+    /// something is already planned from counts as used on that plan's day, so it is not suggested twice.
+    /// </summary>
     public static WorkoutTemplate? SuggestTemplate(IReadOnlyList<WorkoutTemplate> templates, IEnumerable<Workout> workouts, Func<Guid, Exercise?> exercise, DateOnly today)
     {
         var history = workouts.ToList();
+        var planned = history.Where(w => w.TemplateId is not null && WorkoutEditing.StatusOf(w, today) == WorkoutStatus.Planned && w.Date >= today).ToList();
+        DateOnly? PlannedFor(WorkoutTemplate t) => planned.Where(w => w.TemplateId == t.Id).Select(w => (DateOnly?)w.Date).Max();
         return templates
-            .Select((t, i) => (t, i, last: LastDone(t, history, exercise, today) ?? DateOnly.MinValue))
+            .Select((t, i) => (t, i, last: Max(LastDone(t, history, exercise, today), PlannedFor(t)) ?? DateOnly.MinValue))
             .OrderBy(x => x.last)
             .ThenBy(x => x.i)
             .Select(x => x.t)
@@ -92,6 +97,19 @@ public static class Planning
         var inWeek = done.Count(d => d >= monday && d < monday.AddDays(7));
         return inWeek >= settings.SessionsPerWeek ? monday.AddDays(7) : candidate;
     }
+
+    /// <summary>
+    /// The day for a workout planned while <paramref name="upcoming"/> is already planned: the usual
+    /// suggestion, but no sooner than the days between sessions after that plan.
+    /// </summary>
+    public static DateOnly SuggestDateAfter(Workout upcoming, IEnumerable<Workout> workouts, DateOnly today, UserSettings settings)
+    {
+        var usual = SuggestDate(workouts, today, settings);
+        var afterPlan = upcoming.Date.AddDays(settings.DaysBetweenSessions);
+        return usual > afterPlan ? usual : afterPlan;
+    }
+
+    private static DateOnly? Max(DateOnly? a, DateOnly? b) => a is null ? b : b is null ? a : a > b ? a : b;
 
     /// <summary>The earliest planned workout from today on, which the suggestion then is.</summary>
     public static Workout? Upcoming(IEnumerable<Workout> workouts, DateOnly today) =>

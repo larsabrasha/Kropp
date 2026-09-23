@@ -76,6 +76,22 @@ public class PlanningTests
     }
 
     [Fact]
+    public void A_template_already_planned_is_not_suggested_again()
+    {
+        var upper = Template("Armar och bröst", Bench, Curl);
+        var back = Template("Rygg", PullDown);
+        var plannedBack = new Workout { Id = Guid.NewGuid(), Date = Wednesday, TemplateId = back.Id, Exercises = [new WorkoutExercise { ExerciseId = PullDown.Id }] };
+        var history = new[] { Done(new DateOnly(2026, 9, 21), Bench, Curl), plannedBack };
+
+        Planning.SuggestTemplate([upper, back], history, Find, Wednesday).ShouldBe(upper);
+    }
+
+    [Fact]
+    public void A_second_plan_comes_the_days_between_sessions_after_the_first() =>
+        Planning.SuggestDateAfter(new Workout { Id = Guid.NewGuid(), Date = Wednesday }, [Done(new DateOnly(2026, 9, 21), Bench)], Wednesday, UserSettings.Default)
+            .ShouldBe(new DateOnly(2026, 9, 25));
+
+    [Fact]
     public void A_template_never_done_comes_first()
     {
         var upper = Template("Armar och bröst", Bench, Curl);

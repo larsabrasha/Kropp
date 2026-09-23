@@ -31,8 +31,13 @@
             <span class="shrink-0 rounded-lg bg-blue-600 px-4 py-2.5 font-medium text-white">@L["Next.Open"]</span>
         </a>
     }
-    else if (chosen is not null)
+
+    @if (workouts is not null && (upcoming is null || planAnother) && chosen is not null)
     {
+        @if (upcoming is not null)
+        {
+            <p class="mt-4 border-t border-blue-100 pt-3 text-xs font-medium uppercase tracking-wide text-gray-500 dark:border-blue-900 dark:text-gray-400">@L["Next.Another"]</p>
+        }
         <div class="flex items-center gap-3">
             <PlanIcon Slug="@ExerciseCategories.IconFor(AsWorkout(chosen), exercises)" />
             <span class="min-w-0 flex-1">
@@ -67,15 +72,20 @@
             </div>
         }
     }
-    else
+    else if (workouts is not null && upcoming is null)
     {
         <p class="text-sm text-gray-600 dark:text-gray-300" data-testid="no-templates">@L["Next.NoTemplates"]</p>
     }
 
-    <div class="mt-3 flex items-center justify-between gap-3 text-sm">
+    <div class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+        @if (upcoming is not null && templates.Count > 0)
+        {
+            <button type="button" @onclick="() => planAnother = !planAnother" aria-expanded="@(planAnother ? "true" : "false")" data-testid="plan-another"
+                    class="text-gray-500 underline underline-offset-4 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200">@L["Next.FromTemplate"]</button>
+        }
         <button type="button" @onclick="() => showBlankForm = !showBlankForm" aria-expanded="@(showBlankForm ? "true" : "false")" data-testid="blank-toggle"
                 class="text-gray-500 underline underline-offset-4 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200">@L["Next.Blank"]</button>
-        <a href="templates" class="text-gray-500 underline underline-offset-4 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200">@L["Next.ManageTemplates"]</a>
+        <a href="templates" class="ml-auto text-gray-500 underline underline-offset-4 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200">@L["Next.ManageTemplates"]</a>
     </div>
 
     @if (showBlankForm)
@@ -183,6 +193,7 @@
     private Guid? chosenId;
     private DateOnly planDate;
     private bool showBlankForm;
+    private bool planAnother;
 
     // The chosen template, or the suggested one until another is tapped.
     private WorkoutTemplate? chosen => templates.FirstOrDefault(t => t.Id == chosenId)
@@ -208,7 +219,7 @@
             templates = [.. (await Repository.GetAllAsync<WorkoutTemplate>()).OrderBy(t => t.Name, StringComparer.CurrentCultureIgnoreCase)];
             upcoming = Planning.Upcoming(all, Today);
             var settings = await Repository.GetAsync<UserSettings>(UserSettings.SingletonId) ?? UserSettings.Default;
-            planDate = Planning.SuggestDate(all, Today, settings);
+            planDate = upcoming is null ? Planning.SuggestDate(all, Today, settings) : Planning.SuggestDateAfter(upcoming, all, Today, settings);
             showBlankForm = showBlankForm || templates.Count == 0;
         }
         catch (Exception ex)

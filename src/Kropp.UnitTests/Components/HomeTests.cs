@@ -171,4 +171,25 @@ public class HomeTests : ClientTestContext
         home.FindAll("[data-testid=plan]").ShouldBeEmpty();
     }
 
+    [Fact]
+    public async Task Another_workout_can_be_planned_from_a_template_beside_an_existing_plan()
+    {
+        var bench = new Exercise { Id = Guid.NewGuid(), Name = "Bröst maskin" };
+        await Repository.SaveAsync(bench.Id, bench);
+        var template = new WorkoutTemplate { Id = Guid.NewGuid(), Name = "Bröst", Exercises = [new WorkoutExercise { ExerciseId = bench.Id }] };
+        await Repository.SaveAsync(template.Id, template);
+        var planned = new Workout { Id = Guid.NewGuid(), Date = new DateOnly(2026, 9, 23), SessionNumber = 102 };
+        await Repository.SaveAsync(planned.Id, planned);
+        var home = Render<Home>();
+
+        home.WaitForElement("[data-testid=plan-another]").Click();
+        home.Find("[data-testid=next-name]").TextContent.ShouldBe("Bröst");
+        home.Find("[data-testid=next-date]").TextContent.ToLowerInvariant().ShouldBe("fredag 25 sep.");
+        home.Find("[data-testid=plan]").Click();
+
+        home.WaitForAssertion(() => Services.GetRequiredService<NavigationManager>().Uri.ShouldContain("/workouts/"));
+        var second = (await Repository.GetAllAsync<Workout>()).Single(w => w.Id != planned.Id);
+        (second.Date, second.TemplateId, second.SessionNumber).ShouldBe((new DateOnly(2026, 9, 25), (Guid?)template.Id, (int?)103));
+    }
+
 }
