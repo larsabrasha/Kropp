@@ -6,6 +6,19 @@ namespace Kropp.Shared.Training;
 /// </summary>
 public static class WorkoutEditing
 {
+    /// <summary>
+    /// The status follows from what was logged, so there is nothing to tick: anything recorded makes
+    /// the workout done; nothing recorded is a plan until its day has passed, and not done after.
+    /// </summary>
+    public static WorkoutStatus StatusOf(Workout workout, DateOnly today) =>
+        workout.Exercises.Any(HasResult) ? WorkoutStatus.Done
+        : workout.Date < today ? WorkoutStatus.Skipped
+        : WorkoutStatus.Planned;
+
+    /// <summary>The workout with its stored status brought in line with <see cref="StatusOf"/>.</summary>
+    public static Workout WithDerivedStatus(Workout workout, DateOnly today) =>
+        workout with { Status = StatusOf(workout, today) };
+
     public static int NextSessionNumber(IEnumerable<Workout> workouts) =>
         (workouts.Max(w => w.SessionNumber) ?? 0) + 1;
 
@@ -108,7 +121,7 @@ public static class WorkoutEditing
     /// </summary>
     public static WorkoutExercise? LastTime(IEnumerable<Workout> workouts, Workout current, Guid exerciseId) =>
         workouts
-            .Where(w => w.Id != current.Id && w.Date <= current.Date && w.Status != WorkoutStatus.Skipped)
+            .Where(w => w.Id != current.Id && w.Date <= current.Date)
             .OrderByDescending(w => w.Date)
             .ThenByDescending(w => w.SessionNumber)
             .SelectMany(w => w.Exercises.Where(e => e.ExerciseId == exerciseId && HasResult(e)))

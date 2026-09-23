@@ -5,6 +5,7 @@
 @inject NavigationManager Navigation
 @inject ILogger<WorkoutPage> Logger
 @inject IJSRuntime JS
+@inject TimeProvider Time
 
 <PageTitle>@L["App.Title"]</PageTitle>
 
@@ -55,23 +56,13 @@ else
         </section>
     }
 
-    <div class="mt-2 grid grid-cols-3 gap-1 rounded-xl bg-gray-100 p-1 dark:bg-gray-900" role="radiogroup" aria-label="@L["Workout.Status"]">
-        @foreach (var status in Enum.GetValues<WorkoutStatus>())
-        {
-            var selected = workout.Status == status;
-            <button type="button" role="radio" aria-checked="@(selected ? "true" : "false")" @onclick="() => SaveAsync(workout with { Status = status })"
-                    class="rounded-lg px-2 py-2 text-sm font-medium @(selected ? "bg-white shadow-sm dark:bg-gray-700" : "text-gray-600 hover:bg-white/60 dark:text-gray-400 dark:hover:bg-gray-800")">
-                @L[$"Workout.Status.{status}"]
-            </button>
-        }
-    </div>
 
     @if (error is not null)
     {
         <p class="mt-3 text-sm text-red-600 dark:text-red-400" role="alert">@error</p>
     }
 
-    <section class="mt-3 flex flex-col gap-2">
+    <section class="mt-4 flex flex-col gap-2">
         @if (workout.Exercises.Count == 0 && !picking)
         {
             <div class="flex flex-col items-center gap-3 rounded-xl border border-dashed border-gray-300 px-4 py-8 text-center text-gray-500 dark:border-gray-700 dark:text-gray-400" data-testid="no-exercises">
@@ -161,6 +152,8 @@ else
             var parts = new List<string>();
             if (workout?.SessionNumber is { } number)
                 parts.Add(L["Home.SessionShort", number]);
+            if (workout is not null)
+                parts.Add(L[$"Workout.Status.{WorkoutEditing.StatusOf(workout, Today)}"]);
             if (!string.IsNullOrWhiteSpace(workout?.Note))
                 parts.Add(workout.Note);
             return parts.Count > 0 ? string.Join(" · ", parts) : L["Workout.AddDetails"];
@@ -245,8 +238,11 @@ else
     }
 
     // Saved at once and locally; sync picks it up a few seconds later.
+    private DateOnly Today => DateOnly.FromDateTime(Time.GetLocalNow().DateTime);
+
     private async Task SaveAsync(Workout next)
     {
+        next = WorkoutEditing.WithDerivedStatus(next, Today);
         var previous = workout;
         workout = next;
         workouts = [.. workouts.Where(w => w.Id != next.Id), next];
@@ -298,7 +294,7 @@ else
         busy = true;
         try
         {
-            var copy = WorkoutEditing.CopyAsPlan(workout, Guid.NewGuid(), DateOnly.FromDateTime(DateTime.Now), WorkoutEditing.NextSessionNumber(workouts));
+            var copy = WorkoutEditing.CopyAsPlan(workout, Guid.NewGuid(), Today, WorkoutEditing.NextSessionNumber(workouts));
             await Repository.SaveAsync(copy.Id, copy);
             Navigation.NavigateTo($"workouts/{copy.Id}");
         }

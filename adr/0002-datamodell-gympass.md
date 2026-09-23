@@ -27,7 +27,10 @@ Två aggregat, båda i `Kropp.Shared/Training`:
   `SettingsNote` för inställningar som gäller varje gång (till exempel "Sitthöjd 11") och
   `IsArchived`. Ett pass pekar på en övning via id, så ett namnbyte skriver inte om gamla pass.
 - **`Workout`**: ett pass. `Date` är `DateOnly`, så en tidszon aldrig kan flytta passet en dag.
-  `SessionNumber`, `Status` (Planned, Done, Skipped), `Note` och en ordnad lista `WorkoutExercise`:
+  `SessionNumber`, `Status` (Planned, Done, Skipped), `Note` och en ordnad lista `WorkoutExercise`.
+  Status väljs inte, den räknas fram (`WorkoutEditing.StatusOf`): något loggat ger Done, inget
+  loggat ger Planned fram till passets dag och Skipped ("Inte gjort") efter. Den sparas ändå, så
+  att listan och servern kan läsa den utan att räkna om.
   - mål: `TargetSets`, `TargetReps`, `TargetWeightKg`, `TargetSeconds`
   - utfall: en `SetResult` per set (`Reps`, `WeightKg`, `Seconds`). Det ersätter "8,8,10" i
     kommentaren.

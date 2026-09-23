@@ -252,7 +252,7 @@ public class WorkoutPageTests : ClientTestContext
         page.Find("[data-testid=details-editor] input[type=text]").Change("Ben och bröst");
         page.Find("[data-testid=details-editor] button").Click();
 
-        page.WaitForAssertion(() => page.Find("[data-testid=details]").TextContent.ShouldContain("Nr 101 · Ben och bröst"));
+        page.WaitForAssertion(() => page.Find("[data-testid=details]").TextContent.ShouldContain("Nr 101 · Inte gjort · Ben och bröst"));
         page.FindAll("[data-testid=details-editor]").ShouldBeEmpty();
         (await ReloadAsync(workout.Id)).Note.ShouldBe("Ben och bröst");
     }
@@ -276,15 +276,28 @@ public class WorkoutPageTests : ClientTestContext
     }
 
     [Fact]
-    public async Task Marking_the_workout_done_saves_the_status()
+    public async Task The_status_follows_from_the_sets_and_has_no_switch()
     {
-        var workout = await SeedAsync(new Workout { Id = Guid.NewGuid(), Date = new DateOnly(2026, 9, 23) });
+        var workout = await SeedAsync(new Workout
+        {
+            Id = Guid.NewGuid(), Date = new DateOnly(2026, 9, 23), Status = WorkoutStatus.Planned,
+            Exercises = [new WorkoutExercise { ExerciseId = Bench.Id, TargetSets = 3, TargetReps = 8 }],
+        });
         var page = Render<WorkoutPage>(p => p.Add(x => x.Id, workout.Id));
 
-        page.WaitForElements("[role=radio]")[1].Click();
+        page.WaitForElement("[data-testid=details]").TextContent.ShouldContain("Planerat");
+        page.FindAll("[role=radio]").ShouldBeEmpty();
 
-        page.WaitForAssertion(() => page.FindAll("[role=radio]")[1].GetAttribute("aria-checked").ShouldBe("true"));
+        page.Find("[data-testid=set-next]").Click();
+
+        page.WaitForAssertion(() => page.Find("[data-testid=details]").TextContent.ShouldContain("Genomfört"));
         (await ReloadAsync(workout.Id)).Status.ShouldBe(WorkoutStatus.Done);
+
+        page.Find("[data-testid=set-done]").Click();
+        page.Find("[data-testid=set-editor]").QuerySelectorAll("button").Single(b => b.TextContent.Trim() == "Ta bort set").Click();
+
+        page.WaitForAssertion(() => page.Find("[data-testid=details]").TextContent.ShouldContain("Planerat"));
+        (await ReloadAsync(workout.Id)).Status.ShouldBe(WorkoutStatus.Planned);
     }
 
     [Fact]

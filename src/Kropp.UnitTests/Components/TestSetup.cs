@@ -17,6 +17,8 @@ public abstract class ClientTestContext : BunitContext
         CultureInfo.CurrentCulture = CultureInfo.CurrentUICulture = new CultureInfo("sv-SE");
         Repository = new LocalRepository(Store);
         Services.AddLocalization();
+        // Tests name dates around 23 September 2026; the pages read "today" from this.
+        Services.AddSingleton<TimeProvider>(new ManualTimeProvider(new DateTimeOffset(2026, 9, 23, 10, 0, 0, TimeSpan.Zero)));
         Services.AddSingleton(Repository);
         Services.AddSingleton(new SyncEngine(Store, new FakeSyncApi()));
         JSInterop.Mode = JSRuntimeMode.Loose;

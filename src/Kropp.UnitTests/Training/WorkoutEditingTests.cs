@@ -59,7 +59,7 @@ public class WorkoutEditingTests
         var older = Workout(new DateOnly(2026, 9, 14), 102, WorkoutStatus.Done, Entry(Bench, new SetResult { Reps = 8, WeightKg = 55 }));
         var newer = Workout(new DateOnly(2026, 9, 21), 104, WorkoutStatus.Done, Entry(Bench, new SetResult { Reps = 8, WeightKg = 60 }));
         var plannedOnly = Workout(new DateOnly(2026, 9, 22), 105, WorkoutStatus.Planned, Entry(Bench));
-        var skipped = Workout(new DateOnly(2026, 9, 22), 106, WorkoutStatus.Skipped, Entry(Bench, new SetResult { Reps = 1, WeightKg = 1 }));
+        var skipped = Workout(new DateOnly(2026, 9, 22), 106, WorkoutStatus.Skipped, Entry(Bench));
         var later = Workout(new DateOnly(2026, 9, 30), 110, WorkoutStatus.Done, Entry(Bench, new SetResult { Reps = 8, WeightKg = 70 }));
         var current = Workout(new DateOnly(2026, 9, 23), 107, WorkoutStatus.Planned, Entry(Bench));
 
@@ -83,6 +83,25 @@ public class WorkoutEditingTests
         copy.Exercises.ShouldAllBe(e => e.Sets.Count == 0 && e.Comment == null && e.Settings == "Sitthöjd 11" && e.TargetWeightKg == 60);
         source.Exercises[0].Sets.Count.ShouldBe(1);
     }
+
+    [Theory]
+    [InlineData(true, "2026-09-20", WorkoutStatus.Done)]
+    [InlineData(true, "2026-09-30", WorkoutStatus.Done)]
+    [InlineData(false, "2026-09-23", WorkoutStatus.Planned)]
+    [InlineData(false, "2026-09-30", WorkoutStatus.Planned)]
+    [InlineData(false, "2026-09-22", WorkoutStatus.Skipped)]
+    public void The_status_follows_from_what_was_logged(bool anySet, string date, WorkoutStatus expected)
+    {
+        var entry = Entry(Bench, anySet ? [new SetResult { Reps = 8 }] : []);
+        var workout = Workout(DateOnly.Parse(date), status: WorkoutStatus.Planned, entries: entry);
+
+        WorkoutEditing.StatusOf(workout, new DateOnly(2026, 9, 23)).ShouldBe(expected);
+    }
+
+    [Fact]
+    public void Cardio_with_a_time_counts_as_done() =>
+        WorkoutEditing.StatusOf(Workout(new DateOnly(2026, 9, 20), entries: new WorkoutExercise { ExerciseId = Guid.NewGuid(), DurationMinutes = 20 }), new DateOnly(2026, 9, 23))
+            .ShouldBe(WorkoutStatus.Done);
 
     [Fact]
     public void The_next_session_number_follows_the_highest()

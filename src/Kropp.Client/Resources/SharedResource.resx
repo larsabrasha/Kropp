@@ -17,7 +17,7 @@
   <data name="Home.LoadFailed" xml:space="preserve"><value>The workouts could not be read from this device.</value></data>
   <data name="Workout.Status.Planned" xml:space="preserve"><value>Planned</value></data>
   <data name="Workout.Status.Done" xml:space="preserve"><value>Done</value></data>
-  <data name="Workout.Status.Skipped" xml:space="preserve"><value>Skipped</value></data>
+  <data name="Workout.Status.Skipped" xml:space="preserve"><value>Not done</value></data>
   <data name="Sync.Offline" xml:space="preserve"><value>Offline</value></data>
   <data name="Sync.Syncing" xml:space="preserve"><value>Syncing…</value></data>
   <data name="Sync.Failed" xml:space="preserve"><value>Could not sync</value></data>

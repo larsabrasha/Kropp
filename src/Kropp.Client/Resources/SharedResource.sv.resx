@@ -17,7 +17,7 @@
   <data name="Home.LoadFailed" xml:space="preserve"><value>Passen kunde inte läsas från enheten.</value></data>
   <data name="Workout.Status.Planned" xml:space="preserve"><value>Planerat</value></data>
   <data name="Workout.Status.Done" xml:space="preserve"><value>Genomfört</value></data>
-  <data name="Workout.Status.Skipped" xml:space="preserve"><value>Hoppat över</value></data>
+  <data name="Workout.Status.Skipped" xml:space="preserve"><value>Inte gjort</value></data>
   <data name="Sync.Offline" xml:space="preserve"><value>Offline</value></data>
   <data name="Sync.Syncing" xml:space="preserve"><value>Synkar…</value></data>
   <data name="Sync.Failed" xml:space="preserve"><value>Kunde inte synka</value></data>

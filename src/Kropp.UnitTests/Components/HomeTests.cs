@@ -32,7 +32,7 @@ public class HomeTests : ClientTestContext
         home.WaitForAssertion(() => Services.GetRequiredService<NavigationManager>().Uri.ShouldContain("/workouts/"));
         var added = (await Repository.GetAllAsync<Workout>()).Single(w => w.Date == new DateOnly(2026, 9, 21));
         added.SessionNumber.ShouldBe(104);
-        added.Status.ShouldBe(WorkoutStatus.Planned);
+        added.Status.ShouldBe(WorkoutStatus.Skipped);
         Services.GetRequiredService<NavigationManager>().Uri.ShouldEndWith($"/workouts/{added.Id}");
     }
 
@@ -42,7 +42,7 @@ public class HomeTests : ClientTestContext
         var workout = new Workout
         {
             Id = Guid.NewGuid(), Date = new DateOnly(2026, 9, 21), SessionNumber = 101, Status = WorkoutStatus.Done,
-            Exercises = [new WorkoutExercise { ExerciseId = Guid.NewGuid() }, new WorkoutExercise { ExerciseId = Guid.NewGuid(), Order = 1 }],
+            Exercises = [new WorkoutExercise { ExerciseId = Guid.NewGuid(), Sets = [new SetResult { Reps = 8 }] }, new WorkoutExercise { ExerciseId = Guid.NewGuid(), Order = 1 }],
         };
         await Repository.SaveAsync(workout.Id, workout);
 
