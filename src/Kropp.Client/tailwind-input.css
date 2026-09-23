@@ -7,6 +7,12 @@
     input, select, textarea { font-size: max(16px, 1em); }
 }
 
+/* Where text starts inside a field or a card: a 1px border plus px-3. Labels and headings take it,
+   so they line up with the text below them rather than with the border. */
+@utility pl-inset {
+    padding-left: calc(var(--spacing) * 3 + 1px);
+}
+
 /* The set the user is on: its background breathes green, so it is found at a glance.
    Still for anyone who has asked their system for less motion. */
 @theme {

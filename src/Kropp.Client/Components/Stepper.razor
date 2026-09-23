@@ -4,7 +4,7 @@
    never go below zero. *@
 
 <div class="flex flex-col gap-1" data-testid="stepper" data-label="@Label">
-    <span class="text-xs text-gray-600 dark:text-gray-400">@Label</span>
+    <span class="pl-inset text-xs text-gray-600 dark:text-gray-400">@Label</span>
     <div class="flex items-center gap-2">
         <input type="number" inputmode="decimal" min="0" step="@TrainingText.Invariant(Step)" value="@TrainingText.Invariant(Value)" aria-label="@Label"
                @onchange="e => Changed.InvokeAsync(TrainingText.ParseDecimal(e.Value))"

@@ -86,7 +86,7 @@ else if (upcoming is not null)
 }
 
 <section class="mt-6">
-    <h2 class="mb-3 text-base font-semibold">@L["Home.Heading"]</h2>
+    <h2 class="mb-3 pl-inset text-base font-semibold">@L["Home.Heading"]</h2>
 
     @if (workouts is null)
     {
@@ -107,7 +107,7 @@ else if (upcoming is not null)
             @foreach (var week in Weeks.Take(weeksShown))
             {
                 <section @key="week.Key" data-testid="week">
-                    <h3 class="mb-2 flex items-baseline gap-2 text-sm">
+                    <h3 class="mb-2 flex items-baseline gap-2 pl-inset text-sm">
                         <span class="font-semibold">@L["Home.Week", week.Number]</span>
                         <span class="text-gray-500 dark:text-gray-400">@WeekRange(week.Monday)</span>
                     </h3>

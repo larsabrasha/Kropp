@@ -1,6 +1,6 @@
 <div class="rounded-xl border border-blue-300 bg-white p-4 dark:border-blue-800 dark:bg-gray-900" data-testid="exercise-picker">
     <label class="flex flex-col gap-1 text-sm">
-        <span>@L["Picker.Search"]</span>
+        <span class="pl-inset">@L["Picker.Search"]</span>
         <input type="search" value="@query" @oninput="e => query = e.Value?.ToString() ?? string.Empty" @ref="searchInput"
                autocomplete="off" maxlength="200" placeholder="@L["Picker.SearchPlaceholder"]"
                class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-base dark:border-gray-700 dark:bg-gray-900" />
@@ -34,10 +34,10 @@
     @if (!string.IsNullOrWhiteSpace(query) && !ExactMatch)
     {
         <div class="mt-3 flex flex-col gap-2 border-t border-gray-200 pt-3 dark:border-gray-800">
-            <p class="text-sm text-gray-600 dark:text-gray-400">@L["Picker.Categories"]</p>
+            <p class="pl-inset text-sm text-gray-600 dark:text-gray-400">@L["Picker.Categories"]</p>
             <CategoryChips Selected="newCategories" Changed="areas => newCategories = areas" />
             <label class="flex flex-col gap-1 text-sm">
-                <span>@L["Picker.Kind"]</span>
+                <span class="pl-inset">@L["Picker.Kind"]</span>
                 <select @bind="newKind" class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-base dark:border-gray-700 dark:bg-gray-900">
                     @foreach (var kind in Enum.GetValues<ExerciseKind>())
                     {

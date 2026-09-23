@@ -29,7 +29,7 @@ else
 {
     @* The same as the workout's row in the list: picture, name, day, exercises and status. The
        grey line, with the number and note too, opens the details for editing. *@
-    <div class="flex items-center gap-3" data-testid="details">
+    <div class="mt-2 flex items-center gap-3" data-testid="details">
         <span class="size-14 shrink-0 overflow-hidden rounded-xl bg-white dark:bg-gray-900" aria-hidden="true">
             @if (ExerciseCategories.IconFor(workout, exercises) is { } icon)
             {
@@ -53,9 +53,9 @@ else
         <section class="mt-2 rounded-lg bg-gray-50 p-2 dark:bg-gray-900" data-testid="details-editor">
             <div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
                 <label class="flex flex-col gap-1 text-xs text-gray-600 dark:text-gray-400">
-                    <span>@L["Home.Date"]</span>
+                    <span class="pl-inset">@L["Home.Date"]</span>
                     <input type="date" value="@workout.Date.ToString("yyyy-MM-dd")" @onchange="ChangeDate"
-                           class="rounded-lg border border-gray-300 bg-white px-2 py-2 text-base text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100" />
+                           class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-base text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100" />
                 </label>
                 <NumberField Label="@L["Workout.SessionNumber"]" Value="@TrainingText.Invariant(workout.SessionNumber)"
                              Changed="v => SaveAsync(workout with { SessionNumber = TrainingText.ParseInt(v) })" />
@@ -73,7 +73,7 @@ else
         <p class="mt-3 text-sm text-red-600 dark:text-red-400" role="alert">@error</p>
     }
 
-    <div class="mt-4">
+    <div class="mt-6">
         <ExerciseList Owner="workout" Exercises="exercises" History="workouts" OnChange="SaveAsync" OnExerciseChange="SaveExerciseAsync" />
     </div>
 
