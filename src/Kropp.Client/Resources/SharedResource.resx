@@ -95,4 +95,19 @@
   <data name="Entry.Categories" xml:space="preserve"><value>Categories</value></data>
   <data name="Picker.Categories" xml:space="preserve"><value>Trains (at least one)</value></data>
   <data name="Home.Week" xml:space="preserve"><value>Week {0}</value></data>
+  <data name="Next.Heading" xml:space="preserve"><value>Next workout</value></data>
+  <data name="Next.Open" xml:space="preserve"><value>Open</value></data>
+  <data name="Next.Plan" xml:space="preserve"><value>Plan</value></data>
+  <data name="Next.Templates" xml:space="preserve"><value>Templates</value></data>
+  <data name="Next.NoTemplates" xml:space="preserve"><value>No templates yet. Open a workout you often do and choose “Save as template”.</value></data>
+  <data name="Next.Blank" xml:space="preserve"><value>New empty workout</value></data>
+  <data name="Next.ManageTemplates" xml:space="preserve"><value>Templates</value></data>
+  <data name="Next.Today" xml:space="preserve"><value>Today</value></data>
+  <data name="Next.Tomorrow" xml:space="preserve"><value>Tomorrow, {0}</value></data>
+  <data name="Templates.Heading" xml:space="preserve"><value>Templates</value></data>
+  <data name="Templates.Help" xml:space="preserve"><value>Standard workouts to plan from. The next one is suggested on the start page.</value></data>
+  <data name="Templates.Name" xml:space="preserve"><value>Name</value></data>
+  <data name="Templates.Delete" xml:space="preserve"><value>Delete</value></data>
+  <data name="Workout.SaveAsTemplate" xml:space="preserve"><value>Save as template</value></data>
+  <data name="Workout.TemplateSaved" xml:space="preserve"><value>Saved as “{0}”</value></data>
 </root>

@@ -21,6 +21,10 @@ public sealed record Workout
     public int? SessionNumber { get; init; }
     public WorkoutStatus Status { get; init; }
     public string? Note { get; init; }
+
+    /// <summary>The template the workout was planned from, if any.</summary>
+    public Guid? TemplateId { get; init; }
+
     public List<WorkoutExercise> Exercises { get; init; } = [];
 }
 

@@ -49,3 +49,15 @@ Vikt och blodtryck blir senare ett eget aggregat, `Measurement`.
   som "8,8,10" till set. Originalkommentaren sparas alltid.
 - Idéer som datat pekar på: "kopiera förra passet som plan", visa "förra gången: 3×8 @ 60 kg"
   vid varje övning, bocka av set för set.
+
+## Tillägg: mallar och nästa pass (2026-09-23)
+
+- **`WorkoutTemplate`** är ett eget aggregat: ett namn och en ordnad lista övningar med mål, aldrig
+  några set. Det skapas med "Spara som mall" på ett pass och synkas som övriga aggregat.
+- Ett pass som planeras från en mall får `Workout.TemplateId`. Varje övning börjar från förra
+  gången (`WorkoutEditing.LastTime`), och mallens mål gäller bara övningar som aldrig gjorts.
+- **Nästa mall** är den som gjordes längst sedan. Ett pass räknas till en mall om det planerades
+  från den, eller för äldre pass om minst hälften av övningarna är desamma, räknat utan kondition.
+- **Nästa dag** är två dagar efter senaste passet, men tidigast i dag. Har veckan (måndag–söndag)
+  redan tre gjorda pass blir det måndagen efter. Tre pass i veckan är fast i koden (`Planning`).
+- Finns redan ett planerat pass från i dag och framåt, visas det i stället för ett förslag.

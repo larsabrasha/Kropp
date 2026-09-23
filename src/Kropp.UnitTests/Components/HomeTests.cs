@@ -16,7 +16,6 @@ public class HomeTests : ClientTestContext
         var home = Render<Home>();
 
         home.WaitForAssertion(() => home.Find("[data-testid=empty-state]").TextContent.ShouldContain("Inga pass än"));
-        home.FindAll("[data-testid=copy-latest]").ShouldBeEmpty();
     }
 
     [Fact]
@@ -97,24 +96,79 @@ public class HomeTests : ClientTestContext
     }
 
     [Fact]
-    public async Task Copying_the_latest_workout_makes_a_plan_without_results()
+    public async Task Without_templates_the_card_explains_and_the_blank_form_shows()
     {
-        var exerciseId = Guid.NewGuid();
-        var source = new Workout
-        {
-            Id = Guid.NewGuid(), Date = new DateOnly(2026, 9, 21), SessionNumber = 101, Status = WorkoutStatus.Done,
-            Exercises = [new WorkoutExercise { ExerciseId = exerciseId, TargetSets = 3, TargetReps = 8, Sets = [new SetResult { Reps = 8 }] }],
-        };
-        await Repository.SaveAsync(source.Id, source);
         var home = Render<Home>();
 
-        home.WaitForElement("[data-testid=copy-latest]").Click();
-
-        home.WaitForAssertion(() => Store.GetPendingAsync().Result.Count.ShouldBe(2));
-        var copy = (await Repository.GetAllAsync<Workout>()).Single(w => w.Id != source.Id);
-        copy.SessionNumber.ShouldBe(102);
-        copy.Exercises.Single().Sets.ShouldBeEmpty();
-        copy.Exercises.Single().TargetReps.ShouldBe(8);
-        Services.GetRequiredService<NavigationManager>().Uri.ShouldEndWith($"/workouts/{copy.Id}");
+        home.WaitForElement("[data-testid=no-templates]");
+        home.FindAll("form").Count.ShouldBe(1);
     }
+
+    [Fact]
+    public async Task The_suggested_template_is_planned_in_one_tap()
+    {
+        var bench = new Exercise { Id = Guid.NewGuid(), Name = "Bröst maskin" };
+        var pull = new Exercise { Id = Guid.NewGuid(), Name = "Pull down maskin" };
+        await Repository.SaveAsync(bench.Id, bench);
+        await Repository.SaveAsync(pull.Id, pull);
+        var chest = new WorkoutTemplate { Id = Guid.NewGuid(), Name = "Bröst", Exercises = [new WorkoutExercise { ExerciseId = bench.Id, TargetSets = 3, TargetReps = 8 }] };
+        var back = new WorkoutTemplate { Id = Guid.NewGuid(), Name = "Rygg", Exercises = [new WorkoutExercise { ExerciseId = pull.Id, TargetSets = 3, TargetReps = 8 }] };
+        await Repository.SaveAsync(chest.Id, chest);
+        await Repository.SaveAsync(back.Id, back);
+        var done = new Workout
+        {
+            Id = Guid.NewGuid(), Date = new DateOnly(2026, 9, 22), SessionNumber = 101,
+            Exercises = [new WorkoutExercise { ExerciseId = bench.Id, TargetSets = 3, TargetReps = 8, TargetWeightKg = 60, Sets = [new SetResult { Reps = 8, WeightKg = 60 }] }],
+        };
+        await Repository.SaveAsync(done.Id, done);
+
+        var home = Render<Home>();
+
+        home.WaitForAssertion(() => home.Find("[data-testid=next-name]").TextContent.ShouldBe("Rygg"));
+        home.Find("[data-testid=next-date]").TextContent.ToLowerInvariant().ShouldBe("i morgon, 24 sep.");
+        home.FindAll("[data-testid=template-choices] [role=radio]").Select(b => b.TextContent.Trim()).ShouldBe(["Bröst", "Rygg"]);
+
+        home.Find("[data-testid=plan]").Click();
+
+        home.WaitForAssertion(() => Services.GetRequiredService<NavigationManager>().Uri.ShouldContain("/workouts/"));
+        var plan = (await Repository.GetAllAsync<Workout>()).Single(w => w.Id != done.Id);
+        plan.TemplateId.ShouldBe(back.Id);
+        plan.Date.ShouldBe(new DateOnly(2026, 9, 24));
+        plan.SessionNumber.ShouldBe(102);
+        plan.Exercises.Single().ExerciseId.ShouldBe(pull.Id);
+    }
+
+    [Fact]
+    public async Task Another_template_can_be_chosen_before_planning()
+    {
+        var bench = new Exercise { Id = Guid.NewGuid(), Name = "Bröst maskin" };
+        await Repository.SaveAsync(bench.Id, bench);
+        var chest = new WorkoutTemplate { Id = Guid.NewGuid(), Name = "Bröst", Exercises = [new WorkoutExercise { ExerciseId = bench.Id }] };
+        var other = new WorkoutTemplate { Id = Guid.NewGuid(), Name = "Annat", Exercises = [] };
+        await Repository.SaveAsync(chest.Id, chest);
+        await Repository.SaveAsync(other.Id, other);
+        var home = Render<Home>();
+
+        home.WaitForElements("[data-testid=template-choices] [role=radio]").Single(b => b.TextContent.Trim() == "Bröst").Click();
+        home.Find("[data-testid=next-name]").TextContent.ShouldBe("Bröst");
+        home.Find("[data-testid=plan]").Click();
+
+        home.WaitForAssertion(() => Services.GetRequiredService<NavigationManager>().Uri.ShouldContain("/workouts/"));
+        (await Repository.GetAllAsync<Workout>()).Single().TemplateId.ShouldBe(chest.Id);
+    }
+
+    [Fact]
+    public async Task An_existing_plan_is_shown_instead_of_a_suggestion()
+    {
+        var template = new WorkoutTemplate { Id = Guid.NewGuid(), Name = "Bröst", Exercises = [] };
+        await Repository.SaveAsync(template.Id, template);
+        var planned = new Workout { Id = Guid.NewGuid(), Date = new DateOnly(2026, 9, 24) };
+        await Repository.SaveAsync(planned.Id, planned);
+
+        var home = Render<Home>();
+
+        home.WaitForElement("[data-testid=upcoming]").GetAttribute("href").ShouldBe($"workouts/{planned.Id}");
+        home.FindAll("[data-testid=plan]").ShouldBeEmpty();
+    }
+
 }

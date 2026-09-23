@@ -461,6 +461,25 @@ public class WorkoutPageTests : ClientTestContext
     }
 
     [Fact]
+    public async Task A_workout_can_be_saved_as_a_template()
+    {
+        var workout = await SeedAsync(new Workout
+        {
+            Id = Guid.NewGuid(), Date = new DateOnly(2026, 9, 21),
+            Exercises = [new WorkoutExercise { ExerciseId = Bench.Id, TargetSets = 3, TargetReps = 8, TargetWeightKg = 60, Sets = [new SetResult { Reps = 8, WeightKg = 60 }] }],
+        });
+        var page = Render<WorkoutPage>(p => p.Add(x => x.Id, workout.Id));
+
+        page.WaitForElement("[data-testid=save-template]").Click();
+
+        page.WaitForAssertion(() => page.Find("[data-testid=template-saved]").TextContent.ShouldContain("Bröst"));
+        var template = (await Repository.GetAllAsync<WorkoutTemplate>()).Single();
+        template.Name.ShouldBe("Bröst");
+        template.Exercises.Single().Sets.ShouldBeEmpty();
+        template.Exercises.Single().TargetWeightKg.ShouldBe(60);
+    }
+
+    [Fact]
     public async Task Deleting_asks_first_and_then_leaves_a_tombstone()
     {
         var workout = await SeedAsync(new Workout { Id = Guid.NewGuid(), Date = new DateOnly(2026, 9, 23) });

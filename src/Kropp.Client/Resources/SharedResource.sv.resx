@@ -95,4 +95,19 @@
   <data name="Entry.Categories" xml:space="preserve"><value>Kategorier</value></data>
   <data name="Picker.Categories" xml:space="preserve"><value>Tränar (minst en)</value></data>
   <data name="Home.Week" xml:space="preserve"><value>Vecka {0}</value></data>
+  <data name="Next.Heading" xml:space="preserve"><value>Nästa pass</value></data>
+  <data name="Next.Open" xml:space="preserve"><value>Öppna</value></data>
+  <data name="Next.Plan" xml:space="preserve"><value>Planera</value></data>
+  <data name="Next.Templates" xml:space="preserve"><value>Mallar</value></data>
+  <data name="Next.NoTemplates" xml:space="preserve"><value>Inga mallar än. Öppna ett pass du brukar göra och välj ”Spara som mall”.</value></data>
+  <data name="Next.Blank" xml:space="preserve"><value>Nytt tomt pass</value></data>
+  <data name="Next.ManageTemplates" xml:space="preserve"><value>Mallar</value></data>
+  <data name="Next.Today" xml:space="preserve"><value>I dag</value></data>
+  <data name="Next.Tomorrow" xml:space="preserve"><value>I morgon, {0}</value></data>
+  <data name="Templates.Heading" xml:space="preserve"><value>Mallar</value></data>
+  <data name="Templates.Help" xml:space="preserve"><value>Standardpass att planera från. Nästa föreslås på startsidan.</value></data>
+  <data name="Templates.Name" xml:space="preserve"><value>Namn</value></data>
+  <data name="Templates.Delete" xml:space="preserve"><value>Ta bort</value></data>
+  <data name="Workout.SaveAsTemplate" xml:space="preserve"><value>Spara som mall</value></data>
+  <data name="Workout.TemplateSaved" xml:space="preserve"><value>Sparad som ”{0}”</value></data>
 </root>

@@ -1,0 +1,10 @@
+<span class="size-12 shrink-0 overflow-hidden rounded-lg bg-white dark:bg-gray-800" aria-hidden="true">
+    @if (Slug is not null)
+    {
+        <img src="@ExerciseIllustrations.Picture(Slug)" alt="" class="illustration size-full object-contain p-1" />
+    }
+</span>
+
+@code {
+    [Parameter] public string? Slug { get; set; }
+}

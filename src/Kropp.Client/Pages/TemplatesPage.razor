@@ -1,0 +1,130 @@
+@page "/templates"
+@implements IDisposable
+@inject LocalRepository Repository
+@inject SyncEngine Engine
+@inject ILogger<TemplatesPage> Logger
+
+<PageTitle>@L["App.Title"]</PageTitle>
+
+<a href="" class="mb-1 inline-flex items-center gap-1 rounded-lg py-2 pr-2 text-sm text-blue-700 hover:underline dark:text-blue-300">
+    <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M15 18l-6-6 6-6" /></svg>
+    @L["Workout.Back"]
+</a>
+<h1 class="text-xl font-semibold">@L["Templates.Heading"]</h1>
+<p class="mt-1 text-sm text-gray-500 dark:text-gray-400">@L["Templates.Help"]</p>
+
+@if (error is not null)
+{
+    <p class="mt-3 text-sm text-red-600 dark:text-red-400" role="alert">@error</p>
+}
+
+@if (templates is null)
+{
+    <p class="mt-4 text-sm text-gray-500 dark:text-gray-400">@L["Common.Loading"]</p>
+}
+else if (templates.Count == 0)
+{
+    <div class="mt-4 flex flex-col items-center gap-3 rounded-xl border border-dashed border-gray-300 px-4 py-10 text-center text-gray-500 dark:border-gray-700 dark:text-gray-400" data-testid="templates-empty">
+        <svg class="size-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2" /><path d="M9 8h6M9 12h6M9 16h3" /></svg>
+        <p>@L["Next.NoTemplates"]</p>
+    </div>
+}
+else
+{
+    <ul class="mt-4 flex flex-col gap-2" data-testid="templates">
+        @foreach (var template in templates)
+        {
+            <li @key="template.Id" class="rounded-xl border border-gray-200 p-3 dark:border-gray-800">
+                <div class="flex items-end gap-2">
+                    <div class="min-w-0 flex-1">
+                        <TextField Label="@L["Templates.Name"]" Value="@template.Name" Changed="v => RenameAsync(template, v)" />
+                    </div>
+                    @if (confirming == template.Id)
+                    {
+                        <button type="button" @onclick="() => DeleteAsync(template)" class="rounded-lg bg-red-600 px-3 py-2 text-sm font-medium text-white">@L["Templates.Delete"]</button>
+                        <button type="button" @onclick="() => confirming = null" class="rounded-lg px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800">@L["Common.Cancel"]</button>
+                    }
+                    else
+                    {
+                        <button type="button" @onclick="() => confirming = template.Id" class="rounded-lg px-3 py-2 text-sm text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950">@L["Templates.Delete"]</button>
+                    }
+                </div>
+                <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                    @string.Join(", ", template.Exercises.Select(e => exercises.GetValueOrDefault(e.ExerciseId)?.Name ?? L["Exercise.Unknown"]))
+                </p>
+            </li>
+        }
+    </ul>
+}
+
+@code {
+    private List<WorkoutTemplate>? templates;
+    private Dictionary<Guid, Exercise> exercises = [];
+    private Guid? confirming;
+    private string? error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Engine.DataChanged += OnRemoteChange;
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        try
+        {
+            exercises = (await Repository.GetAllAsync<Exercise>()).ToDictionary(e => e.Id);
+            templates = [.. (await Repository.GetAllAsync<WorkoutTemplate>()).OrderBy(t => t.Name, StringComparer.CurrentCultureIgnoreCase)];
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Could not read templates");
+            templates = [];
+            error = L["Home.LoadFailed"];
+        }
+    }
+
+    private async Task RenameAsync(WorkoutTemplate template, string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            return;
+        await SaveAsync(template with { Name = name.Trim() });
+    }
+
+    private async Task SaveAsync(WorkoutTemplate template)
+    {
+        try
+        {
+            await Repository.SaveAsync(template.Id, template);
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Could not save template");
+            error = L["Home.SaveFailed"];
+        }
+    }
+
+    private async Task DeleteAsync(WorkoutTemplate template)
+    {
+        confirming = null;
+        try
+        {
+            await Repository.DeleteAsync<WorkoutTemplate>(template.Id);
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Could not delete template");
+            error = L["Home.SaveFailed"];
+        }
+    }
+
+    private void OnRemoteChange() => _ = InvokeAsync(async () =>
+    {
+        await LoadAsync();
+        StateHasChanged();
+    });
+
+    public void Dispose() => Engine.DataChanged -= OnRemoteChange;
+}

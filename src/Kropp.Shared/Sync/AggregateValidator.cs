@@ -34,6 +34,7 @@ public static partial class AggregateValidator
             {
                 AggregateTypes.Workout => ValidateWorkout(change.Id, Deserialize<Workout>(change.Data)),
                 AggregateTypes.Exercise => ValidateExercise(change.Id, Deserialize<Exercise>(change.Data)),
+                AggregateTypes.Template => ValidateTemplate(change.Id, Deserialize<WorkoutTemplate>(change.Data)),
                 _ => null,
             };
         }
@@ -55,10 +56,24 @@ public static partial class AggregateValidator
             return "The date is out of range.";
         if (workout.Note?.Length > MaxText)
             return "The note is too long.";
-        if (workout.Exercises.Count > MaxExercisesPerWorkout)
+        return ValidateEntries(workout.Exercises);
+    }
+
+    private static string? ValidateTemplate(Guid id, WorkoutTemplate template)
+    {
+        if (template.Id != id)
+            return "The document's id does not match the change's id.";
+        if (string.IsNullOrWhiteSpace(template.Name) || template.Name.Length > MaxName)
+            return "The template needs a name of at most 200 characters.";
+        return ValidateEntries(template.Exercises);
+    }
+
+    private static string? ValidateEntries(List<WorkoutExercise> entries)
+    {
+        if (entries.Count > MaxExercisesPerWorkout)
             return "The workout has too many exercises.";
 
-        foreach (var entry in workout.Exercises)
+        foreach (var entry in entries)
         {
             if (entry.ExerciseId == Guid.Empty)
                 return "An exercise entry has no exercise.";

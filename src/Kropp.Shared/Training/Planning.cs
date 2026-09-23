@@ -1,0 +1,120 @@
+using System.Globalization;
+
+namespace Kropp.Shared.Training;
+
+/// <summary>What to do next and when: templates, the suggested next template and the suggested day.</summary>
+public static class Planning
+{
+    public const int SessionsPerWeek = 3;
+
+    /// <summary>Days between sessions the suggestion aims for: every other day fits three a week.</summary>
+    public const int RestDays = 2;
+
+    /// <summary>A workout counts as one of a template's when this share of their exercises match.</summary>
+    private const double SimilarityThreshold = 0.5;
+
+    /// <summary>A template with the workout's exercises and targets, and none of what was done.</summary>
+    public static WorkoutTemplate TemplateFrom(Workout workout, Guid id, string name) =>
+        new()
+        {
+            Id = id,
+            Name = name,
+            Exercises = [.. workout.Exercises.Select((e, i) => e with
+            {
+                Order = i,
+                Comment = null,
+                Sets = [],
+                DurationMinutes = null,
+                DistanceKm = null,
+                AvgHeartRate = null,
+            })],
+        };
+
+    /// <summary>
+    /// A planned workout from a template. Each exercise starts from what it was last time, so the
+    /// plan continues where training left off; the template's targets are for exercises never done.
+    /// </summary>
+    public static Workout PlanFrom(WorkoutTemplate template, Guid id, DateOnly date, int sessionNumber, IReadOnlyList<Workout> history)
+    {
+        var plan = new Workout { Id = id, Date = date, SessionNumber = sessionNumber, Status = WorkoutStatus.Planned, TemplateId = template.Id };
+        return plan with
+        {
+            Exercises = [.. template.Exercises.Select((entry, i) =>
+            {
+                var last = WorkoutEditing.LastTime(history, plan, entry.ExerciseId);
+                return entry with
+                {
+                    Order = i,
+                    Sets = [],
+                    Comment = null,
+                    TargetSets = last?.TargetSets ?? entry.TargetSets,
+                    TargetReps = last?.TargetReps ?? entry.TargetReps,
+                    TargetWeightKg = last?.TargetWeightKg ?? entry.TargetWeightKg,
+                    TargetSeconds = last?.TargetSeconds ?? entry.TargetSeconds,
+                    Settings = last?.Settings ?? entry.Settings,
+                };
+            })],
+        };
+    }
+
+    /// <summary>
+    /// When the template was last done: by the template it was planned from, or for older workouts
+    /// by how many exercises they share with it. Cardio is left out of the comparison, as in naming.
+    /// </summary>
+    public static DateOnly? LastDone(WorkoutTemplate template, IEnumerable<Workout> workouts, Func<Guid, Exercise?> exercise, DateOnly today)
+    {
+        var core = Core(template.Exercises, exercise);
+        return workouts
+            .Where(w => WorkoutEditing.StatusOf(w, today) == WorkoutStatus.Done)
+            .Where(w => w.TemplateId == template.Id || (w.TemplateId is null && Similarity(core, Core(w.Exercises, exercise)) >= SimilarityThreshold))
+            .Select(w => (DateOnly?)w.Date)
+            .Max();
+    }
+
+    /// <summary>The template done longest ago; one never done comes first. Ties keep the given order.</summary>
+    public static WorkoutTemplate? SuggestTemplate(IReadOnlyList<WorkoutTemplate> templates, IEnumerable<Workout> workouts, Func<Guid, Exercise?> exercise, DateOnly today)
+    {
+        var history = workouts.ToList();
+        return templates
+            .Select((t, i) => (t, i, last: LastDone(t, history, exercise, today) ?? DateOnly.MinValue))
+            .OrderBy(x => x.last)
+            .ThenBy(x => x.i)
+            .Select(x => x.t)
+            .FirstOrDefault();
+    }
+
+    /// <summary>
+    /// Two days after the last session, but not before today. When that week already holds
+    /// <see cref="SessionsPerWeek"/> sessions, the Monday after it.
+    /// </summary>
+    public static DateOnly SuggestDate(IEnumerable<Workout> workouts, DateOnly today)
+    {
+        var done = workouts.Where(w => WorkoutEditing.StatusOf(w, today) == WorkoutStatus.Done).Select(w => w.Date).ToList();
+        var candidate = done.Count > 0 && done.Max().AddDays(RestDays) > today ? done.Max().AddDays(RestDays) : today;
+
+        var monday = MondayOf(candidate);
+        var inWeek = done.Count(d => d >= monday && d < monday.AddDays(7));
+        return inWeek >= SessionsPerWeek ? monday.AddDays(7) : candidate;
+    }
+
+    /// <summary>The earliest planned workout from today on, which the suggestion then is.</summary>
+    public static Workout? Upcoming(IEnumerable<Workout> workouts, DateOnly today) =>
+        workouts
+            .Where(w => w.Date >= today && WorkoutEditing.StatusOf(w, today) == WorkoutStatus.Planned)
+            .OrderBy(w => w.Date)
+            .ThenBy(w => w.SessionNumber)
+            .FirstOrDefault();
+
+    public static DateOnly MondayOf(DateOnly date) => date.AddDays(-(((int)date.DayOfWeek + 6) % 7));
+
+    public static int WeekNumber(DateOnly date) => ISOWeek.GetWeekOfYear(date.ToDateTime(TimeOnly.MinValue));
+
+    private static HashSet<Guid> Core(IEnumerable<WorkoutExercise> entries, Func<Guid, Exercise?> exercise) =>
+        [.. entries.Where(e => exercise(e.ExerciseId)?.Kind != ExerciseKind.Cardio).Select(e => e.ExerciseId)];
+
+    private static double Similarity(HashSet<Guid> a, HashSet<Guid> b)
+    {
+        var union = a.Union(b).Count();
+        return union == 0 ? 0 : (double)a.Intersect(b).Count() / union;
+    }
+}
