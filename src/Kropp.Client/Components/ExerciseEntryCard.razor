@@ -64,11 +64,19 @@
                 var index = i;
                 if (index < Entry.Sets.Count)
                 {
+                    var set = Entry.Sets[index];
+                    var weight = TrainingText.SetWeightIfChanged(set, Entry, Kind);
+                    var shortSet = TrainingText.IsShort(set, Entry, Kind);
                     <button type="button" @onclick="() => Toggle(Panel.Set, index)" aria-expanded="@Expanded(Panel.Set, index)"
-                            class="inline-flex min-h-14 min-w-0 flex-1 items-center justify-center gap-0.5 whitespace-nowrap rounded-xl bg-green-600 px-1 text-[15px] font-semibold tabular-nums text-white hover:bg-green-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-500"
-                            data-testid="set-done">
-                        <svg class="size-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="M5 12l5 5L20 7" /></svg>
-                        @TrainingText.Set(Entry.Sets[index], Kind)
+                            aria-label="@L["Entry.SetDone", index + 1, TrainingText.Set(set, Kind)]"
+                            class="relative inline-flex min-h-14 min-w-0 flex-1 flex-col items-center justify-center whitespace-nowrap rounded-xl px-1 tabular-nums focus-visible:outline-2 focus-visible:outline-offset-2 @(shortSet ? "bg-amber-300 text-gray-900 hover:bg-amber-400 focus-visible:outline-amber-500" : "bg-green-600 text-white hover:bg-green-700 focus-visible:outline-green-500")"
+                            data-testid="set-done" data-short="@(shortSet ? "true" : "false")">
+                        <svg class="absolute left-1.5 top-1.5 size-3 opacity-80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" aria-hidden="true"><path d="M5 12l5 5L20 7" /></svg>
+                        <span class="text-xl font-semibold leading-tight">@TrainingText.SetMain(set, Kind)</span>
+                        @if (weight is not null)
+                        {
+                            <span class="text-xs font-medium leading-tight opacity-90" data-testid="set-weight">@weight</span>
+                        }
                     </button>
                 }
                 else if (index == Entry.Sets.Count)

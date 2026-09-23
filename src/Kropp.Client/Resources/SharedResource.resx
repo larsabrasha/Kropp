@@ -72,4 +72,5 @@
   <data name="Entry.EditNotes" xml:space="preserve"><value>Settings and comment</value></data>
   <data name="Entry.ExtraSet" xml:space="preserve"><value>Extra set</value></data>
   <data name="Entry.SetTarget" xml:space="preserve"><value>Set target</value></data>
+  <data name="Entry.SetDone" xml:space="preserve"><value>Set {0} done: {1}</value></data>
 </root>

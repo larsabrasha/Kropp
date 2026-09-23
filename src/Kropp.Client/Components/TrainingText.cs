@@ -28,7 +28,20 @@ internal static class TrainingText
         return string.Join(" ", new[] { head, weight }.Where(p => p is not null));
     }
 
-    // Narrow no-break spaces keep "10 × 100" on one line in a set button.
+    /// <summary>The big text on a done set: the reps, or the seconds for a timed exercise.</summary>
+    public static string SetMain(SetResult set, ExerciseKind kind) =>
+        kind == ExerciseKind.Timed ? $"{set.Seconds} s" : $"{set.Reps}";
+
+    /// <summary>The weight, but only when it differs from the plan — the plan already says it once.</summary>
+    public static string? SetWeightIfChanged(SetResult set, WorkoutExercise entry, ExerciseKind kind) =>
+        kind == ExerciseKind.Strength && set.WeightKg is { } kg && kg != entry.TargetWeightKg ? $"{Number(kg)} kg" : null;
+
+    /// <summary>Fewer reps (or seconds) than planned, which the set button shows in another colour.</summary>
+    public static bool IsShort(SetResult set, WorkoutExercise entry, ExerciseKind kind) => kind == ExerciseKind.Timed
+        ? set.Seconds < entry.TargetSeconds
+        : set.Reps < entry.TargetReps;
+
+    // Narrow no-break spaces keep "10 × 100" on one line.
     public static string Set(SetResult set, ExerciseKind kind) => kind switch
     {
         ExerciseKind.Strength => set.WeightKg is { } kg ? $"{set.Reps}\u202F×\u202F{Number(kg)}" : $"{set.Reps}",

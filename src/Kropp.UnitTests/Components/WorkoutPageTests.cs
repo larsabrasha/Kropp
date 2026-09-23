@@ -40,7 +40,10 @@ public class WorkoutPageTests : ClientTestContext
         page.WaitForElement("[data-testid=set-next]").Click();
 
         page.WaitForAssertion(() => page.FindAll("[data-testid=set-done]").Count.ShouldBe(2));
-        page.FindAll("[data-testid=set-done]")[0].TextContent.ShouldContain("8\u202F×\u202F22,5");
+        var first = page.FindAll("[data-testid=set-done]")[0];
+        first.TextContent.Trim().ShouldBe("8");
+        first.QuerySelector("[data-testid=set-weight]").ShouldBeNull();
+        first.GetAttribute("aria-label").ShouldBe("Set 1 klart: 8\u202F×\u202F22,5");
         (await ReloadAsync(workout.Id)).Exercises.Single().Sets.ShouldBe([new SetResult { Reps = 8, WeightKg = 22.5m }, new SetResult { Reps = 8, WeightKg = 22.5m }]);
     }
 
@@ -133,8 +136,29 @@ public class WorkoutPageTests : ClientTestContext
         page.WaitForElement("[data-testid=set-done]").Click();
         page.Find("[data-testid=set-editor] input").Change("6");
 
-        page.WaitForAssertion(() => page.Find("[data-testid=set-done]").TextContent.ShouldContain("6\u202F×\u202F60"));
+        page.WaitForAssertion(() => page.Find("[data-testid=set-done]").TextContent.Trim().ShouldBe("6"));
+        page.Find("[data-testid=set-done]").GetAttribute("data-short").ShouldBe("true");
         (await ReloadAsync(workout.Id)).Exercises.Single().Sets.Single().Reps.ShouldBe(6);
+    }
+
+    [Fact]
+    public async Task A_set_shows_its_weight_only_when_it_differs_from_the_plan()
+    {
+        var workout = await SeedAsync(new Workout
+        {
+            Id = Guid.NewGuid(), Date = new DateOnly(2026, 9, 23),
+            Exercises = [new WorkoutExercise
+            {
+                ExerciseId = Bench.Id, TargetSets = 3, TargetReps = 8, TargetWeightKg = 20,
+                Sets = [new() { Reps = 8, WeightKg = 20 }, new() { Reps = 10, WeightKg = 17.5m }],
+            }],
+        });
+        var page = Render<WorkoutPage>(p => p.Add(x => x.Id, workout.Id));
+
+        var sets = page.WaitForElements("[data-testid=set-done]");
+        sets[0].QuerySelector("[data-testid=set-weight]").ShouldBeNull();
+        sets[1].QuerySelector("[data-testid=set-weight]")!.TextContent.ShouldBe("17,5 kg");
+        sets.Select(b => b.GetAttribute("data-short")).ShouldBe(["false", "false"]);
     }
 
     [Fact]
