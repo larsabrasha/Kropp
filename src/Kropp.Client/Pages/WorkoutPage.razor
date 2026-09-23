@@ -151,6 +151,8 @@ else
         get
         {
             var parts = new List<string>();
+            if (workout is not null && ExerciseCategories.WorkoutName(workout, exercises, L) is { } name)
+                parts.Add(name);
             if (workout?.SessionNumber is { } number)
                 parts.Add(L["Home.SessionShort", number]);
             if (workout is not null)
@@ -313,9 +315,9 @@ else
         await PrefetchIllustrationsAsync();
     }
 
-    private async Task CreateExerciseAsync((string Name, ExerciseKind Kind) request)
+    private async Task CreateExerciseAsync((string Name, ExerciseKind Kind, List<BodyArea> Categories) request)
     {
-        var exercise = new Exercise { Id = Guid.NewGuid(), Name = request.Name, Kind = request.Kind };
+        var exercise = new Exercise { Id = Guid.NewGuid(), Name = request.Name, Kind = request.Kind, Categories = request.Categories };
         try
         {
             await Repository.SaveAsync(exercise.Id, exercise);

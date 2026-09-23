@@ -25,7 +25,7 @@ Två aggregat, båda i `Kropp.Shared/Training`:
 
 - **`Exercise`**: övningsregistret. `Name`, `Kind` (Strength, Bodyweight, Timed, Cardio),
   `SettingsNote` för inställningar som gäller varje gång (till exempel "Sitthöjd 11") och
-  `IsArchived`, `Illustration` (bild) och `WeightStepKg` (hur mycket − och + ändrar vikten,
+  `Categories` (en eller flera av ben, bröst, rygg, mage, armar, axlar), `IsArchived`, `Illustration` (bild) och `WeightStepKg` (hur mycket − och + ändrar vikten,
   standard 2,5 kg). Ett pass pekar på en övning via id, så ett namnbyte skriver inte om gamla pass.
 - **`Workout`**: ett pass. `Date` är `DateOnly`, så en tidszon aldrig kan flytta passet en dag.
   `SessionNumber`, `Status` (Planned, Done, Skipped), `Note` och en ordnad lista `WorkoutExercise`.
@@ -37,6 +37,9 @@ Två aggregat, båda i `Kropp.Shared/Training`:
     kommentaren.
   - kondition: `DurationMinutes`, `DistanceKm`, `AvgHeartRate`
   - `Comment` och `Settings` för det som gäller just det tillfället
+
+Passet har inget eget namn. Det namnges efter övningarnas kategorier, flest övningar först,
+utan konditionsövningar (`WorkoutEditing.AreasOf`): "Ben, rygg och mage", eller "Kondition".
 
 Vikt och blodtryck blir senare ett eget aggregat, `Measurement`.
 

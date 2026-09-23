@@ -39,10 +39,14 @@ public class HomeTests : ClientTestContext
     [Fact]
     public async Task Lists_workouts_as_links_with_a_summary()
     {
+        var squat = new Exercise { Id = Guid.NewGuid(), Name = "Benböj lår framsida" };
+        var bench = new Exercise { Id = Guid.NewGuid(), Name = "Bröst maskin" };
+        await Repository.SaveAsync(squat.Id, squat);
+        await Repository.SaveAsync(bench.Id, bench);
         var workout = new Workout
         {
             Id = Guid.NewGuid(), Date = new DateOnly(2026, 9, 21), SessionNumber = 101, Status = WorkoutStatus.Done,
-            Exercises = [new WorkoutExercise { ExerciseId = Guid.NewGuid(), Sets = [new SetResult { Reps = 8 }] }, new WorkoutExercise { ExerciseId = Guid.NewGuid(), Order = 1 }],
+            Exercises = [new WorkoutExercise { ExerciseId = squat.Id, Sets = [new SetResult { Reps = 8 }] }, new WorkoutExercise { ExerciseId = bench.Id, Order = 1 }],
         };
         await Repository.SaveAsync(workout.Id, workout);
 
@@ -53,6 +57,7 @@ public class HomeTests : ClientTestContext
             var link = home.Find("[data-testid=workout-list] a");
             link.GetAttribute("href").ShouldBe($"workouts/{workout.Id}");
             link.TextContent.ShouldContain("Måndag 21 september 2026", Case.Insensitive);
+            link.QuerySelector("[data-testid=workout-name]")!.TextContent.ShouldBe("Ben och bröst");
             link.TextContent.ShouldContain("Nr 101");
             link.TextContent.ShouldContain("2 övningar");
             link.TextContent.ShouldContain("Genomfört");

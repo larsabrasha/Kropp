@@ -138,6 +138,27 @@ public class WorkoutPageTests : ClientTestContext
     }
 
     [Fact]
+    public async Task The_workout_is_named_from_its_exercises_and_categories_can_be_changed()
+    {
+        var workout = await SeedAsync(new Workout
+        {
+            Id = Guid.NewGuid(), Date = new DateOnly(2026, 9, 23), SessionNumber = 102,
+            Exercises = [new WorkoutExercise { ExerciseId = Bench.Id, TargetSets = 3, TargetReps = 8 }],
+        });
+        var page = Render<WorkoutPage>(p => p.Add(x => x.Id, workout.Id));
+        page.WaitForAssertion(() => page.Find("[data-testid=details]").TextContent.ShouldContain("Bröst · Nr 102"));
+
+        page.Find("[data-testid=more]").Click();
+        page.Find("[data-testid=menu]").QuerySelectorAll("button").Single(b => b.TextContent.Trim() == "Kategorier").Click();
+        var chips = page.Find("[data-testid=categories-editor]");
+        chips.QuerySelector("[data-area=Chest]")!.HasAttribute("disabled").ShouldBeTrue();
+        chips.QuerySelector("[data-area=Arms]")!.Click();
+
+        page.WaitForAssertion(() => page.Find("[data-testid=details]").TextContent.ShouldContain("Bröst och armar · Nr 102"));
+        (await Repository.GetAllAsync<Exercise>()).Single(e => e.Id == Bench.Id).Categories.ShouldBe([BodyArea.Chest, BodyArea.Arms]);
+    }
+
+    [Fact]
     public async Task The_weight_step_is_chosen_per_exercise()
     {
         var workout = await SeedAsync(new Workout
@@ -347,11 +368,14 @@ public class WorkoutPageTests : ClientTestContext
         page.WaitForElement("[data-testid=add-exercise]").Click();
         page.Find("[data-testid=exercise-picker] input[type=search]").Input("Plankan");
         page.Find("[data-testid=exercise-picker] select").Change(nameof(ExerciseKind.Timed));
+        page.Find("[data-testid=create-exercise]").HasAttribute("disabled").ShouldBeTrue();
+        page.Find("[data-testid=exercise-picker] [data-area=Core]").Click();
         page.Find("[data-testid=create-exercise]").Click();
 
         page.WaitForAssertion(() => page.Find("[data-testid=exercise-entry] h3").TextContent.ShouldBe("Plankan"));
         var plank = (await Repository.GetAllAsync<Exercise>()).Single(e => e.Name == "Plankan");
         plank.Kind.ShouldBe(ExerciseKind.Timed);
+        plank.Categories.ShouldBe([BodyArea.Core]);
         var entry = (await ReloadAsync(workout.Id)).Exercises.Single();
         entry.ExerciseId.ShouldBe(plank.Id);
         entry.TargetSeconds.ShouldBe(30);

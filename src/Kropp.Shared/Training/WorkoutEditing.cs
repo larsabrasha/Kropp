@@ -19,6 +19,26 @@ public static class WorkoutEditing
     public static Workout WithDerivedStatus(Workout workout, DateOnly today) =>
         workout with { Status = StatusOf(workout, today) };
 
+    /// <summary>
+    /// The body areas a workout trains, most exercises first, for naming it. Cardio is left out:
+    /// the walk that warms up nearly every session would otherwise make every session "legs".
+    /// Ties keep the order of <see cref="BodyArea"/>.
+    /// </summary>
+    public static IReadOnlyList<BodyArea> AreasOf(Workout workout, Func<Guid, Exercise?> exercise, Func<Exercise, IReadOnlyList<BodyArea>> categories) =>
+        [.. workout.Exercises
+            .Select(e => exercise(e.ExerciseId))
+            .OfType<Exercise>()
+            .Where(e => e.Kind != ExerciseKind.Cardio)
+            .SelectMany(categories)
+            .GroupBy(a => a)
+            .OrderByDescending(g => g.Count())
+            .ThenBy(g => g.Key)
+            .Select(g => g.Key)];
+
+    /// <summary>Whether the workout has only cardio, which is named as such.</summary>
+    public static bool IsCardioOnly(Workout workout, Func<Guid, Exercise?> exercise) =>
+        workout.Exercises.Count > 0 && workout.Exercises.All(e => exercise(e.ExerciseId)?.Kind == ExerciseKind.Cardio);
+
     public static int NextSessionNumber(IEnumerable<Workout> workouts) =>
         (workouts.Max(w => w.SessionNumber) ?? 0) + 1;
 

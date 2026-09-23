@@ -73,6 +73,10 @@
                             <span class="shrink-0 rounded-full px-2 py-0.5 text-xs @StatusClass(status)">@L[$"Workout.Status.{status}"]</span>
                         </div>
                         <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+                            @if (ExerciseCategories.WorkoutName(workout, exercises, L) is { } name)
+                            {
+                                <span class="font-medium text-gray-800 dark:text-gray-100" data-testid="workout-name">@name</span><span> · </span>
+                            }
                             @if (workout.SessionNumber is { } number)
                             {
                                 <span>@L["Home.SessionShort", number] · </span>
@@ -101,6 +105,7 @@
 
     private DateOnly Today => DateOnly.FromDateTime(Time.GetLocalNow().DateTime);
     private List<Workout>? workouts;
+    private Dictionary<Guid, Exercise> exercises = [];
     private Workout? latest;
     private bool saving;
     private string? error;
@@ -118,6 +123,7 @@
         try
         {
             var all = await Repository.GetAllAsync<Workout>();
+            exercises = (await Repository.GetAllAsync<Exercise>()).ToDictionary(e => e.Id);
             workouts = [.. all.OrderByDescending(w => w.Date).ThenByDescending(w => w.SessionNumber)];
             latest = WorkoutEditing.LatestWithExercises(all);
         }

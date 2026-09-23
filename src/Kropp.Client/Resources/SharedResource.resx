@@ -84,4 +84,14 @@
   <data name="Stepper.Decrease" xml:space="preserve"><value>Decrease {0}</value></data>
   <data name="Stepper.Increase" xml:space="preserve"><value>Increase {0}</value></data>
   <data name="Entry.WeightStep" xml:space="preserve"><value>Step</value></data>
+  <data name="BodyArea.Legs" xml:space="preserve"><value>Legs</value></data>
+  <data name="BodyArea.Chest" xml:space="preserve"><value>Chest</value></data>
+  <data name="BodyArea.Back" xml:space="preserve"><value>Back</value></data>
+  <data name="BodyArea.Core" xml:space="preserve"><value>Core</value></data>
+  <data name="BodyArea.Arms" xml:space="preserve"><value>Arms</value></data>
+  <data name="BodyArea.Shoulders" xml:space="preserve"><value>Shoulders</value></data>
+  <data name="Common.And" xml:space="preserve"><value>and</value></data>
+  <data name="Workout.CardioOnly" xml:space="preserve"><value>Cardio</value></data>
+  <data name="Entry.Categories" xml:space="preserve"><value>Categories</value></data>
+  <data name="Picker.Categories" xml:space="preserve"><value>Trains (at least one)</value></data>
 </root>

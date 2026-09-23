@@ -35,7 +35,16 @@
     {
         <div class="mt-2 flex flex-wrap gap-1" data-testid="menu">
             <MenuButton OnClick="() => Toggle(Panel.Notes)">@L["Entry.EditNotes"]</MenuButton>
+            <MenuButton OnClick="() => Toggle(Panel.Categories)">@L["Entry.Categories"]</MenuButton>
             <MenuButton OnClick="OnRemove" Danger="true">@L["Entry.Remove"]</MenuButton>
+        </div>
+    }
+
+    @if (panel == Panel.Categories && Exercise is not null)
+    {
+        <div class="mt-2 rounded-lg bg-gray-50 p-2 dark:bg-gray-900" data-testid="categories-editor">
+            <CategoryChips Selected="ExerciseCategories.For(Exercise)" Changed="areas => OnExerciseChange.InvokeAsync(Exercise with { Categories = areas })" />
+            <DoneRow OnDone="Close" />
         </div>
     }
 
@@ -197,7 +206,7 @@
 </article>
 
 @code {
-    public enum Panel { None, Targets, Menu, Notes, Set, Illustration }
+    public enum Panel { None, Targets, Menu, Notes, Set, Illustration, Categories }
 
     [Parameter, EditorRequired] public WorkoutExercise Entry { get; set; } = default!;
     [Parameter] public Exercise? Exercise { get; set; }

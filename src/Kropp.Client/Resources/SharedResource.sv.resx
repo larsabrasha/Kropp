@@ -84,4 +84,14 @@
   <data name="Stepper.Decrease" xml:space="preserve"><value>Minska {0}</value></data>
   <data name="Stepper.Increase" xml:space="preserve"><value>Öka {0}</value></data>
   <data name="Entry.WeightStep" xml:space="preserve"><value>Steg</value></data>
+  <data name="BodyArea.Legs" xml:space="preserve"><value>Ben</value></data>
+  <data name="BodyArea.Chest" xml:space="preserve"><value>Bröst</value></data>
+  <data name="BodyArea.Back" xml:space="preserve"><value>Rygg</value></data>
+  <data name="BodyArea.Core" xml:space="preserve"><value>Mage</value></data>
+  <data name="BodyArea.Arms" xml:space="preserve"><value>Armar</value></data>
+  <data name="BodyArea.Shoulders" xml:space="preserve"><value>Axlar</value></data>
+  <data name="Common.And" xml:space="preserve"><value>och</value></data>
+  <data name="Workout.CardioOnly" xml:space="preserve"><value>Kondition</value></data>
+  <data name="Entry.Categories" xml:space="preserve"><value>Kategorier</value></data>
+  <data name="Picker.Categories" xml:space="preserve"><value>Tränar (minst en)</value></data>
 </root>

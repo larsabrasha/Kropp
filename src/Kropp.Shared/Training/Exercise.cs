@@ -31,6 +31,12 @@ public sealed record Exercise
     public bool IsArchived { get; init; }
 
     /// <summary>
+    /// What the exercise trains; at least one when chosen in the app. Empty for exercises from
+    /// before categories, which the client then gives a default by name.
+    /// </summary>
+    public List<BodyArea> Categories { get; init; } = [];
+
+    /// <summary>
     /// The picture chosen for the exercise, by its folder name in the client's illustrations; null
     /// for the client's default by name, <see cref="NoIllustration"/> for none at all.
     /// </summary>
