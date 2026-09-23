@@ -146,10 +146,6 @@
                                         </span>
                                         <span class="block truncate text-sm text-gray-500 dark:text-gray-400" data-testid="workout-meta">
                                             <span class="first-letter:uppercase inline-block">@workout.Date.ToString("dddd d MMM")</span>
-                                            @if (workout.SessionNumber is { } number)
-                                            {
-                                                <span> · @L["Home.SessionShort", number]</span>
-                                            }
                                             <span> · @(workout.Exercises.Count == 1 ? L["Home.ExerciseCountOne"] : L["Home.ExerciseCount", workout.Exercises.Count])</span>
                                             @if (name is not null && !string.IsNullOrWhiteSpace(workout.Note))
                                             {

@@ -58,7 +58,7 @@ public class HomeTests : ClientTestContext
             link.QuerySelector("[data-testid=workout-name]")!.TextContent.ShouldBe("Ben och bröst");
             link.QuerySelector("[data-testid=workout-meta]")!.TextContent.ShouldContain("måndag 21 sep", Case.Insensitive);
             link.QuerySelector("[data-testid=workout-icon]")!.GetAttribute("src").ShouldBe(Kropp.Client.Components.ExerciseIllustrations.Picture("squat"));
-            link.TextContent.ShouldContain("Nr 101");
+            link.TextContent.ShouldNotContain("Nr 101");
             link.TextContent.ShouldContain("2 övningar");
             link.TextContent.ShouldContain("Genomfört");
         });
