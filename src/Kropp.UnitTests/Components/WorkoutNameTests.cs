@@ -42,6 +42,20 @@ public class WorkoutNameTests
     }
 
     [Fact]
+    public void A_name_has_at_most_three_areas_those_with_most_exercises()
+    {
+        var squat = Add("Benböj lår framsida");
+        var calf = Add("Vader");
+        var pull = Add("Pull down maskin");
+        var pull2 = Add("Pull down maskin 2");
+        var sit = Add("Sit ups");
+        var curl = Add("Biceps hantlar");
+        var shrug = Add("Dra upp nacke/axlar med hantlar");
+
+        Name(squat, pull, sit, calf, pull2, curl, shrug).ShouldBe("Ben, rygg och mage");
+    }
+
+    [Fact]
     public void Two_areas_are_joined_with_och() =>
         Name(Add("Benböj lår framsida"), Add("Bröst maskin")).ShouldBe("Ben och bröst");
 

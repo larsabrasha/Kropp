@@ -39,7 +39,8 @@ Två aggregat, båda i `Kropp.Shared/Training`:
   - `Comment` och `Settings` för det som gäller just det tillfället
 
 Passet har inget eget namn. Det namnges efter övningarnas kategorier, flest övningar först,
-utan konditionsövningar (`WorkoutEditing.AreasOf`): "Ben, rygg och mage", eller "Kondition".
+utan konditionsövningar (`WorkoutEditing.AreasOf`) och med högst tre områden: "Ben, rygg och mage",
+eller "Kondition". Vid lika antal gäller ordningen ben, bröst, rygg, mage, armar, axlar.
 
 Vikt och blodtryck blir senare ett eget aggregat, `Measurement`.
 

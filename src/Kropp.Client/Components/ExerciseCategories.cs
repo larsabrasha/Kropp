@@ -126,6 +126,8 @@ internal static class ExerciseCategories
         return areas.Count > 0 ? AreaIcons[areas[0]] : null;
     }
 
+    public const int MaxAreasInName = 3;
+
     /// <summary>"Ben, rygg och mage" — or "Kondition", or null when nothing is known yet.</summary>
     public static string? WorkoutName(Workout workout, IReadOnlyDictionary<Guid, Exercise> exercises, IStringLocalizer<SharedResource> L)
     {
@@ -133,7 +135,8 @@ internal static class ExerciseCategories
         if (WorkoutEditing.IsCardioOnly(workout, Find))
             return L["Workout.CardioOnly"];
 
-        var names = WorkoutEditing.AreasOf(workout, Find, For).Select((a, i) => i == 0 ? L[$"BodyArea.{a}"].Value : L[$"BodyArea.{a}"].Value.ToLower(System.Globalization.CultureInfo.CurrentCulture)).ToList();
+        // At most three areas, the ones with the most exercises, so a name stays one short line.
+        var names = WorkoutEditing.AreasOf(workout, Find, For).Take(MaxAreasInName).Select((a, i) => i == 0 ? L[$"BodyArea.{a}"].Value : L[$"BodyArea.{a}"].Value.ToLower(System.Globalization.CultureInfo.CurrentCulture)).ToList();
         return names.Count switch
         {
             0 => null,
