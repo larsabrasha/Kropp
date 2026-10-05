@@ -35,11 +35,18 @@ NFS. WAL-läge, och `synchronous=FULL`, eftersom skrivningarna är få och det �
 | `server_seq` | INTEGER, unik | `ServerSeq`, oförändrat |
 
 Primärnyckeln är (`type`, `id`). Nästa löpnummer ligger i en egen tabell med en rad, inte i
-`max(server_seq) + 1`. Då går det att hoppa framåt efter en återställning, som `setval` gör i
-dag (se Följder).
+`max(server_seq) + 1`. Då går det att hoppa framåt efter en återställning.
 
 **Löpnumren följer med exakt.** Telefonerna har sparat det senaste löpnummer de har hämtat. Om
 numren började om lägre skulle de inte hämta något nytt förrän numren hann ikapp.
+
+**Efter en återställning hoppar löpnumren framåt med ett kommando.** En backup är äldre än den
+databas den ersätter. Utan hoppet skulle nya ändringar få nummer som telefonerna redan har
+passerat, och de skulle aldrig hämtas. `node dist-server/skipSeq.mjs` höjer räknaren till
+`max(server_seq) + 1 000 000`, som `setval` gör i dag. En miljon är fler ändringar än appen gör
+på flera år. README:s återställning har kommandot som ett eget steg. Bortvalt: att servern
+hoppar själv vid start. Det skulle kräva en fil till bredvid databasen och logik vid varje start,
+för något som händer sällan. Risken är att steget glöms bort, precis som i dag.
 
 **Push utan await inuti transaktionen.** `node:sqlite` är synkron, och en process har en
 anslutning. Hela push-batchen körs mellan `BEGIN IMMEDIATE` och `COMMIT` utan att lämna ifrån sig
@@ -49,7 +56,7 @@ blir synliga i den ordning de delas ut, som 0001 kräver.
 **Backup i serverprocessen.** Servern skriver en kopia med `backup()` från `node:sqlite` när den
 startar och varje natt kl. 03:00. Kopian hamnar i `KROPP_BACKUP_DIR` och sparas i
 `KROPP_BACKUP_KEEP_DAYS` dagar, som i dag. Kopian är en vanlig SQLite-fil. Att återställa är att
-stoppa API:t, lägga filen på plats, hoppa framåt i löpnumren och starta igen.
+stoppa API:t, lägga filen på plats, köra `skipSeq` och starta igen.
 
 **Bortvalt:**
 
@@ -77,6 +84,12 @@ Data som redan finns i Postgres flyttas en gång, med ett kommando som bara finn
    flytten och jämför `pull?since=0` från båda servrarna. De ska vara identiska.
 4. `docker-compose.yaml` får volymen för SQLite. Tjänsterna `db` och `backup` och API:ts
    PG-variabler är kvar, men bara för flytten.
+5. Kommandot `skipSeq`, med ett test som visar att en ändring efter en återställning får ett
+   högre nummer än alla före den. README:s återställning blir fyra steg:
+   - `docker compose stop api`
+   - lägg backupfilen på `KROPP_DB`:s plats i volymen
+   - `docker compose run --rm api node dist-server/skipSeq.mjs`
+   - `docker compose start api`
 
 **På servern, en gång:**
 
@@ -106,9 +119,5 @@ Postgres-steget i CI och tjänsterna `db` och `backup`. Ta bort `POSTGRES_PASSWO
   ovan. Kontraktstesterna (`server/contract.test.ts`) får ett nytt första migrationssteg och
   testet av flytten i stället för testet av databasen som .NET skapade.
 - Servern kan bara köras i en process mot samma fil. Det gör den redan.
-- Öppen fråga, att avgöra i version A: hur löpnumren hoppar framåt efter en återställning. Utan
-  hoppet får nya ändringar nummer som telefonerna redan har passerat, och då hämtas de aldrig.
-  Ett sätt är ett kommando som ökar räknaren, och som README:s återställning anropar, som
-  `setval` i dag. Ett annat är att servern sparar sitt högsta utdelade nummer i en fil bredvid
-  databasen och hoppar förbi det vid start, om databasen är äldre. Det andra kan inte glömmas
-  bort, men det är en rörlig del till.
+- En återställning utan `skipSeq` ger ändringar som telefonerna aldrig hämtar, och det märks
+  inte. Det steget är det viktigaste i README:s återställning.
