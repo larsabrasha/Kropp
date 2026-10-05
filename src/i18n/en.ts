@@ -1,6 +1,5 @@
 // English, the fallback. Every key here must also be in sv.ts; the type checker enforces it.
 export const en = {
-  'App.Title': 'Kropp',
   'BodyArea.Arms': 'Arms',
   'BodyArea.Back': 'Back',
   'BodyArea.Chest': 'Chest',
@@ -102,6 +101,7 @@ export const en = {
   'Home.NotePlaceholder': 'e.g. Legs and chest',
   'Home.SaveFailed': 'The workout could not be saved on this device. Try again.',
   'Home.SessionShort': 'No. {0}',
+  'Home.Title': 'Training',
   'Home.Week': 'Week {0}',
   'Illustration.Change': 'Change picture',
   'Illustration.Count': '{0} pictures',

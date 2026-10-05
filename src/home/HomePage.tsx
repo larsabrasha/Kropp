@@ -197,15 +197,10 @@ export function HomePage() {
 
   return (
     <>
-      {/* The app's name and mark, only here: the large title of the page everything starts from. */}
-      <h1 className="large-title mb-4 flex items-center gap-2.5" data-testid="brand">
-        <svg className="size-9 shrink-0" viewBox="0 0 32 32" aria-hidden="true">
-          <rect width="32" height="32" rx="8" className="fill-accent-600" />
-          <g stroke="#fff" strokeWidth="2.6" strokeLinecap="round">
-            <path d="M10.5 10v12M21.5 10v12M7 13v6M25 13v6M10.5 16h11" />
-          </g>
-        </svg>
-        {t('App.Title')}
+      {/* The page everything starts from is named for what it holds, as Apple names its own apps'
+          first page; the app's name and mark are on the home screen. */}
+      <h1 className="large-title mb-4" data-testid="title">
+        {t('Home.Title')}
       </h1>
 
       {/* What is next, lifted out of the list: a larger green row of its own that opens it, with a

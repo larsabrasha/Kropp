@@ -1,7 +1,6 @@
 import type { Messages } from './i18n'
 
 export const sv: Messages = {
-  'App.Title': 'Kropp',
   'BodyArea.Arms': 'Armar',
   'BodyArea.Back': 'Rygg',
   'BodyArea.Chest': 'Bröst',
@@ -103,6 +102,7 @@ export const sv: Messages = {
   'Home.NotePlaceholder': 't.ex. Ben och bröst',
   'Home.SaveFailed': 'Passet kunde inte sparas på enheten. Försök igen.',
   'Home.SessionShort': 'Nr {0}',
+  'Home.Title': 'Träning',
   'Home.Week': 'Vecka {0}',
   'Illustration.Change': 'Byt bild',
   'Illustration.Count': '{0} bilder',
