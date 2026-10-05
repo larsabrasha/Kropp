@@ -63,10 +63,11 @@ aldrig in den. Sätt `DATABASE_URL` för att använda en riktig Postgres i stäl
 ### Tester
 
 ```shell
-npm run typecheck
-npm run lint
-npm test
+npm run check
 ```
+
+Det kör formatkontroll, typkontroll, lint och tester. `src/contract.test.ts` och
+`server/contract.test.ts` låser det som redan ligger lagrat på telefoner och i databasen.
 
 Servertesterna kör mot PGlite. Med `DATABASE_URL` kör de dessutom mot en riktig Postgres. Den
 databasen töms, så peka den aldrig mot en som har data:
@@ -87,6 +88,11 @@ npx vite preview
 ```
 
 Öppna <http://localhost:4173> en gång, slå av nätet i DevTools och ladda om.
+
+`npm run e2e` gör samma sak automatiskt i Chromium med Playwright. Testet bygger appen och startar
+`vite preview` med en tom databas i minnet, så `./data/pglite` rörs inte. Det öppnar appen en gång,
+slår av nätet och laddar om, planerar ett pass, laddar om igen och ser att passet finns kvar. Första
+gången kan du behöva köra `npx playwright install chromium`.
 
 ## Den gamla träningsloggen
 

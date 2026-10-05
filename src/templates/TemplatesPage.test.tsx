@@ -56,7 +56,7 @@ const $ = <E extends Element = HTMLElement>(selector: string, scope: ParentNode 
 }
 const $$ = (selector: string, scope: ParentNode = document) => [...scope.querySelectorAll<HTMLElement>(selector)]
 const waitForElement = (selector: string) => waitFor(() => $(selector))
-const text = (e: Element) => e.textContent!.trim()
+const text = (e: Element) => e.textContent.trim()
 const click = (e: Element) => fireEvent.click(e)
 
 const stepperFor = (scope: ParentNode, label: string) =>

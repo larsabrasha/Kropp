@@ -12,7 +12,7 @@ import { pglite } from './pglite'
 // Runs against PGlite, and also against a real Postgres when DATABASE_URL is set (as in CI).
 // That database is emptied: never point it at one that holds data.
 const targets: [string, () => Promise<Db>][] = [['PGlite', () => pglite()]]
-if (process.env.DATABASE_URL) targets.push(['Postgres', async () => connect(process.env.DATABASE_URL!)])
+if (process.env.DATABASE_URL) targets.push(['Postgres', async () => connect(process.env.DATABASE_URL)])
 
 const T0 = new Date('2026-09-23T08:00:00Z')
 const at = (ms: number) => new Date(T0.getTime() + ms).toISOString()

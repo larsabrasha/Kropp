@@ -34,7 +34,7 @@ export interface PushedVersion {
 
 /**
  * The app's own copy of the data: IndexedDB in the browser (indexedDbStore.ts), memory in tests
- * (memoryStore.ts). Both follow the same rules, and storeRules.test.ts runs against both.
+ * (memoryStore.ts). Both follow the same rules, and engine.test.ts runs against both.
  */
 export interface LocalStore {
   get(key: string): Promise<LocalRecord | undefined>

@@ -22,7 +22,7 @@ const firstOfMonth = (date: DateOnly): DateOnly => `${date.slice(0, 7)}-01`
 const FIRST_MONTH = firstOfMonth(Limits.firstDate)
 const LAST_MONTH = firstOfMonth(Limits.lastDate)
 
-/** The month and day in the address, as the .NET page read them: a valid day wins over a month. */
+/** The month and day in the address (?day=, ?month=): a valid day wins over a month. */
 function fromQuery(query: URLSearchParams, day: DateOnly): { month: DateOnly; selected: DateOnly | undefined } {
   const dayParameter = query.get('day')
   if (dayParameter !== null && isDateOnly(dayParameter) && isInRange(dayParameter))

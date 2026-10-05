@@ -6,6 +6,11 @@ dist-server
 .DS_Store
 .idea/
 
+# Playwright's output (npm run e2e).
+/test-results/
+/playwright-report/
+/blob-report/
+
 # The dev server's local database (PGlite), see server/devPlugin.ts.
 /data/
 

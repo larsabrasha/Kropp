@@ -32,12 +32,16 @@ jobs:
           cache: npm
 
       - run: npm ci
+      - run: npm run format:check
       - run: npm run typecheck
       - run: npm run lint
       - run: npm test
         env:
           DATABASE_URL: postgres://postgres:test@localhost:5432/kropp_test
       - run: npm run build && npm run build:server
+      # The offline claim in a real browser, against the production build (playwright.config.ts).
+      - run: npx playwright install --with-deps chromium
+      - run: npm run e2e
 
   # Only after the tests pass, and never for a pull request.
   image:

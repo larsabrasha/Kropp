@@ -16,7 +16,7 @@ import {
 
 export type FindExercise = (id: string) => Exercise | undefined
 
-/** Compares optional numbers with a missing one first, as .NET orders nullable values. */
+/** Compares optional numbers, a missing one first. */
 export const compareOptional = (a: number | undefined, b: number | undefined) =>
   a === b ? 0 : a === undefined ? -1 : b === undefined ? 1 : a - b
 

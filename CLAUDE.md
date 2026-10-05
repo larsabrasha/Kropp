@@ -8,6 +8,8 @@ Before 2026-10-05 it was .NET and Blazor (ADR 0003). Installed phones and the da
 what that version wrote: never change the IndexedDB schema (`src/sync/indexedDbStore.ts`), the
 service worker's name (`service-worker.js`), the sync contract (`src/sync/protocol.ts`), the JSON
 of the aggregates (`src/training/model.ts`) or the table, without a way for existing data to follow.
+`src/contract.test.ts` and `server/contract.test.ts` pin all of these. When one fails, change the
+code back, not the test.
 
 ## Health data and secrets
 - This repository is public. Never commit health data: no exports, no imports, no database files,
@@ -26,7 +28,8 @@ of the aggregates (`src/training/model.ts`) or the table, without a way for exis
 ## Sync
 - The unit of sync is an aggregate (`Workout`, `Exercise`). Children travel inside their root.
   A new aggregate type is added to `AggregateTypes` (`src/sync/protocol.ts`) and validated in
-  `src/training/validate.ts`.
+  `src/training/validate.ts`. A new type or field also goes into `src/contract.test.ts`, which
+  fails until the server checks every field.
 - Stamps come from `src/sync/clock.ts` (UTC, whole milliseconds). Never stamp with anything else.
 - Deleting writes a tombstone through `LocalRepository.delete`; nothing is removed outright.
 - `IndexedDbStore` and `MemoryStore` implement the same rules (shared in `localStore.ts`). Cover a
@@ -70,8 +73,14 @@ of the aggregates (`src/training/model.ts`) or the table, without a way for exis
 - Code, comments and identifiers are in English. README and ADRs are in Swedish.
 
 ## Verification
-- Run `npm run typecheck`, `npm run lint` and `npm test` before calling anything done.
-- Component tests use Testing Library in happy-dom (`src/test/render.tsx`); the server tests run
-  on PGlite, and also on real Postgres when `DATABASE_URL` is set (as in CI).
-- The service worker only runs in a production build (`npm run build && npx vite preview`); see the
-  README for how to test offline start.
+- Run `npm run check` (format, types, lint, tests; about 15 s) before calling anything done. A
+  Stop hook (`.claude/hooks/check.sh`) runs it when a turn changed files.
+- ESLint enforces some of these rules: no network outside `src/sync` (and the illustrations'
+  prefetch), no `toISOString` outside `clock.ts` and `dates.ts`, and no promise left unawaited.
+- Component tests use Testing Library in happy-dom (`src/test/render.tsx`; the workout page's tests
+  share `src/test/workoutPage.ts`); the server tests run on PGlite, and also on real Postgres when
+  `DATABASE_URL` is set (as in CI).
+- The service worker only runs in a production build (`npm run build && npx vite preview`).
+  `npm run e2e` (Playwright, Chromium) builds it and proves the app starts, saves and reloads
+  offline. Run it after changing the service worker, `vite.config.ts` or how the home page plans a
+  workout. It is not part of `npm run check`, which stays fast.

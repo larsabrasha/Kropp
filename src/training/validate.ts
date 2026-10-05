@@ -24,7 +24,7 @@ const ILLUSTRATION = /^[a-z0-9-]{1,80}$/
 
 export const isUuid = (value: unknown): value is string => typeof value === 'string' && UUID.test(value)
 
-/** Thrown for a document that is not even the right shape, like .NET's JsonException. */
+/** Thrown for a document that is not even the right shape. */
 class ShapeError extends Error {}
 
 type Json = Record<string, unknown>

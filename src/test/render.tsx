@@ -9,7 +9,7 @@ import { MemoryStore } from '../sync/memoryStore'
 import { FakeSyncApi } from './fakeSyncApi'
 
 // For component tests (with `// @vitest-environment happy-dom` at the top of the file): the app in
-// Swedish, with its local store in memory, on 23 September 2026, as the .NET tests had it.
+// Swedish, with its local store in memory, on 23 September 2026.
 
 export const TODAY = '2026-09-23'
 export const NOW = new Date('2026-09-23T10:00:00Z')
