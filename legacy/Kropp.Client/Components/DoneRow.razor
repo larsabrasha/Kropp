@@ -1,9 +1,0 @@
-<div class="mt-2 flex items-center justify-end gap-2">
-    @ChildContent
-    <CloseButton OnClick="OnDone" />
-</div>
-
-@code {
-    [Parameter] public RenderFragment? ChildContent { get; set; }
-    [Parameter] public EventCallback OnDone { get; set; }
-}
