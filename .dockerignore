@@ -1,0 +1,11 @@
+node_modules
+dist
+dist-server
+data
+legacy
+backups
+.git
+.env
+.env.*
+*.tsbuildinfo
+**/.DS_Store

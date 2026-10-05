@@ -17,7 +17,6 @@ export default defineConfig({
       // prompt, and everything is saved locally as it is typed, so a reload loses nothing.
       registerType: 'autoUpdate',
       injectRegister: false,
-      includeAssets: ['apple-touch-icon.png', 'icon-192.png', 'icon-512.png'],
       manifest: {
         name: 'Kropp',
         short_name: 'Kropp',

@@ -17,12 +17,18 @@ export const NOW = new Date('2026-09-23T10:00:00Z')
 afterEach(() => {
   cleanup()
   vi.useRealTimers()
+  vi.unstubAllGlobals()
 })
 
 beforeEach(() => {
   setLanguage('sv')
   vi.useFakeTimers({ toFake: ['Date'] })
   vi.setSystemTime(NOW)
+  // No network in the tests: the pages never need it, and a stray prefetch would try localhost.
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async () => new Response(null, { status: 404 })),
+  )
 })
 
 export interface TestApp {

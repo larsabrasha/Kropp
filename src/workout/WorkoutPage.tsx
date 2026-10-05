@@ -1,4 +1,407 @@
-// Not ported yet.
-export function WorkoutPage(_: { id: string }) {
-  return null
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { formatDate, t } from '../i18n/i18n'
+import { picture, prefetch, slugFor } from '../illustrations/illustrations'
+import { navigate, useLocation } from '../route'
+import { useRemoteChange, useRepository } from '../services'
+import { iconFor, workoutName, type ExerciseMap } from '../training/categories'
+import { isDateOnly, today } from '../training/dates'
+import { opensLocked as opensLockedOn, statusOf, withDerivedStatus } from '../training/editing'
+import { isInRange, Limits } from '../training/limits'
+import type { Exercise, Workout } from '../training/model'
+import { invariant, parseInt0 } from '../training/text'
+import { moveToTrash } from '../training/trash'
+import { DoneRow } from '../ui/EditorActions'
+import { BackLink } from '../ui/Layout'
+import { StatusBadge } from '../ui/StatusBadge'
+import { NumberField, TextField } from '../ui/TextField'
+import { useCommit } from '../ui/useCommit'
+import { ExerciseList } from './ExerciseList'
+
+// Only the calendar of this app, never a URL from elsewhere.
+const CALENDAR_BACK = /^\/?(calendar\?(month=\d{4}-\d{2}|day=\d{4}-\d{2}-\d{2}))$/
+
+/** The pictures of a workout's exercises: only the ones in use, never the whole catalog. */
+function picturesOf(workout: Workout | undefined, exercises: ExerciseMap): string[] {
+  if (!workout) return []
+  const slugs = workout.exercises
+    .map((e) => slugFor(exercises.get(e.exerciseId)))
+    .filter((s): s is string => s !== undefined)
+  return [...new Set(slugs)].map(picture)
+}
+
+// Loads a workout's pictures while there is a network, so the service worker has them when
+// there is none.
+async function prefetchIllustrations(workout: Workout | undefined, exercises: ExerciseMap) {
+  const urls = picturesOf(workout, exercises)
+  if (urls.length === 0) return
+  try {
+    await prefetch(urls)
+  } catch (error) {
+    console.debug('Could not prefetch illustrations', error)
+  }
+}
+
+const sameExercises = (a: Workout, b: Workout) => {
+  const ids = new Set(a.exercises.map((e) => e.exerciseId))
+  const other = new Set(b.exercises.map((e) => e.exerciseId))
+  return ids.size === other.size && [...ids].every((id) => other.has(id))
+}
+
+export function WorkoutPage({ id }: { id: string }) {
+  const repository = useRepository()
+  const { query } = useLocation()
+  const safeBack = CALENDAR_BACK.exec(query.get('back') ?? '')?.[1]
+
+  const [loaded, setLoaded] = useState(false)
+  const [workout, setWorkout] = useState<Workout>()
+  const [workouts, setWorkouts] = useState<Workout[]>([])
+  const [exercises, setExercises] = useState<ReadonlyMap<string, Exercise>>(new Map())
+  const [editingDetails, setEditingDetails] = useState(false)
+  const [opensLocked, setOpensLocked] = useState(false)
+  const [locked, setLocked] = useState(false)
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [error, setError] = useState<string>()
+
+  // The latest exercises, for a save that follows creating one before the page renders again.
+  const exercisesNow = useRef(exercises)
+  // Decided once per workout opened, so a reload after a sync does not lock it again mid-edit.
+  const lockDecidedFor = useRef<string>(undefined)
+  // The workout whose first render has been scrolled to the top: a reload lets the browser
+  // restore an old position, and a workout should open at its top.
+  const scrolledFor = useRef<string>(undefined)
+  const deletingNow = useRef(false)
+
+  // Read first and set state in the callbacks: the effect below then never sets state synchronously.
+  const load = useCallback(
+    () =>
+      Promise.all([repository.getAll('workout'), repository.getAll('exercise')])
+        .then(
+          ([all, list]) => {
+            const map = new Map(list.map((e) => [e.id, e]))
+            const found = all.find((w) => w.id === id)
+            exercisesNow.current = map
+            setWorkouts(all)
+            setExercises(map)
+            setWorkout(found)
+            if (found && lockDecidedFor.current !== found.id) {
+              lockDecidedFor.current = found.id
+              const lock = opensLockedOn(found, today())
+              setLocked(lock)
+              setOpensLocked(lock)
+            }
+          },
+          (e) => {
+            console.error(`Could not read workout ${id}`, e)
+            setError(t('Home.LoadFailed'))
+          },
+        )
+        .then(() => setLoaded(true)),
+    [repository, id],
+  )
+
+  useEffect(() => {
+    void load()
+  }, [load])
+  useRemoteChange(() => void load())
+
+  useEffect(() => {
+    if (!loaded || scrolledFor.current === id) return
+    scrolledFor.current = id
+    void prefetchIllustrations(workout, exercises)
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+  }, [loaded, id, workout, exercises])
+
+  const toggleDetails = () => setEditingDetails(!locked && !editingDetails)
+
+  const lock = () => {
+    setLocked(true)
+    setEditingDetails(false)
+    setConfirmingDelete(false)
+  }
+
+  // Saved at once and locally; sync picks it up a few seconds later.
+  async function save(edited: Workout) {
+    // The disabled controls are the lock; this keeps anything that slips past them from saving.
+    if (locked) return
+    const next = withDerivedStatus(edited, today())
+    const exercisesChanged = !workout || !sameExercises(workout, next)
+    const previous = workout
+    setWorkout(next)
+    setWorkouts((all) => [...all.filter((w) => w.id !== next.id), next])
+    setError(undefined)
+    try {
+      await repository.save('workout', next.id, next)
+      if (exercisesChanged) await prefetchIllustrations(next, exercisesNow.current)
+    } catch (e) {
+      console.error(`Could not save workout ${next.id}`, e)
+      setWorkout(previous)
+      setError(t('Home.SaveFailed'))
+    }
+  }
+
+  async function saveExercise(exercise: Exercise) {
+    if (locked) return
+    try {
+      await repository.save('exercise', exercise.id, exercise)
+      const map = new Map(exercisesNow.current).set(exercise.id, exercise)
+      exercisesNow.current = map
+      setExercises(map)
+      await prefetchIllustrations(workout, map)
+    } catch (e) {
+      console.error(`Could not save exercise ${exercise.id}`, e)
+      setError(t('Home.SaveFailed'))
+    }
+  }
+
+  const dateField = useCommit<HTMLInputElement>((value) => {
+    if (isDateOnly(value) && isInRange(value) && workout) void save({ ...workout, date: value })
+  })
+
+  async function remove() {
+    if (deletingNow.current || locked) return
+    deletingNow.current = true
+    setDeleting(true)
+    try {
+      if (workout) await moveToTrash(repository, workout)
+      navigate('/')
+    } catch (e) {
+      console.error('Could not delete workout', e)
+      setError(t('Home.SaveFailed'))
+    } finally {
+      deletingNow.current = false
+      setDeleting(false)
+    }
+  }
+
+  const name = workout ? workoutName(workout, exercises) : undefined
+  const title = name ?? workout?.note ?? t('Home.Heading')
+
+  /** After the day, as in the list: the exercises, then the number and a note not already the title. */
+  const metaParts: string[] = []
+  if (workout) {
+    metaParts.push(
+      workout.exercises.length === 1 ? t('Home.ExerciseCountOne') : t('Home.ExerciseCount', workout.exercises.length),
+    )
+    if (workout.sessionNumber !== undefined) metaParts.push(t('Home.SessionShort', workout.sessionNumber))
+    if (name !== undefined && workout.note?.trim()) metaParts.push(workout.note)
+  }
+
+  const icon = workout ? iconFor(workout, exercises) : undefined
+
+  return (
+    <>
+      <BackLink
+        href={safeBack ? `/${safeBack}` : '/'}
+        label={safeBack ? t('Calendar.Heading') : t('Workout.Back')}
+        testId="back"
+      />
+
+      {!loaded ? (
+        <p className="text-sm text-gray-500 dark:text-gray-400">{t('Common.Loading')}</p>
+      ) : !workout ? (
+        <div
+          className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-gray-300 px-4 py-10 text-center text-gray-500 dark:border-gray-700 dark:text-gray-400"
+          data-testid="not-found"
+        >
+          <svg
+            className="size-10"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            aria-hidden="true"
+          >
+            <circle cx="11" cy="11" r="7" />
+            <path d="M20 20l-4-4" />
+          </svg>
+          <p>{t('Workout.NotFound')}</p>
+        </div>
+      ) : (
+        <>
+          {/* The same as the workout's row in the list: picture, name, day, exercises and status. The
+              grey line, with the number and note too, opens the details for editing. */}
+          <div className="mt-2 flex items-center gap-3" data-testid="details">
+            <span className="size-14 shrink-0 overflow-hidden rounded-xl bg-white dark:bg-gray-900" aria-hidden="true">
+              {icon && (
+                <img
+                  src={picture(icon)}
+                  alt=""
+                  className="illustration size-full object-contain p-1"
+                  data-testid="workout-icon"
+                />
+              )}
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-start justify-between gap-2">
+                <h1 className="min-w-0 text-xl leading-tight font-semibold break-words">{title}</h1>
+                <span className="mt-0.5">
+                  <StatusBadge status={statusOf(workout, today())} />
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={toggleDetails}
+                disabled={locked}
+                aria-expanded={editingDetails}
+                data-testid="workout-meta"
+                className="mt-0.5 block max-w-full text-left text-sm text-gray-500 underline decoration-gray-300 decoration-dotted underline-offset-4 hover:text-gray-700 dark:text-gray-400 dark:decoration-gray-600 dark:hover:text-gray-200"
+              >
+                <span className="inline-block first-letter:uppercase">{formatDate(workout.date, 'dddd d MMM')}</span>
+                {metaParts.map((p) => ' · ' + p).join('')}
+              </button>
+            </div>
+          </div>
+
+          {locked ? (
+            <section
+              className="mt-4 flex items-center gap-3 rounded-xl border border-gray-200 bg-white p-3 dark:border-gray-800 dark:bg-gray-900"
+              data-testid="locked"
+            >
+              <svg
+                className="size-5 shrink-0 text-gray-500 dark:text-gray-400"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <rect x="5" y="11" width="14" height="10" rx="2" />
+                <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+              </svg>
+              <p className="min-w-0 flex-1 text-sm text-gray-600 dark:text-gray-300">{t('Workout.Locked')}</p>
+              <button
+                type="button"
+                onClick={() => setLocked(false)}
+                data-testid="unlock"
+                className="shrink-0 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus-visible:outline-2 focus-visible:outline-blue-500 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
+              >
+                {t('Workout.Unlock')}
+              </button>
+            </section>
+          ) : (
+            opensLocked && (
+              <div className="mt-3 flex justify-end">
+                <button
+                  type="button"
+                  onClick={lock}
+                  data-testid="lock"
+                  className="inline-flex min-h-9 items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-gray-600 hover:bg-gray-100 focus-visible:outline-2 focus-visible:outline-blue-500 dark:text-gray-300 dark:hover:bg-gray-800"
+                >
+                  <svg
+                    className="size-4"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <rect x="5" y="11" width="14" height="10" rx="2" />
+                    <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+                  </svg>
+                  {t('Workout.Lock')}
+                </button>
+              </div>
+            )
+          )}
+
+          {editingDetails && (
+            <section className="mt-2 rounded-lg bg-gray-50 p-2 dark:bg-gray-900" data-testid="details-editor">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                <label className="flex flex-col gap-1 text-xs text-gray-600 dark:text-gray-400">
+                  <span className="pl-inset">{t('Home.Date')}</span>
+                  <input
+                    key={workout.date}
+                    ref={dateField}
+                    type="date"
+                    defaultValue={workout.date}
+                    min={Limits.firstDate}
+                    max={Limits.lastDate}
+                    className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-base text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+                  />
+                </label>
+                <NumberField
+                  label={t('Workout.SessionNumber')}
+                  value={invariant(workout.sessionNumber)}
+                  max={Limits.sessionNumber}
+                  onChange={(v) => {
+                    const n = parseInt0(v)
+                    void save({
+                      ...workout,
+                      sessionNumber: n === undefined ? undefined : Math.min(Math.max(n, 0), Limits.sessionNumber),
+                    })
+                  }}
+                />
+                <div className="col-span-2 sm:col-span-1">
+                  <TextField
+                    label={t('Home.Note')}
+                    value={workout.note}
+                    maxLength={Limits.longText}
+                    onChange={(v) => void save({ ...workout, note: v })}
+                  />
+                </div>
+              </div>
+              <DoneRow onDone={() => setEditingDetails(false)} />
+            </section>
+          )}
+
+          {error !== undefined && (
+            <p className="mt-3 text-sm text-red-600 dark:text-red-400" role="alert">
+              {error}
+            </p>
+          )}
+
+          {/* A locked workout still reads the same, but every control in it is disabled. */}
+          <fieldset disabled={locked} className="m-0 min-w-0 border-0 p-0" data-testid="workout-body">
+            <div className="mt-6">
+              <ExerciseList
+                key={workout.id}
+                owner={workout}
+                exercises={exercises}
+                history={workouts}
+                onChange={save}
+                onExerciseChange={saveExercise}
+              />
+            </div>
+
+            <section className="mt-8 flex justify-end border-t border-gray-200 pt-4 dark:border-gray-800">
+              {confirmingDelete ? (
+                <div className="flex items-center gap-2" role="alertdialog" aria-label={t('Workout.DeleteConfirm')}>
+                  <span className="text-sm">{t('Workout.DeleteConfirm')}</span>
+                  <button
+                    type="button"
+                    onClick={() => void remove()}
+                    disabled={deleting}
+                    className="rounded-lg bg-red-600 px-4 py-2.5 font-medium text-white hover:bg-red-700 disabled:opacity-60"
+                  >
+                    {deleting ? t('Common.Loading') : t('Workout.Delete')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmingDelete(false)}
+                    className="rounded-lg px-4 py-2.5 hover:bg-gray-100 dark:hover:bg-gray-800"
+                  >
+                    {t('Common.Cancel')}
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setConfirmingDelete(true)}
+                  className="rounded-lg px-4 py-2.5 font-medium text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950"
+                >
+                  {t('Workout.Delete')}
+                </button>
+              )}
+            </section>
+          </fieldset>
+        </>
+      )}
+    </>
+  )
 }

@@ -4,7 +4,7 @@ Kropp's own code is MIT licensed (see `LICENSE`). The exercise illustrations are
 
 ## Exercise illustrations
 
-`src/Kropp.Client/wwwroot/exercises/` holds the 302 exercises × 3 frames of
+`public/exercises/` holds the 302 exercises × 3 frames of
 [Workout Guide](https://github.com/bryllim/workout-guide) by [Bryl Lim](https://bryllim.com),
 based on pose artwork from [Everkinetic](https://github.com/everkinetic/data) (created by Greg Priday).
 
@@ -17,4 +17,5 @@ Changes to the images themselves must be shared under the same licence.
 
 ## Third-party code
 
-`src/Kropp.Client/wwwroot/lib/sortable.min.js` is [SortableJS](https://github.com/SortableJS/Sortable) 1.15.6, MIT licensed.
+[SortableJS](https://github.com/SortableJS/Sortable) (MIT) is used for drag and drop. It and the other
+npm packages are listed with their licences in `package-lock.json`.

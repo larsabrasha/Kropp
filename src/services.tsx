@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- the hooks belong beside their provider */
 import { createContext, useContext, useEffect, useRef, useSyncExternalStore, type ReactNode } from 'react'
 import type { SyncCoordinator } from './sync/coordinator'
 import type { SyncEngine, SyncStatus } from './sync/engine'

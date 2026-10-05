@@ -13,10 +13,10 @@ Den sparar allt i telefonen först och synkar med servern när det finns nät.
 ```
 iPhone (Safari, hemskärmen)                          Server
 ┌──────────────────────────────┐                    ┌──────────────────────────┐
-│ Kropp.Client (Blazor WASM)   │  POST /api/sync/push│ Kropp.Api                │
-│  ├─ IndexedDB  ← läs/skriv   │ ──────────────────▶ │  ├─ SyncService          │
+│ Appen (React, src/)          │  POST /api/sync/push│ Servern (Hono, server/)  │
+│  ├─ IndexedDB  ← läs/skriv   │ ──────────────────▶ │  ├─ push och pull        │
 │  ├─ utkorg (pending-poster)  │  GET  /api/sync/pull│  └─ Postgres (jsonb)     │
-│  └─ service worker (cache)   │ ◀────────────────── │  serverar även klienten  │
+│  └─ service worker (cache)   │ ◀────────────────── │  serverar även appen     │
 └──────────────────────────────┘                    └──────────────────────────┘
 ```
 
@@ -28,99 +28,83 @@ iPhone (Safari, hemskärmen)                          Server
 
 ## Teknik
 
-Samma grund som [GospelPresenter](https://github.com/larsabrasha/GospelPresenter):
-.NET 10, Blazor, Tailwind CSS, PostgreSQL och .NET Aspire. Skillnaden är att klienten är en
-fristående Blazor WebAssembly-PWA i stället för Blazor Server, eftersom den måste fungera offline.
+Samma grund som Bygg: Vite, React och TypeScript i webbläsaren, Tailwind CSS, och en server i
+Hono på Node. Allt är ett npm-paket. Data ligger i PostgreSQL. Bytet från .NET och Blazor beskrivs
+i [ADR 0003](adr/0003-vite-react-typescript.md).
 
-| Projekt | Vad |
+| Mapp | Vad |
 | --- | --- |
-| `Kropp.Client` | Blazor WebAssembly-PWA: sidor, IndexedDB-lager, sync-schemaläggare |
-| `Kropp.Shared` | Datamodell, sync-kontrakt och sync-motorn. Ingen webbläsare, ingen databas. |
-| `Kropp.Api` | Minimal API för sync, serverar klienten |
-| `Kropp.Data` | EF Core-kontext och migreringar |
-| `Kropp.MigrationService` | Kör migreringarna och avslutar |
-| `Kropp.AppHost` | Aspire: Postgres, pgweb, migreringar, API |
-| `Kropp.Import` | Engångsimport av den gamla träningsloggen från Numbers (CSV) |
-| `Kropp.UnitTests` | Sync-motorn, validering, sidor (bUnit) |
-| `Kropp.IntegrationTests` | API:t mot riktig Postgres (Testcontainers) |
+| `src/training` | Datamodellen och reglerna: status, planering, papperskorg, validering |
+| `src/sync` | Lokala lagret (IndexedDB), utkorgen och sync-motorn |
+| `src/i18n` | Texterna på svenska och engelska |
+| `src/home`, `src/workout` … | Sidorna, en mapp per område |
+| `src/ui` | Gemensamma kontroller: layout, stegare, fält |
+| `server` | API:t för sync, migreringen och produktionsservern |
+| `public/exercises` | Övningsbilderna |
+
+Servern delar kod med appen: den validerar med `src/training/validate.ts` och använder samma
+kontrakt (`src/sync/protocol.ts`).
 
 ## Kom igång
 
-Krav: .NET 10 SDK och Docker.
+Krav: Node 24.
 
 ```shell
-cd src
-dotnet run --project Kropp.AppHost
+npm install
+npm run dev
 ```
 
-Aspire startar Postgres med en beständig volym, kör migreringarna och startar API:t på
-<http://localhost:5260>. Aspire-dashboarden öppnas av sig själv. pgweb ligger på
-<http://localhost:5051>. Postgres-lösenordet genereras av Aspire första gången och sparas i
-AppHost-projektets user secrets, aldrig i repot.
+Appen och API:t startar på <http://localhost:5173>. API:t körs inne i Vite. Databasen är PGlite
+(Postgres i WebAssembly) i `./data/pglite`, så Docker behövs inte. Mappen gitignoreras; checka
+aldrig in den. Sätt `DATABASE_URL` för att använda en riktig Postgres i stället.
 
-Tailwind byggs vid varje `dotnet build`. För snabb omladdning av CSS:
-
-```shell
-./src/Kropp.Client/tailwind-watch.sh
-```
+`npm run dev:lan` gör appen nåbar från telefonen i samma nät.
 
 ### Tester
 
 ```shell
-cd src
-dotnet test
+npm run typecheck
+npm run lint
+npm test
 ```
 
-Integrationstesterna startar en Postgres-container, så Docker måste vara igång.
+Servertesterna kör mot PGlite. Med `DATABASE_URL` kör de dessutom mot en riktig Postgres. Den
+databasen töms, så peka den aldrig mot en som har data:
+
+```shell
+docker run -d --rm --name kropp-test-pg -e POSTGRES_PASSWORD=test -e POSTGRES_DB=kropp_test -p 55432:5432 postgres:17
+DATABASE_URL=postgres://postgres:test@localhost:55432/kropp_test npm test
+```
 
 ### Testa offline
 
-Service workern är bara aktiv i en publicerad build (`service-worker.published.js`). I utvecklingsläget
-cachar den ingenting, så där testar man offline genom att stänga av nätet i DevTools efter att sidan
-laddats. För att testa att appen *startar* utan nät:
+Service workern finns bara i produktionsbygget, inte i `npm run dev`. För att testa att appen
+*startar* utan nät:
 
 ```shell
-cd src
-dotnet publish Kropp.Api -c Release -o ../publish
-cd ../publish
-ConnectionStrings__kroppdb="Host=localhost;Database=kropp;Username=postgres;Password=..." ./Kropp.Api
+npm run build
+npx vite preview
 ```
 
-Öppna sidan en gång, slå av nätet och ladda om.
+Öppna <http://localhost:4173> en gång, slå av nätet i DevTools och ladda om.
 
-## Importera den gamla träningsloggen
+## Den gamla träningsloggen
 
-`Kropp.Import` läser en CSV-export av Numbers-dokumentet och skickar passen via samma sync-API
-som appen. Exportera till en mapp utanför repot (Numbers → Arkiv → Exportera till → CSV) och kör:
-
-```shell
-cd src
-dotnet run --project Kropp.Import -- ~/Downloads/kropp/csv            # torrkörning, skickar inget
-dotnet run --project Kropp.Import -- ~/Downloads/kropp/csv --push     # skickar till localhost:5260
-```
-
-Torrkörningen visar vad som importeras, vilka datum som slås ihop och vilka kommentarer som inte
-kunde tolkas. Id:n räknas fram ur övningsnamn och datum, och allt stämplas 2020-01-01. En andra
-körning ändrar därför ingenting, och den skriver aldrig över det du ändrat i appen. `--overwrite`
-stämplar med nuvarande tid, för när själva importen var fel. `--server URL` pekar ut en annan server.
-
-Reglerna för hur kolumner och kommentarer tolkas finns i `ExerciseCatalog` och `CommentParser`,
-och testerna i `NumbersImportTests` visar dem med påhittade rader.
+Loggen från Numbers importerades en gång med `Kropp.Import`, ett .NET-verktyg. Det finns kvar i
+git-historiken, före bytet till TypeScript.
 
 ## Köra hemma
 
 GitHub Actions bygger en image när testerna går igenom på `main`:
 `ghcr.io/larsabrasha/kropp:latest` och `:sha-<commit>`. En tagg `v1.2.3` ger även `:1.2.3`.
-Imagen finns för både amd64 och arm64. Den innehåller API:t och migreringarna, så de kommer
-alltid från samma commit.
+Imagen finns för både amd64 och arm64.
 
-`docker-compose.yaml` startar fyra tjänster:
+`docker-compose.yaml` startar tre tjänster:
 
 | Tjänst | Vad |
 | --- | --- |
 | `db` | Postgres 17 med en beständig volym |
-| `migrations` | Kör migreringarna och avslutar. API:t startar först när den lyckats. |
-| `api` | API:t, som även serverar appen, över vanlig HTTP på port 8080 |
+| `api` | API:t, som även serverar appen, över vanlig HTTP på port 8080. Uppdaterar databasens schema när den startar. |
 | `backup` | En dump av databasen varje natt |
 
 HTTPS kommer från Caddy på routern (OPNsense). På servern behövs `docker-compose.yaml` och en `.env`:
@@ -142,6 +126,11 @@ kropp.example.se {
 ```
 
 Uppdatera med `docker compose pull && docker compose up -d`.
+
+**Första gången efter bytet från .NET:** hämta den nya `docker-compose.yaml` innan `pull`. Den
+gamla har tjänsten `migrations`, som kör .NET. Den nya imagen har ingen .NET, så den tjänsten
+misslyckas, och då startar inte API:t. Kör sedan `docker compose up -d --remove-orphans`, så tas
+den gamla tjänsten bort. Databasen är densamma; servern använder samma tabell som förut.
 
 Om paketet på GitHub är privat måste servern logga in först: `docker login ghcr.io` med en token
 som har `read:packages`. Paketet innehåller inga data, så det går också bra att göra det publikt.
@@ -169,8 +158,6 @@ telefonerna hämtar bara nummer över det de redan sett. Utan hoppet får nya ä
 telefonerna redan passerat, och de hämtas aldrig. Det som synkats efter dumpen finns kvar bara i
 telefonerna och skickas inte till servern igen.
 
-Den gamla träningsloggen importeras mot servern med `--server https://kropp.example.se`.
-
 ## På telefonen
 
 Service workers kräver HTTPS, utom på `localhost`. Använd därför Caddys adress. Öppna den i
@@ -190,8 +177,8 @@ i hemnätet, utan HTTPS och utan inloggning.
 
 Varje övning kan ha en bild. De 302 övningarna × 3 lägen kommer från
 [Workout Guide](https://github.com/bryllim/workout-guide) (Bryl Lim, byggd på Everkinetic) och
-ligger i `src/Kropp.Client/wwwroot/exercises/`. De importerade övningarna får en bild efter namn
-(`ExerciseIllustrations.Catalog.cs`); i appen byts den genom att trycka på bilden.
+ligger i `public/exercises/`. De importerade övningarna får en bild efter namn
+(`src/illustrations/catalog.ts`); i appen byts den genom att trycka på bilden.
 
 De tre lägena för en övning är ritade i olika stil, så appen visar bara ett: det som syns
 tydligast i 48 px (starkast linjer). Valet mättes en gång för alla 906 lägen och står i katalogen.

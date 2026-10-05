@@ -1,4 +1,4 @@
-# Kropp at home: Postgres, the migrations, and the API, which also serves the app. HTTPS comes
+# Kropp at home: Postgres, and the API, which also serves the app. HTTPS comes
 # from a reverse proxy in front (Caddy on the router); service workers need it, so the phone
 # always uses the proxy's address, at home and at the gym alike.
 #
@@ -23,29 +23,22 @@ services:
       timeout: 5s
       retries: 10
 
-  # Runs once and exits. The API starts only after it succeeds, so it never meets an old schema.
-  migrations:
-    image: ghcr.io/larsabrasha/kropp:${KROPP_TAG:-latest}
-    working_dir: /migrations
-    entrypoint: ["dotnet", "Kropp.MigrationService.dll"]
-    environment:
-      ConnectionStrings__kroppdb: Host=db;Database=kropp;Username=kropp;Password=${POSTGRES_PASSWORD}
-    depends_on:
-      db:
-        condition: service_healthy
-
+  # The API also serves the app, and brings the database schema up to date when it starts.
   api:
     image: ghcr.io/larsabrasha/kropp:${KROPP_TAG:-latest}
     restart: unless-stopped
     environment:
-      ConnectionStrings__kroppdb: Host=db;Database=kropp;Username=kropp;Password=${POSTGRES_PASSWORD}
+      PGHOST: db
+      PGDATABASE: kropp
+      PGUSER: kropp
+      PGPASSWORD: ${POSTGRES_PASSWORD}
     # Plain HTTP for the reverse proxy. The API has no sign-in: anything that reaches this port
     # reaches the data, so bind it to the one interface the proxy uses (KROPP_LISTEN in .env).
     ports:
       - ${KROPP_LISTEN:-8080}:8080
     depends_on:
-      migrations:
-        condition: service_completed_successfully
+      db:
+        condition: service_healthy
 
   # A pg_dump when it starts and every night at 03:00, kept for KROPP_BACKUP_KEEP_DAYS days.
   # The dumps hold health data: point KROPP_BACKUP_DIR at a disk other than the database's.

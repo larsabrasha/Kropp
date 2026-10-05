@@ -1,6 +1,7 @@
 # 0001 Offline först: Blazor WebAssembly-PWA med IndexedDB och sync
 
-Status: beslutad, 2026-09-23
+Status: beslutad, 2026-09-23. Teknikvalet (Blazor) är ersatt av [0003](0003-vite-react-typescript.md);
+reglerna för lagring och sync gäller.
 
 ## Bakgrund
 

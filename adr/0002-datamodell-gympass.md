@@ -21,7 +21,7 @@ Det som syns i datat:
 
 ## Beslut
 
-Två aggregat, båda i `Kropp.Shared/Training`:
+Två aggregat, båda i `Kropp.Shared/Training` (sedan [0003](0003-vite-react-typescript.md) i `src/training/model.ts`):
 
 - **`Exercise`**: övningsregistret. `Name`, `Kind` (Strength, Bodyweight, Timed, Cardio),
   `SettingsNote` för inställningar som gäller varje gång (till exempel "Sitthöjd 11") och
