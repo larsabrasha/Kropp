@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { WorkoutRow } from '../home/WorkoutRow'
 import { formatDate, shortestDayNames, t } from '../i18n/i18n'
 import { navigate, useLocation } from '../route'
@@ -46,11 +46,21 @@ function dotColour(status: WorkoutStatus): string {
   }
 }
 
-async function read(repository: LocalRepository): Promise<Data> {
-  const exercises = new Map((await repository.getAll('exercise')).map((e) => [e.id, e]))
-  const workouts = (await repository.getAll('workout')).sort(
-    (a, b) => a.date.localeCompare(b.date) || compareOptional(a.sessionNumber, b.sessionNumber),
-  )
+/** The workouts by day, from the repository's memory, or a message when it could not be read. */
+function read(repository: LocalRepository): Data {
+  try {
+    return readWorkouts(repository)
+  } catch (e) {
+    console.error('Could not read workouts', e)
+    return { workouts: [], byDay: new Map(), exercises: new Map(), error: t('Home.LoadFailed') }
+  }
+}
+
+function readWorkouts(repository: LocalRepository): Data {
+  const exercises = new Map(repository.peekAll('exercise').map((e) => [e.id, e]))
+  const workouts = repository
+    .peekAll('workout')
+    .sort((a, b) => a.date.localeCompare(b.date) || compareOptional(a.sessionNumber, b.sessionNumber))
   const byDay = new Map<DateOnly, Workout[]>()
   for (const w of workouts) {
     const list = byDay.get(w.date)
@@ -66,36 +76,18 @@ export function CalendarPage() {
   const day = today()
   // The month and the day are in the address, so that the way back from a workout lands here again.
   const { month, selected } = fromQuery(query, day)
-  const [data, setData] = useState<Data | null>(null)
+  // Read during the first render, so the page never shows without its data.
+  const [data, setData] = useState(() => read(repository))
+  const load = useCallback(() => setData(read(repository)), [repository])
+  useAnyChange(load)
 
-  const load = useCallback(
-    () =>
-      read(repository).then(setData, (e: unknown) => {
-        console.error('Could not read workouts', e)
-        setData((d) => ({
-          workouts: [],
-          byDay: new Map(),
-          exercises: d?.exercises ?? new Map(),
-          error: t('Home.LoadFailed'),
-        }))
-      }),
-    [repository],
-  )
-
-  useEffect(() => {
-    void load()
-  }, [load])
-  useAnyChange(() => void load())
-
-  const workouts = data?.workouts
-  const byDay = data?.byDay ?? new Map<DateOnly, Workout[]>()
-  const exercises = data?.exercises ?? new Map<string, Exercise>()
+  const { workouts, byDay, exercises } = data
 
   /** The workouts under the calendar: the chosen day's, or the whole month's. */
   const shown =
     selected !== undefined
       ? (byDay.get(selected) ?? [])
-      : (workouts ?? []).filter((w) => w.date.slice(0, 7) === month.slice(0, 7))
+      : workouts.filter((w) => w.date.slice(0, 7) === month.slice(0, 7))
 
   // Weeks run Monday to Sunday, as on the home page.
   const mondays: DateOnly[] = []
@@ -268,9 +260,7 @@ export function CalendarPage() {
       </div>
 
       <section className="mt-5">
-        {workouts === undefined ? (
-          <p className="text-sm text-gray-500 dark:text-gray-400">{t('Common.Loading')}</p>
-        ) : data?.error !== undefined ? (
+        {data.error !== undefined ? (
           <p className="text-sm text-red-600 dark:text-red-400" role="alert">
             {data.error}
           </p>

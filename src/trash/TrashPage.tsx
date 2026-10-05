@@ -4,7 +4,7 @@ import { useRemoteChange, useRepository } from '../services'
 import type { LocalRepository } from '../sync/localRepo'
 import { workoutName, type ExerciseMap } from '../training/categories'
 import type { Exercise, TrashedWorkout } from '../training/model'
-import { deleteForGood, deletedForGoodAt, purge, restore } from '../training/trash'
+import { deleteForGood, deletedForGoodAt, inTrash, purge, restore } from '../training/trash'
 import { BackLink } from '../ui/Layout'
 
 const DAY_MS = 86_400_000
@@ -14,42 +14,41 @@ function deletedForGoodText(item: TrashedWorkout): string {
   return days <= 1 ? t('Trash.DeletedSoon') : t('Trash.DeletedInDays', days)
 }
 
-/** The exercises, for the workouts' names, and what is left in the trash after the purge. */
-async function read(repository: LocalRepository) {
-  const exercises: ExerciseMap = new Map((await repository.getAll('exercise')).map((e) => [e.id, e]))
-  return { exercises, trashed: await purge(repository) }
+/** The exercises, for the workouts' names, and what the trash shows, from the repository's memory. */
+function read(repository: LocalRepository) {
+  try {
+    const exercises: ExerciseMap = new Map(repository.peekAll('exercise').map((e) => [e.id, e]))
+    return { exercises, trashed: inTrash(repository.peekAll('trashedWorkout'), repository.peekAll('workout')) }
+  } catch (e) {
+    console.error('Could not read the trash', e)
+    return { exercises: new Map<string, Exercise>() as ExerciseMap, trashed: [], error: t('Home.LoadFailed') }
+  }
 }
 
 export function TrashPage() {
   const repository = useRepository()
-  const [trashed, setTrashed] = useState<TrashedWorkout[] | null>(null)
-  const [exercises, setExercises] = useState<ExerciseMap>(new Map<string, Exercise>())
+  // Read during the first render, so the page never shows without its data.
+  const [initial] = useState(() => read(repository))
+  const [trashed, setTrashed] = useState<TrashedWorkout[]>(initial.trashed)
+  const [exercises, setExercises] = useState<ExerciseMap>(initial.exercises)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [confirmingId, setConfirmingId] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(initial.error ?? null)
   // Guards against a second click before the first one's state has rendered.
   const busy = useRef(false)
 
-  const load = useCallback(
-    () =>
-      read(repository).then(
-        (found) => {
-          setExercises(found.exercises)
-          setTrashed(found.trashed)
-        },
-        (e) => {
-          console.error('Could not read the trash', e)
-          setTrashed([])
-          setError(t('Home.LoadFailed'))
-        },
-      ),
-    [repository],
-  )
+  const load = useCallback(() => {
+    const found = read(repository)
+    setExercises(found.exercises)
+    setTrashed(found.trashed)
+    if (found.error !== undefined) setError(found.error)
+  }, [repository])
 
+  // What is due goes for good when the trash is opened; the page already leaves it out.
   useEffect(() => {
-    void load()
-  }, [load])
-  useRemoteChange(() => void load())
+    purge(repository).catch((e: unknown) => console.error('Could not empty the trash', e))
+  }, [repository])
+  useRemoteChange(load)
 
   const run = async (item: TrashedWorkout, action: () => Promise<void>, failure: string) => {
     if (busy.current) return
@@ -85,9 +84,7 @@ export function TrashPage() {
         </p>
       )}
 
-      {trashed === null ? (
-        <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">{t('Common.Loading')}</p>
-      ) : trashed.length === 0 ? (
+      {trashed.length === 0 ? (
         <div
           className="mt-4 flex flex-col items-center gap-3 rounded-xl border border-dashed border-gray-300 px-4 py-10 text-center text-gray-500 dark:border-gray-700 dark:text-gray-400"
           data-testid="trash-empty"

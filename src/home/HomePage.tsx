@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { compareText, formatDate, t } from '../i18n/i18n'
 import { Link, navigate } from '../route'
 import { useAnyChange, useRepository } from '../services'
@@ -77,63 +77,61 @@ const asWorkout = (template: WorkoutTemplate): Workout => ({
   exercises: template.exercises,
 })
 
-/** Everything the page shows, and the day to plan on, read from the device. */
-async function read(repository: LocalRepository): Promise<Data & { planDate: DateOnly }> {
-  const all = await repository.getAll('workout')
-  const exercises = new Map((await repository.getAll('exercise')).map((e) => [e.id, e]))
+/** Everything the page shows, and the day to plan on, from the repository's memory. */
+function read(repository: LocalRepository): Data & { planDate: DateOnly } {
+  const all = repository.peekAll('workout')
+  const exercises = new Map(repository.peekAll('exercise').map((e) => [e.id, e]))
   const workouts = [...all].sort(
     (a, b) => b.date.localeCompare(a.date) || compareOptional(b.sessionNumber, a.sessionNumber),
   )
-  const templates = (await repository.getAll('template')).sort((a, b) => compareText(a.name, b.name))
+  const templates = repository.peekAll('template').sort((a, b) => compareText(a.name, b.name))
   const now = today()
   const upcoming = upcomingOf(all, now)
-  const settings = (await repository.get('settings', SETTINGS_ID)) ?? DEFAULT_SETTINGS
+  const settings = repository.peek('settings', SETTINGS_ID) ?? DEFAULT_SETTINGS
   const planDate =
     upcoming === undefined ? suggestDate(all, now, settings) : suggestDateAfter(upcoming, all, now, settings)
   return { workouts, exercises, templates, upcoming, planDate }
 }
 
+/** read, or nothing and a message when the device's data could not be read. */
+function readOrFail(repository: LocalRepository): { data: Data; planDate?: DateOnly; error?: string } {
+  try {
+    const { planDate, ...data } = read(repository)
+    return { data, planDate }
+  } catch (e) {
+    console.error('Could not read workouts', e)
+    return { data: NO_DATA, error: t('Home.LoadFailed') }
+  }
+}
+
 export function HomePage() {
   const repository = useRepository()
   const day = today()
-  const [data, setData] = useState<Data | null>(null)
+  // Read during the first render, so the page never shows without its data.
+  const [initial] = useState(() => readOrFail(repository))
+  const [data, setData] = useState<Data>(initial.data)
   const [chosenId, setChosenId] = useState<string>()
   const [planningOpen, setPlanningOpen] = useState(false)
-  const [planDate, setPlanDate] = useState<DateOnly>(day)
+  const [planDate, setPlanDate] = useState<DateOnly>(initial.planDate ?? day)
   const [saving, setSaving] = useState(false)
   const savingRef = useRef(false)
-  const [error, setError] = useState<string>()
+  const [error, setError] = useState<string | undefined>(initial.error)
   const [weeksShown, setWeeksShown] = useState(WEEKS_PER_PAGE)
 
-  const load = useCallback(
-    () =>
-      read(repository).then(
-        ({ planDate, ...loaded }) => {
-          setData(loaded)
-          setPlanDate(planDate)
-        },
-        (e: unknown) => {
-          console.error('Could not read workouts', e)
-          setData((d) => ({ ...(d ?? NO_DATA), workouts: [] }))
-          setError(t('Home.LoadFailed'))
-        },
-      ),
-    [repository],
-  )
+  const load = useCallback(() => {
+    const next = readOrFail(repository)
+    setData(next.data)
+    if (next.planDate !== undefined) setPlanDate(next.planDate)
+    if (next.error !== undefined) setError(next.error)
+  }, [repository])
 
-  useEffect(() => {
-    void load()
-  }, [load])
-  useAnyChange(() => void load())
+  useAnyChange(load)
 
   const commitDate = useCommit<HTMLInputElement>((value) => {
     if (isDateOnly(value) && isInRange(value)) setPlanDate(value)
   })
 
-  const workouts = data?.workouts
-  const exercises = data?.exercises ?? NO_DATA.exercises
-  const templates = data?.templates ?? []
-  const upcoming = data?.upcoming
+  const { workouts, exercises, templates, upcoming } = data
 
   // An empty workout is offered as one more choice, last, with no exercises; it is never the
   // suggestion unless there are no templates at all.
@@ -144,7 +142,7 @@ export function HomePage() {
     chosenId === EMPTY_ID
       ? emptyTemplate
       : (templates.find((tp) => tp.id === chosenId) ??
-        suggestTemplate(templates, workouts ?? [], (id) => exercises.get(id), day) ??
+        suggestTemplate(templates, workouts, (id) => exercises.get(id), day) ??
         emptyTemplate)
 
   const plan = async () => {
@@ -154,7 +152,7 @@ export function HomePage() {
     setSaving(true)
     setError(undefined)
     try {
-      const history = workouts ?? []
+      const history = workouts
       let planned = planFrom(template, newId(), planDate, nextSessionNumber(history), history)
       if (template.id === EMPTY_ID) planned = { ...planned, templateId: undefined }
       planned = withDerivedStatus(planned, today())
@@ -169,7 +167,7 @@ export function HomePage() {
     }
   }
 
-  const weeks = weeksOf(workouts ?? [])
+  const weeks = weeksOf(workouts)
 
   /** The planning card: at the top when nothing is planned, above the list otherwise. */
   const planCard = () => (
@@ -329,41 +327,37 @@ export function HomePage() {
           weight, the day second; template choices and links stay neutral so they do not compete. */}
       {/* Two cards: what is next (green, when a plan exists) and planning (blue). Only their actions
           carry the accent colour; everything else in them stays neutral. */}
-      {workouts === undefined ? (
-        <p className="text-sm text-gray-500 dark:text-gray-400">{t('Common.Loading')}</p>
-      ) : (
-        upcoming !== undefined && (
-          <section
-            className="mb-3 rounded-xl border border-green-200 bg-green-50 p-4 dark:border-green-900 dark:bg-green-950/30"
-            data-testid="next"
-          >
-            <h2 className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
-              {t('Next.Heading')}
-            </h2>
-            <Link href={`/workouts/${upcoming.id}`} className="flex items-center gap-3" data-testid="upcoming">
-              <PlanIcon slug={iconFor(upcoming, exercises)} />
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-lg font-semibold">
-                  {workoutName(upcoming, exercises) ?? t('Home.Heading')}
-                </span>
-                <span className="block text-sm text-gray-600 first-letter:uppercase dark:text-gray-300">
-                  {dayText(upcoming.date, day)}
-                </span>
+      {upcoming !== undefined && (
+        <section
+          className="mb-3 rounded-xl border border-green-200 bg-green-50 p-4 dark:border-green-900 dark:bg-green-950/30"
+          data-testid="next"
+        >
+          <h2 className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+            {t('Next.Heading')}
+          </h2>
+          <Link href={`/workouts/${upcoming.id}`} className="flex items-center gap-3" data-testid="upcoming">
+            <PlanIcon slug={iconFor(upcoming, exercises)} />
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-lg font-semibold">
+                {workoutName(upcoming, exercises) ?? t('Home.Heading')}
               </span>
-              <span className="shrink-0 rounded-lg bg-green-600 px-4 py-2.5 font-medium text-white hover:bg-green-700">
-                {t('Next.Open')}
+              <span className="block text-sm text-gray-600 first-letter:uppercase dark:text-gray-300">
+                {dayText(upcoming.date, day)}
               </span>
-            </Link>
-          </section>
-        )
+            </span>
+            <span className="shrink-0 rounded-lg bg-green-600 px-4 py-2.5 font-medium text-white hover:bg-green-700">
+              {t('Next.Open')}
+            </span>
+          </Link>
+        </section>
       )}
 
-      {workouts !== undefined && upcoming === undefined && planCard()}
+      {upcoming === undefined && planCard()}
 
       <section className="mt-6">
         {/* With a workout already planned, adding another is the exception: it waits behind a quiet
             button above the list instead of competing with the green card. */}
-        {workouts !== undefined && upcoming !== undefined && (
+        {upcoming !== undefined && (
           <div className="mb-5">
             {planningOpen ? (
               planCard()
@@ -392,8 +386,7 @@ export function HomePage() {
           </div>
         )}
 
-        {/* Nothing while loading: that is said once, at the top of the page. */}
-        {workouts !== undefined && workouts.length === 0 && (
+        {workouts.length === 0 && (
           <div
             className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-gray-300 px-4 py-10 text-center text-gray-500 dark:border-gray-700 dark:text-gray-400"
             data-testid="empty-state"
@@ -412,7 +405,7 @@ export function HomePage() {
             <p>{t('Home.Empty')}</p>
           </div>
         )}
-        {workouts !== undefined && workouts.length > 0 && (
+        {workouts.length > 0 && (
           <div className="flex flex-col gap-5" data-testid="workout-list">
             {weeks.slice(0, weeksShown).map((week) => (
               <section key={week.key} data-testid="week">

@@ -3,6 +3,7 @@ import { formatDate, t } from '../i18n/i18n'
 import { picture, prefetch, slugFor } from '../illustrations/illustrations'
 import { navigate, useLocation } from '../route'
 import { useRemoteChange, useRepository } from '../services'
+import type { LocalRepository } from '../sync/localRepo'
 import { iconFor, workoutName, type ExerciseMap } from '../training/categories'
 import { isDateOnly, today } from '../training/dates'
 import { opensLocked as opensLockedOn, statusOf, withDerivedStatus } from '../training/editing'
@@ -47,70 +48,71 @@ const sameExercises = (a: Workout, b: Workout) => {
   return ids.size === other.size && [...ids].every((id) => other.has(id))
 }
 
+/** The workout, every workout (for last time) and the exercises, from the repository's memory. */
+function read(repository: LocalRepository, id: string) {
+  try {
+    const all = repository.peekAll('workout')
+    const exercises: ReadonlyMap<string, Exercise> = new Map(repository.peekAll('exercise').map((e) => [e.id, e]))
+    return { all, exercises, workout: all.find((w) => w.id === id) }
+  } catch (e) {
+    console.error(`Could not read workout ${id}`, e)
+    return { all: [], exercises: new Map<string, Exercise>(), workout: undefined, error: t('Home.LoadFailed') }
+  }
+}
+
 export function WorkoutPage({ id }: { id: string }) {
   const repository = useRepository()
   const { query } = useLocation()
   const safeBack = CALENDAR_BACK.exec(query.get('back') ?? '')?.[1]
 
-  const [loaded, setLoaded] = useState(false)
-  const [workout, setWorkout] = useState<Workout>()
-  const [workouts, setWorkouts] = useState<Workout[]>([])
-  const [exercises, setExercises] = useState<ReadonlyMap<string, Exercise>>(new Map())
+  // Read during the first render, so the page never shows without its data.
+  const [initial] = useState(() => {
+    const found = read(repository, id)
+    return { ...found, lock: found.workout !== undefined && opensLockedOn(found.workout, today()) }
+  })
+  const [workout, setWorkout] = useState<Workout | undefined>(initial.workout)
+  const [workouts, setWorkouts] = useState<Workout[]>(initial.all)
+  const [exercises, setExercises] = useState<ReadonlyMap<string, Exercise>>(initial.exercises)
   const [editingDetails, setEditingDetails] = useState(false)
-  const [opensLocked, setOpensLocked] = useState(false)
-  const [locked, setLocked] = useState(false)
+  const [opensLocked, setOpensLocked] = useState(initial.lock)
+  const [locked, setLocked] = useState(initial.lock)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
-  const [error, setError] = useState<string>()
+  const [error, setError] = useState<string | undefined>(initial.error)
 
   // The latest exercises, for a save that follows creating one before the page renders again.
   const exercisesNow = useRef(exercises)
   // Decided once per workout opened, so a reload after a sync does not lock it again mid-edit.
-  const lockDecidedFor = useRef<string>(undefined)
+  const lockDecidedFor = useRef<string | undefined>(initial.workout?.id)
   // The workout whose first render has been scrolled to the top: a reload lets the browser
   // restore an old position, and a workout should open at its top.
   const scrolledFor = useRef<string>(undefined)
   const deletingNow = useRef(false)
 
-  // Read first and set state in the callbacks: the effect below then never sets state synchronously.
-  const load = useCallback(
-    () =>
-      Promise.all([repository.getAll('workout'), repository.getAll('exercise')])
-        .then(
-          ([all, list]) => {
-            const map = new Map(list.map((e) => [e.id, e]))
-            const found = all.find((w) => w.id === id)
-            exercisesNow.current = map
-            setWorkouts(all)
-            setExercises(map)
-            setWorkout(found)
-            if (found && lockDecidedFor.current !== found.id) {
-              lockDecidedFor.current = found.id
-              const lock = opensLockedOn(found, today())
-              setLocked(lock)
-              setOpensLocked(lock)
-            }
-          },
-          (e) => {
-            console.error(`Could not read workout ${id}`, e)
-            setError(t('Home.LoadFailed'))
-          },
-        )
-        .then(() => setLoaded(true)),
-    [repository, id],
-  )
+  // After a sync: what it brought, without locking a workout the user has unlocked meanwhile.
+  const load = useCallback(() => {
+    const found = read(repository, id)
+    if (found.error !== undefined) return setError(found.error)
+    exercisesNow.current = found.exercises
+    setWorkouts(found.all)
+    setExercises(found.exercises)
+    setWorkout(found.workout)
+    if (found.workout && lockDecidedFor.current !== found.workout.id) {
+      lockDecidedFor.current = found.workout.id
+      const lock = opensLockedOn(found.workout, today())
+      setLocked(lock)
+      setOpensLocked(lock)
+    }
+  }, [repository, id])
+
+  useRemoteChange(load)
 
   useEffect(() => {
-    void load()
-  }, [load])
-  useRemoteChange(() => void load())
-
-  useEffect(() => {
-    if (!loaded || scrolledFor.current === id) return
+    if (scrolledFor.current === id) return
     scrolledFor.current = id
     void prefetchIllustrations(workout, exercises)
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
-  }, [loaded, id, workout, exercises])
+  }, [id, workout, exercises])
 
   const toggleDetails = () => setEditingDetails(!locked && !editingDetails)
 
@@ -197,9 +199,7 @@ export function WorkoutPage({ id }: { id: string }) {
         testId="back"
       />
 
-      {!loaded ? (
-        <p className="text-sm text-gray-500 dark:text-gray-400">{t('Common.Loading')}</p>
-      ) : !workout ? (
+      {!workout ? (
         <div
           className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-gray-300 px-4 py-10 text-center text-gray-500 dark:border-gray-700 dark:text-gray-400"
           data-testid="not-found"

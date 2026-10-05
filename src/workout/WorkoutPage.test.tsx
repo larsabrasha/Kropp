@@ -37,6 +37,15 @@ beforeEach(() => vi.mocked(prefetch).mockClear())
 // The workout page as a whole: opening, ordering, adding and removing exercises, status, deleting
 // and locking. The cards' own behaviour is in WorkoutPage.sets, .cardio and .card.
 
+it('shows the workout in its very first render, with nothing in between', async () => {
+  const w = await seed(workout({ date: '2026-09-23', exercises: [entry({ exerciseId: BENCH.id, targetSets: 3 })] }))
+
+  open(w.id)
+
+  // No waitFor: the page reads the repository's memory while it renders the first time.
+  expect(names()).toEqual([BENCH.name])
+})
+
 it('shows not found for an unknown id', async () => {
   open(newId())
 

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { t } from '../i18n/i18n'
 import { nameOf, picture, slugFor } from '../illustrations/illustrations'
 import { useLocation } from '../route'
@@ -39,11 +39,16 @@ function safeBack(back: string | null): string | undefined {
     : undefined
 }
 
-/** The exercise, and the number of workouts that use it. */
-async function read(repository: LocalRepository, id: string) {
-  const exercise = await repository.get('exercise', id)
-  const usedIn = (await repository.getAll('workout')).filter((w) => w.exercises.some((e) => e.exerciseId === id)).length
-  return { exercise, usedIn }
+/** The exercise, and the number of workouts that use it, from the repository's memory. */
+function read(repository: LocalRepository, id: string): { exercise?: Exercise; usedIn: number; error?: string } {
+  try {
+    const exercise = repository.peek('exercise', id)
+    const usedIn = repository.peekAll('workout').filter((w) => w.exercises.some((e) => e.exerciseId === id)).length
+    return { exercise, usedIn }
+  } catch (e) {
+    console.error(`Could not read exercise ${id}`, e)
+    return { usedIn: 0, error: t('Home.LoadFailed') }
+  }
 }
 
 export function ExercisePage({ id: routeId }: { id: string }) {
@@ -51,35 +56,23 @@ export function ExercisePage({ id: routeId }: { id: string }) {
   const repository = useRepository()
   const back = safeBack(useLocation().query.get('back'))
 
-  const [exercise, setExercise] = useState<Exercise | undefined>()
-  const [usedIn, setUsedIn] = useState(0)
-  const [loaded, setLoaded] = useState(false)
+  // Read during the first render, so the page never shows without its data.
+  const [initial] = useState(() => read(repository, id))
+  const [exercise, setExercise] = useState<Exercise | undefined>(initial.exercise)
+  const [usedIn, setUsedIn] = useState(initial.usedIn)
   const [choosingIllustration, setChoosingIllustration] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(initial.error ?? null)
   // Bumped to put the stored name back in the field after a name that was refused.
   const [nameKey, setNameKey] = useState(0)
 
-  const load = useCallback(
-    () =>
-      read(repository, id).then(
-        (found) => {
-          setExercise(found.exercise)
-          setUsedIn(found.usedIn)
-          setLoaded(true)
-        },
-        (e) => {
-          console.error(`Could not read exercise ${id}`, e)
-          setError(t('Home.LoadFailed'))
-          setLoaded(true)
-        },
-      ),
-    [repository, id],
-  )
+  const load = useCallback(() => {
+    const found = read(repository, id)
+    if (found.error !== undefined) return setError(found.error)
+    setExercise(found.exercise)
+    setUsedIn(found.usedIn)
+  }, [repository, id])
 
-  useEffect(() => {
-    void load()
-  }, [load])
-  useRemoteChange(() => void load())
+  useRemoteChange(load)
 
   const save = async (next: Exercise) => {
     const previous = exercise
@@ -130,9 +123,7 @@ export function ExercisePage({ id: routeId }: { id: string }) {
     <>
       <BackLink href={back ?? '/exercises'} label={back ? t('Common.Back') : t('Exercises.Heading')} testId="back" />
 
-      {!loaded ? (
-        <p className="text-sm text-gray-500 dark:text-gray-400">{t('Common.Loading')}</p>
-      ) : !exercise ? (
+      {!exercise ? (
         <div
           className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-gray-300 px-4 py-10 text-center text-gray-500 dark:border-gray-700 dark:text-gray-400"
           data-testid="not-found"

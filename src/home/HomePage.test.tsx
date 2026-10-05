@@ -46,6 +46,17 @@ it('shows the empty state when there are no workouts', async () => {
   await waitFor(() => expect(screen.getByTestId('empty-state').textContent).toContain('Inga pass än'))
 })
 
+it('shows the workouts in its very first render, with nothing in between', async () => {
+  const app = createTestApp()
+  const w = workout('2026-09-21')
+  await app.repository.save('workout', w.id, w)
+
+  app.renderAt('/')
+
+  // No waitFor: the page reads the repository's memory while it renders the first time.
+  expect(screen.getByTestId('workout-list').querySelectorAll('a')).toHaveLength(1)
+})
+
 it('plans an empty workout from the last choice', async () => {
   const app = createTestApp()
   const tp = template('Bröst')

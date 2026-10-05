@@ -25,17 +25,28 @@ export async function restore(repository: LocalRepository, trashed: TrashedWorko
 
 export const deleteForGood = (repository: LocalRepository, id: string) => repository.delete('trashedWorkout', id)
 
+/**
+ * Whether a trashed workout is due to go: 30 days have passed, or the workout is alive as well
+ * (another device edited it after it was trashed here, and the later edit won; the workout holds
+ * the data, so the trash copy can go).
+ */
+const isDue = (trashed: TrashedWorkout, alive: ReadonlySet<string>, nowMs: number) =>
+  nowMs >= deletedForGoodAt(trashed).getTime() || alive.has(trashed.id)
+
+/** What the trash shows: what purge keeps, newest first. */
+export function inTrash(trashed: readonly TrashedWorkout[], workouts: readonly Workout[], nowMs = Date.now()) {
+  const alive = new Set(workouts.map((w) => w.id))
+  return trashed
+    .filter((t) => !isDue(t, alive, nowMs))
+    .sort((a, b) => Date.parse(b.deletedAt) - Date.parse(a.deletedAt))
+}
+
 /** Deletes for good what has been in the trash for 30 days, and returns the rest, newest first. */
 export async function purge(repository: LocalRepository): Promise<TrashedWorkout[]> {
   const nowMs = Date.now()
-  const alive = new Set((await repository.getAll('workout')).map((w) => w.id))
-  const kept: TrashedWorkout[] = []
-  for (const trashed of await repository.getAll('trashedWorkout')) {
-    // Alive as well: another device edited the workout after it was trashed here, and the
-    // later edit won. The workout holds the data, so the trash copy can go.
-    if (nowMs >= deletedForGoodAt(trashed).getTime() || alive.has(trashed.id))
-      await repository.delete('trashedWorkout', trashed.id)
-    else kept.push(trashed)
-  }
-  return kept.sort((a, b) => Date.parse(b.deletedAt) - Date.parse(a.deletedAt))
+  const workouts = await repository.getAll('workout')
+  const alive = new Set(workouts.map((w) => w.id))
+  const trashed = await repository.getAll('trashedWorkout')
+  for (const item of trashed) if (isDue(item, alive, nowMs)) await repository.delete('trashedWorkout', item.id)
+  return inTrash(trashed, workouts, nowMs)
 }

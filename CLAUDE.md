@@ -20,6 +20,10 @@ code back, not the test.
 ## Offline first
 - The app always reads and writes through `LocalRepository` → `LocalStore` (IndexedDB). Pages
   never call the API directly; the network is only for sync.
+- `LocalRepository` keeps every aggregate in memory, loaded before the first render and kept
+  current by every save and every sync (`followSync`). Pages read it with `peek` and `peekAll`
+  while they render, in a `useState` initializer, never in an effect: a page has its data in its
+  first render and never flashes empty or "Laddar…".
 - A page must render and save with no network at all. Test that path, not only the online one.
 - Anything that must work offline must be in the service worker's cache. Built files and files in
   `public/` are precached automatically (`vite.config.ts`), except `public/exercises/`, which is
@@ -54,7 +58,8 @@ code back, not the test.
 
 ## Empty states
 - Every view that can be empty shows an empty state with an SVG icon and a short text.
-- Use the three-state pattern: loading (`null` → `t('Common.Loading')`), empty, content.
+- A page has two states, empty and content, plus an error message when the device's data could not
+  be read. It has no loading state (see Offline first); only buttons show one (Async behavior).
 
 ## Async behavior
 - Buttons that trigger async operations show a loading indicator and prevent double-clicks.

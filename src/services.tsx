@@ -29,31 +29,44 @@ export function useServices(): Services {
 
 export const useRepository = () => useServices().repository
 
-/** Calls listener after a sync stored data from the server, so a page can reload what it shows. */
+/**
+ * Keeps the repository's memory current with what a sync stores, as the app and the tests both
+ * need. Returns the unsubscribe.
+ */
+export function followSync(repository: LocalRepository, engine: SyncEngine): () => void {
+  return engine.onDataChange(() => {
+    repository.refresh().catch((error: unknown) => console.error('Could not read what sync stored', error))
+  })
+}
+
+/**
+ * Calls listener after a sync stored data from the server and the repository has read it into
+ * memory (followSync), so a page can show it.
+ */
 export function useRemoteChange(listener: () => void) {
-  const { engine } = useServices()
+  const { repository } = useServices()
   const latest = useRef(listener)
   useEffect(() => {
     latest.current = listener
   })
-  useEffect(() => engine.onDataChange(() => latest.current()), [engine])
+  useEffect(() => repository.onRemoteChange(() => latest.current()), [repository])
 }
 
 /** Calls listener after every local save, as well as after a sync stored data. */
 export function useAnyChange(listener: () => void) {
-  const { repository, engine } = useServices()
+  const { repository } = useServices()
   const latest = useRef(listener)
   useEffect(() => {
     latest.current = listener
   })
   useEffect(() => {
     const stopLocal = repository.onChange(() => latest.current())
-    const stopRemote = engine.onDataChange(() => latest.current())
+    const stopRemote = repository.onRemoteChange(() => latest.current())
     return () => {
       stopLocal()
       stopRemote()
     }
-  }, [repository, engine])
+  }, [repository])
 }
 
 export function useSyncStatus(): SyncStatus {

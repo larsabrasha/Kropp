@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { compareText, lower, t } from '../i18n/i18n'
 import { picture, slugFor } from '../illustrations/illustrations'
 import { Link } from '../route'
 import { useRemoteChange, useRepository } from '../services'
+import type { LocalRepository } from '../sync/localRepo'
 import { categoriesOf } from '../training/categories'
 import { Limits } from '../training/limits'
 import type { Exercise } from '../training/model'
@@ -14,30 +15,35 @@ function summary(exercise: Exercise): string {
   return parts.join(' · ')
 }
 
+/** Every exercise, from the repository's memory, or a message when it could not be read. */
+function read(repository: LocalRepository): { exercises: Exercise[]; error?: string } {
+  try {
+    return { exercises: repository.peekAll('exercise') }
+  } catch (e) {
+    console.error('Could not read exercises', e)
+    return { exercises: [], error: t('Home.LoadFailed') }
+  }
+}
+
 export function ExercisesPage() {
   const repository = useRepository()
-  const [exercises, setExercises] = useState<Exercise[] | null>(null)
+  // Read during the first render, so the page never shows without its data.
+  const [initial] = useState(() => read(repository))
+  const [exercises, setExercises] = useState<Exercise[]>(initial.exercises)
   const [query, setQuery] = useState('')
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(initial.error ?? null)
 
-  const load = useCallback(
-    () =>
-      repository.getAll('exercise').then(setExercises, (e) => {
-        console.error('Could not read exercises', e)
-        setExercises([])
-        setError(t('Home.LoadFailed'))
-      }),
-    [repository],
-  )
+  const load = useCallback(() => {
+    const found = read(repository)
+    setExercises(found.exercises)
+    if (found.error !== undefined) setError(found.error)
+  }, [repository])
 
-  useEffect(() => {
-    void load()
-  }, [load])
-  useRemoteChange(() => void load())
+  useRemoteChange(load)
 
   // Hidden exercises last: they are kept for history, not for picking.
   const wanted = lower(query.trim())
-  const matches = (exercises ?? [])
+  const matches = exercises
     .filter((e) => lower(e.name).includes(wanted))
     .sort((a, b) => Number(a.isArchived) - Number(b.isArchived) || compareText(a.name, b.name))
 
@@ -53,9 +59,7 @@ export function ExercisesPage() {
         </p>
       )}
 
-      {exercises === null ? (
-        <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">{t('Common.Loading')}</p>
-      ) : exercises.length === 0 ? (
+      {exercises.length === 0 ? (
         <div
           className="mt-4 flex flex-col items-center gap-3 rounded-xl border border-dashed border-gray-300 px-4 py-10 text-center text-gray-500 dark:border-gray-700 dark:text-gray-400"
           data-testid="exercises-empty"

@@ -2,7 +2,7 @@ import { cleanup, render } from '@testing-library/react'
 import { afterEach, beforeEach, vi } from 'vitest'
 import { App } from '../App'
 import { setLanguage } from '../i18n/i18n'
-import { ServicesProvider } from '../services'
+import { followSync, ServicesProvider } from '../services'
 import { SyncEngine } from '../sync/engine'
 import { LocalRepository } from '../sync/localRepo'
 import { MemoryStore } from '../sync/memoryStore'
@@ -46,6 +46,7 @@ export function createTestApp(): TestApp {
   const repository = new LocalRepository(store)
   const api = new FakeSyncApi()
   const engine = new SyncEngine(store, api)
+  followSync(repository, engine)
   return {
     store,
     repository,

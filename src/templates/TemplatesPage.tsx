@@ -1,41 +1,44 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { compareText, t } from '../i18n/i18n'
 import { Link, navigate } from '../route'
 import { useRemoteChange, useRepository } from '../services'
+import type { LocalRepository } from '../sync/localRepo'
 import { iconFor } from '../training/categories'
 import { newId, type Exercise, type WorkoutTemplate } from '../training/model'
 import { BackLink } from '../ui/Layout'
 import { PlanIcon } from '../ui/PlanIcon'
 
+/** The templates by name and the exercises, from the repository's memory. */
+function read(repository: LocalRepository) {
+  try {
+    return {
+      templates: repository.peekAll('template').sort((a, b) => compareText(a.name, b.name)),
+      exercises: new Map(repository.peekAll('exercise').map((e) => [e.id, e])) as ReadonlyMap<string, Exercise>,
+    }
+  } catch (e) {
+    console.error('Could not read templates', e)
+    return { templates: [], exercises: new Map<string, Exercise>(), error: t('Home.LoadFailed') }
+  }
+}
+
 export function TemplatesPage() {
   const repository = useRepository()
-  const [templates, setTemplates] = useState<WorkoutTemplate[]>()
-  const [exercises, setExercises] = useState<ReadonlyMap<string, Exercise>>(new Map())
-  const [error, setError] = useState<string>()
+  // Read during the first render, so the page never shows without its data.
+  const [initial] = useState(() => read(repository))
+  const [templates, setTemplates] = useState<WorkoutTemplate[]>(initial.templates)
+  const [exercises, setExercises] = useState<ReadonlyMap<string, Exercise>>(initial.exercises)
+  const [error, setError] = useState<string | undefined>(initial.error)
   const [creating, setCreating] = useState(false)
   const creatingNow = useRef(false)
 
-  // Read first and set state in the callbacks: the effect below then never sets state synchronously.
-  const load = useCallback(
-    () =>
-      Promise.all([repository.getAll('exercise'), repository.getAll('template')]).then(
-        ([list, all]) => {
-          setExercises(new Map(list.map((e) => [e.id, e])))
-          setTemplates(all.sort((a, b) => compareText(a.name, b.name)))
-        },
-        (e) => {
-          console.error('Could not read templates', e)
-          setTemplates([])
-          setError(t('Home.LoadFailed'))
-        },
-      ),
-    [repository],
-  )
+  const load = useCallback(() => {
+    const found = read(repository)
+    setTemplates(found.templates)
+    setExercises(found.exercises)
+    if (found.error !== undefined) setError(found.error)
+  }, [repository])
 
-  useEffect(() => {
-    void load()
-  }, [load])
-  useRemoteChange(() => void load())
+  useRemoteChange(load)
 
   /** An empty template named "Ny mall", opened at once to add exercises and a name. */
   async function create() {
@@ -77,9 +80,7 @@ export function TemplatesPage() {
         </p>
       )}
 
-      {templates === undefined ? (
-        <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">{t('Common.Loading')}</p>
-      ) : templates.length === 0 ? (
+      {templates.length === 0 ? (
         <div
           className="mt-4 flex flex-col items-center gap-3 rounded-xl border border-dashed border-gray-300 px-4 py-10 text-center text-gray-500 dark:border-gray-700 dark:text-gray-400"
           data-testid="templates-empty"

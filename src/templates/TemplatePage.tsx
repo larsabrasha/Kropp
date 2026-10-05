@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { t } from '../i18n/i18n'
 import { navigate } from '../route'
 import { useRemoteChange, useRepository } from '../services'
+import type { LocalRepository } from '../sync/localRepo'
 import { Limits } from '../training/limits'
 import type { Exercise, Workout, WorkoutTemplate } from '../training/model'
 import { BackLink } from '../ui/Layout'
@@ -16,38 +17,39 @@ const asWorkout = (template: WorkoutTemplate): Workout => ({
   exercises: template.exercises,
 })
 
+/** The template, the exercises and every workout, from the repository's memory. */
+function read(repository: LocalRepository, id: string) {
+  try {
+    return {
+      template: repository.peek('template', id),
+      exercises: new Map(repository.peekAll('exercise').map((e) => [e.id, e])) as ReadonlyMap<string, Exercise>,
+      workouts: repository.peekAll('workout'),
+    }
+  } catch (e) {
+    console.error(`Could not read template ${id}`, e)
+    return { template: undefined, exercises: new Map<string, Exercise>(), workouts: [], error: t('Home.LoadFailed') }
+  }
+}
+
 export function TemplatePage({ id }: { id: string }) {
   const repository = useRepository()
-  const [loaded, setLoaded] = useState(false)
-  const [template, setTemplate] = useState<WorkoutTemplate>()
-  const [exercises, setExercises] = useState<ReadonlyMap<string, Exercise>>(new Map())
-  const [workouts, setWorkouts] = useState<Workout[]>([])
+  // Read during the first render, so the page never shows without its data.
+  const [initial] = useState(() => read(repository, id))
+  const [template, setTemplate] = useState<WorkoutTemplate | undefined>(initial.template)
+  const [exercises, setExercises] = useState<ReadonlyMap<string, Exercise>>(initial.exercises)
+  const [workouts, setWorkouts] = useState<Workout[]>(initial.workouts)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
-  const [error, setError] = useState<string>()
+  const [error, setError] = useState<string | undefined>(initial.error)
 
-  // Read first and set state in the callbacks: the effect below then never sets state synchronously.
-  const load = useCallback(
-    () =>
-      Promise.all([repository.getAll('exercise'), repository.getAll('workout'), repository.get('template', id)])
-        .then(
-          ([list, all, found]) => {
-            setExercises(new Map(list.map((e) => [e.id, e])))
-            setWorkouts(all)
-            setTemplate(found)
-          },
-          (e) => {
-            console.error(`Could not read template ${id}`, e)
-            setError(t('Home.LoadFailed'))
-          },
-        )
-        .then(() => setLoaded(true)),
-    [repository, id],
-  )
+  const load = useCallback(() => {
+    const found = read(repository, id)
+    if (found.error !== undefined) return setError(found.error)
+    setExercises(found.exercises)
+    setWorkouts(found.workouts)
+    setTemplate(found.template)
+  }, [repository, id])
 
-  useEffect(() => {
-    void load()
-  }, [load])
-  useRemoteChange(() => void load())
+  useRemoteChange(load)
 
   async function save(next: WorkoutTemplate) {
     const previous = template
@@ -90,9 +92,7 @@ export function TemplatePage({ id }: { id: string }) {
     <>
       <BackLink href="/templates" label={t('Templates.Heading')} />
 
-      {!loaded ? (
-        <p className="text-sm text-gray-500 dark:text-gray-400">{t('Common.Loading')}</p>
-      ) : !template ? (
+      {!template ? (
         <div
           className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-gray-300 px-4 py-10 text-center text-gray-500 dark:border-gray-700 dark:text-gray-400"
           data-testid="not-found"
