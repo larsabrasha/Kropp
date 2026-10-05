@@ -2,7 +2,6 @@ node_modules
 dist
 dist-server
 data
-legacy
 backups
 .git
 .env

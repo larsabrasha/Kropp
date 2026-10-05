@@ -25,7 +25,3 @@ imports/
 
 # Database dumps from docker-compose.yaml hold health data.
 /backups/
-
-# The .NET version, kept only until the port is finished.
-legacy/**/bin/
-legacy/**/obj/
