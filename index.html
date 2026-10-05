@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="sv">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Kropp</title>
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#030712" media="(prefers-color-scheme: dark)" />
+    <!-- Home-screen app on iOS: full screen, no Safari chrome, our own name under the icon. -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Kropp" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
+    <style>
+      /* Only what has to exist before the app's stylesheet has loaded. */
+      html { background: #fff; color-scheme: light dark; }
+      @media (prefers-color-scheme: dark) { html { background: #030712; } }
+      .app-loading {
+        position: fixed; inset: 0; margin: auto; width: 2.5rem; height: 2.5rem;
+        border: 3px solid #9ca3af33; border-top-color: #2563eb; border-radius: 50%;
+        animation: app-loading-spin 0.8s linear infinite;
+      }
+      @keyframes app-loading-spin { to { transform: rotate(360deg); } }
+    </style>
+  </head>
+  <body>
+    <div id="root"><div class="app-loading" aria-hidden="true"></div></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
