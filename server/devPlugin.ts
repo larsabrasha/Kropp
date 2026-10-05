@@ -1,4 +1,5 @@
 import { getRequestListener } from '@hono/node-server'
+import { mkdirSync } from 'node:fs'
 import type { Connect, Plugin } from 'vite'
 import { createApp } from './app'
 import { connect, type Db } from './db'
@@ -14,6 +15,7 @@ export function kroppApi(): Plugin {
   let db: Promise<Db> | null = null
   const open = async () => {
     const url = process.env.DATABASE_URL
+    if (!url) mkdirSync('./data', { recursive: true })
     const opened = url ? connect(url) : await (await import('./pglite')).pglite('./data/pglite')
     await migrate(opened, (message) => console.log(`[kropp] ${message}`))
     return opened
@@ -21,9 +23,17 @@ export function kroppApi(): Plugin {
   const mount = (middlewares: Connect.Server) => {
     db ??= open()
     const listener = db.then((d) => getRequestListener(createApp(d).fetch))
+    // Without a database the app still runs; sync then fails, as it would against a server that is down.
+    listener.catch((error) => console.error('[kropp] The dev database could not open:', error))
     middlewares.use((req, res, next) => {
-      if (req.url?.startsWith('/api/')) void listener.then((l) => l(req, res))
-      else next()
+      if (!req.url?.startsWith('/api/')) return next()
+      listener.then(
+        (l) => l(req, res),
+        () => {
+          res.statusCode = 503
+          res.end()
+        },
+      )
     })
   }
   return {
