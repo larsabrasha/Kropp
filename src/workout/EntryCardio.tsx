@@ -131,13 +131,13 @@ export function EntryCardio({
           onClick={onFinish}
           aria-label={label}
           data-testid="cardio-next"
-          className="inline-flex min-h-14 flex-1 flex-col items-center justify-center rounded-xl border-2 border-green-600 px-3 text-green-700 tabular-nums hover:bg-green-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-500 active:bg-green-100 motion-safe:animate-next-set dark:border-green-500 dark:text-green-300 dark:hover:bg-green-950"
+          className="inline-flex min-h-14 flex-1 flex-col items-center justify-center rounded-xl bg-green-100 px-3 text-green-800 tabular-nums focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-500 active:bg-green-200 dark:bg-green-900/50 dark:text-green-300 dark:active:bg-green-900/80"
         >
           {content}
         </button>
       ) : (
         <span
-          className={`inline-flex min-h-14 flex-1 flex-col items-center justify-center rounded-xl border border-dashed border-gray-300 px-3 text-gray-400 tabular-nums dark:border-gray-700 ${entry.isSkipped ? 'line-through' : ''}`}
+          className={`inline-flex min-h-14 flex-1 flex-col items-center justify-center rounded-xl bg-fill px-3 text-label-2 tabular-nums ${entry.isSkipped ? 'line-through' : ''}`}
           aria-label={entry.isSkipped ? t('Entry.Skipped') : label}
           data-testid="cardio-planned"
         >

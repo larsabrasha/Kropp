@@ -5,7 +5,7 @@ import { useRemoteChange, useRepository } from '../services'
 import type { LocalRepository } from '../sync/localRepo'
 import { Limits } from '../training/limits'
 import type { Exercise, Workout, WorkoutTemplate } from '../training/model'
-import { BackLink, BarItem } from '../ui/Layout'
+import { BackLink, BarItem, DoneButton } from '../ui/Layout'
 import { MenuButton } from '../ui/Menu'
 import { ActionSheet } from '../ui/ActionSheet'
 import { TextRow } from '../ui/Form'
@@ -34,6 +34,21 @@ function read(repository: LocalRepository, id: string) {
   }
 }
 
+const ListSymbol = () => (
+  <svg
+    className="size-5"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01" />
+  </svg>
+)
+
 const TrashSymbol = () => (
   <svg
     className="size-5"
@@ -58,6 +73,10 @@ export function TemplatePage({ id }: { id: string }) {
   const [workouts, setWorkouts] = useState<Workout[]>(initial.workouts)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [error, setError] = useState<string | undefined>(initial.error)
+  // The exercise list's edit mode, as on the workout page; it ends by itself with the last exercise.
+  const [editingList, setEditingList] = useState(false)
+  const editing = editingList && (template?.exercises.length ?? 0) > 0
+  if (editingList && !editing) setEditingList(false)
 
   const load = useCallback(() => {
     const found = read(repository, id)
@@ -110,13 +129,27 @@ export function TemplatePage({ id }: { id: string }) {
     <>
       <BackLink href="/templates" label={t('Templates.Heading')} />
 
-      {/* The template's actions behind "⋯" in the bar, as the workout's. */}
-      {template && (
+      {/* The template's actions behind "⋯" in the bar, as the workout's; Done in its place in edit mode. */}
+      {template && editing && (
+        <BarItem side="trailing">
+          <DoneButton onClick={() => setEditingList(false)} testId="done-editing" />
+        </BarItem>
+      )}
+      {template && !editing && (
         <BarItem side="trailing">
           <MenuButton
             label={t('Workout.Actions')}
             testId="template-menu"
             groups={[
+              [
+                {
+                  label: t('Workout.EditExercises'),
+                  icon: <ListSymbol />,
+                  onSelect: () => setEditingList(true),
+                  disabled: template.exercises.length === 0,
+                  testId: 'edit-exercises',
+                },
+              ],
               [
                 {
                   label: t('Templates.DeleteTemplate'),
@@ -158,6 +191,7 @@ export function TemplatePage({ id }: { id: string }) {
               exercises={exercises}
               history={workouts}
               forTemplate
+              editing={editing}
               onChange={(edited) => save({ ...template, exercises: edited.exercises })}
               onExerciseChange={saveExercise}
             />

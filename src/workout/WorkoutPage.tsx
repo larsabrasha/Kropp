@@ -11,7 +11,7 @@ import { isInRange, Limits } from '../training/limits'
 import type { Exercise, Workout } from '../training/model'
 import { invariant, parseInt0 } from '../training/text'
 import { moveToTrash } from '../training/trash'
-import { BackLink, BarItem } from '../ui/Layout'
+import { BackLink, BarItem, DoneButton } from '../ui/Layout'
 import { MenuButton } from '../ui/Menu'
 import { StatusBadge } from '../ui/StatusBadge'
 import { ActionSheet } from '../ui/ActionSheet'
@@ -67,6 +67,7 @@ const PENCIL = 'M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4'
 const LOCK = 'M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 0 1 7 0v3'
 const LOCK_OPEN = 'M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 0 1 6.8-1.2'
 const TRASH = 'M5 7h14M10 11v6M14 11v6M7 7l1 13h8l1-13M9.5 7V4.5h5V7'
+const LIST = 'M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01'
 
 const Symbol = ({ d }: { d: string }) => (
   <svg
@@ -99,6 +100,8 @@ export function WorkoutPage({ id }: { id: string }) {
   const [editingDetails, setEditingDetails] = useState(false)
   const [opensLocked, setOpensLocked] = useState(initial.lock)
   const [locked, setLocked] = useState(initial.lock)
+  // The exercise list's edit mode; it ends by itself with the last exercise.
+  const [editingList, setEditingList] = useState(false)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState<string | undefined>(initial.error)
@@ -209,6 +212,8 @@ export function WorkoutPage({ id }: { id: string }) {
   }
 
   const icon = workout ? iconFor(workout, exercises) : undefined
+  const editing = editingList && !locked && (workout?.exercises.length ?? 0) > 0
+  if (editingList && !editing) setEditingList(false)
 
   return (
     <>
@@ -218,8 +223,14 @@ export function WorkoutPage({ id }: { id: string }) {
         testId="back"
       />
 
-      {/* The workout's own actions, as iOS gathers a page's: behind "⋯" in the bar. */}
-      {workout && (
+      {/* The workout's own actions, as iOS gathers a page's: behind "⋯" in the bar. In the list's
+          edit mode, Done takes its place. */}
+      {workout && editing && (
+        <BarItem side="trailing">
+          <DoneButton onClick={() => setEditingList(false)} testId="done-editing" />
+        </BarItem>
+      )}
+      {workout && !editing && (
         <BarItem side="trailing">
           <MenuButton
             label={t('Workout.Actions')}
@@ -232,6 +243,13 @@ export function WorkoutPage({ id }: { id: string }) {
                   onSelect: () => setEditingDetails(true),
                   disabled: locked,
                   testId: 'edit-details',
+                },
+                {
+                  label: t('Workout.EditExercises'),
+                  icon: <Symbol d={LIST} />,
+                  onSelect: () => setEditingList(true),
+                  disabled: locked || workout.exercises.length === 0,
+                  testId: 'edit-exercises',
                 },
                 locked
                   ? {
@@ -388,6 +406,7 @@ export function WorkoutPage({ id }: { id: string }) {
               <ExerciseList
                 key={workout.id}
                 owner={workout}
+                editing={editing}
                 exercises={exercises}
                 history={workouts}
                 onChange={save}

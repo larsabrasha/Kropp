@@ -1,3 +1,4 @@
+import { Fragment } from 'react'
 import { formatDate, t } from '../i18n/i18n'
 import { daysBetween, today } from '../training/dates'
 import type { DateOnly, ExerciseKind, WorkoutExercise } from '../training/model'
@@ -133,29 +134,33 @@ function LastTimeLines({
             <path d="M12 7v5l3 2" />
           </svg>
         </span>
-        <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+        {/* One line of grey text, as iOS sets a footnote; a set short of the plan in amber. */}
+        <span className="min-w-0">
           {date && (
             <span data-testid="last-time-date">
               {shortDate(date)} ({ago(date)})
             </span>
           )}
+          {date && ' · '}
           {kind === 'Cardio' || shown.sets.length === 0 ? (
             <span className="tabular-nums">{result(shown, kind)}</span>
           ) : (
-            <span className="flex flex-wrap items-center gap-1" data-testid="last-sets">
+            <span className="tabular-nums" data-testid="last-sets">
               {shown.sets.map((set, i) => {
                 const shortSet = isShort(set, shown, kind)
                 return (
-                  <span
-                    key={i}
-                    className={`rounded-md px-1.5 py-0.5 text-xs font-semibold tabular-nums ${shortSet ? 'bg-amber-200 text-gray-900 dark:bg-amber-400' : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'}`}
-                    data-short={shortSet ? 'true' : 'false'}
-                  >
-                    {uniform === undefined && kind === 'Strength' ? setText(set, kind) : setMain(set, kind)}
-                  </span>
+                  <Fragment key={i}>
+                    {i > 0 && ', '}
+                    <span
+                      className={shortSet ? 'font-medium text-amber-600 dark:text-amber-400' : undefined}
+                      data-short={shortSet ? 'true' : 'false'}
+                    >
+                      {uniform === undefined && kind === 'Strength' ? setText(set, kind) : setMain(set, kind)}
+                    </span>
+                  </Fragment>
                 )
               })}
-              {uniform !== undefined && <span className="text-xs tabular-nums">× {num(uniform)} kg</span>}
+              {uniform !== undefined && ` × ${num(uniform)} kg`}
             </span>
           )}
         </span>

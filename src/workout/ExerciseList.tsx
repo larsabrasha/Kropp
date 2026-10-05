@@ -28,6 +28,7 @@ export function ExerciseList({
   exercises,
   history,
   forTemplate = false,
+  editing = false,
   onChange,
   onExerciseChange,
 }: {
@@ -37,6 +38,12 @@ export function ExerciseList({
   /** Every workout, for "last time" and for the targets an added exercise starts from. */
   history: readonly Workout[]
   forTemplate?: boolean
+  /**
+   * Edit mode, as iOS edits a list: only the rows, each with a minus and a handle. Dragging is
+   * only then, so a touch on a card outside it is always a tap or a scroll. The page turns it on
+   * from its menu and off with Done in its bar.
+   */
+  editing?: boolean
   onChange: (workout: Workout) => void | Promise<void>
   /** Called with an exercise created in the register, for the page to save. */
   onExerciseChange: (exercise: Exercise) => void | Promise<void>
@@ -57,15 +64,16 @@ export function ExerciseList({
     }
   })
 
-  // Drag-and-drop reordering with SortableJS: drag by the handle, a short delay on touch so a swipe
+  // Drag-and-drop reordering with SortableJS, in edit mode: drag by the handle, a short delay on touch so a swipe
   // still scrolls, and the DOM put back after the drop so React alone decides the order when it
   // renders again.
+  const sortable = useRef<Sortable>(undefined)
   useEffect(() => {
     const list = entryList.current
     if (!list) return
-    let sortable: Sortable
     try {
-      sortable = Sortable.create(list, {
+      sortable.current = Sortable.create(list, {
+        disabled: true,
         animation: 150,
         handle: '.drag-handle',
         delay: 150,
@@ -84,8 +92,18 @@ export function ExerciseList({
       console.warn('Could not start drag and drop', error)
       return
     }
-    return () => sortable.destroy()
+    return () => {
+      sortable.current?.destroy()
+      sortable.current = undefined
+    }
   }, [])
+  useEffect(() => sortable.current?.option('disabled', !editing), [editing])
+  // Entering edit mode closes what was open, so Done does not bring it back.
+  const [wasEditing, setWasEditing] = useState(editing)
+  if (wasEditing !== editing) {
+    setWasEditing(editing)
+    if (editing) setActiveEntry(undefined)
+  }
 
   const remove = (index: number) => {
     setActiveEntry(undefined)
@@ -139,6 +157,7 @@ export function ExerciseList({
             <ExerciseEntryCard
               key={`${entry.exerciseId}:${entry.order}`}
               forTemplate={forTemplate}
+              editing={editing}
               entry={entry}
               exercise={exercises.get(entry.exerciseId)}
               lastTime={last?.entry}

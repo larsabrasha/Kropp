@@ -11,8 +11,8 @@ import { toInt } from './toInt'
 
 /**
  * The set buttons of a strength, bodyweight or timed exercise, and under them the fields of the
- * done set open for correcting. A done set is solid, the next one pulses on the current exercise,
- * and the rest show their plan dashed.
+ * done set open for correcting. A done set is solid green, the next one on the current exercise
+ * light green, and the rest show their plan in grey: filled, as iOS marks state, never outlined.
  */
 export function EntrySets({
   entry,
@@ -123,7 +123,7 @@ export function EntrySets({
                 type="button"
                 onClick={onCompleteNext}
                 aria-label={setLabel(index)}
-                className="inline-flex min-h-14 min-w-0 flex-col items-center justify-center rounded-xl border-2 border-green-600 px-1 whitespace-nowrap text-green-700 tabular-nums hover:bg-green-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-500 active:bg-green-100 motion-safe:animate-next-set dark:border-green-500 dark:text-green-300 dark:hover:bg-green-950"
+                className="inline-flex min-h-14 min-w-0 flex-col items-center justify-center rounded-xl bg-green-100 px-1 whitespace-nowrap text-green-800 tabular-nums focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-500 active:bg-green-200 dark:bg-green-900/50 dark:text-green-300 dark:active:bg-green-900/80"
                 data-testid="set-next"
               >
                 {plannedSetContent(index)}
@@ -132,7 +132,7 @@ export function EntrySets({
           return (
             <span
               key={index}
-              className={`inline-flex min-h-14 min-w-0 flex-col items-center justify-center rounded-xl border border-dashed border-gray-300 px-1 whitespace-nowrap text-gray-400 tabular-nums dark:border-gray-700 ${entry.isSkipped ? 'line-through' : ''}`}
+              className={`inline-flex min-h-14 min-w-0 flex-col items-center justify-center rounded-xl bg-fill px-1 whitespace-nowrap text-label-2 tabular-nums ${entry.isSkipped ? 'line-through' : ''}`}
               aria-label={entry.isSkipped ? t('Entry.SetSkipped', index + 1) : setLabel(index)}
               data-testid="set-planned"
               data-skipped={entry.isSkipped ? 'true' : 'false'}

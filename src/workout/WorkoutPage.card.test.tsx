@@ -83,7 +83,7 @@ it('shows what was done last time', async () => {
 
   const last = await waitForElement('[data-testid=last-time]')
   expect($('[data-testid=last-time-date]', last).textContent).toBe('mån 21 sep (2 dagar sedan)')
-  expect($$('[data-testid=last-sets] > span', last).map(text)).toEqual(['8', '8', '10', '× 60 kg'])
+  expect(text($('[data-testid=last-sets]', last))).toBe('8, 8, 10 × 60 kg')
   expect(last.getAttribute('aria-label')).toBe('Förra gången: mån 21 sep (2 dagar sedan), 8, 8, 10 × 60 kg')
 })
 

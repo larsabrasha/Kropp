@@ -62,7 +62,16 @@ it('saves the new order when an exercise is dropped', async () => {
     }),
   )
   open(w.id)
+  // Only in edit mode, from the menu, so a touch on a card is otherwise a tap or a scroll.
+  await waitForElement('[data-testid=exercise-entry]')
+  expect($$('[data-testid=drag-handle]')).toEqual([])
+  click($('[data-testid=workout-menu]'))
+  expect(text($('[role=menu] [data-testid=edit-exercises]'))).toBe('Ändra övningar')
+  click($('[data-testid=edit-exercises]'))
   await waitFor(() => expect($$('[data-testid=drag-handle]')).toHaveLength(2))
+  // Done takes the menu's place in the bar.
+  expect($$('[data-testid=workout-menu]')).toEqual([])
+  expect($('[data-testid=done-editing]').getAttribute('aria-label')).toBe('Klar')
   const list = $('[data-testid=entry-list]')
   await waitFor(() => expect(Sortable.get(list)).toBeDefined())
 
@@ -106,6 +115,58 @@ it('removes an exercise from the menu', async () => {
 
   await waitFor(() => expect(names()).toEqual(['Vader']))
   await waitFor(async () => expect((await reload(w.id)).exercises.map((e) => e.exerciseId)).toEqual([other.id]))
+})
+
+it('removes in edit mode at once, but asks first when sets are done', async () => {
+  const other = exercise({ name: 'Vader', kind: 'Bodyweight' })
+  await saveExercise(other)
+  const w = await seed(
+    workout({
+      date: '2026-09-23',
+      exercises: [
+        entry({ exerciseId: BENCH.id, sets: [{ reps: 8, weightKg: 20 }] }),
+        entry({ exerciseId: other.id, order: 1 }),
+      ],
+    }),
+  )
+  open(w.id)
+  click(await waitForElement('[data-testid=workout-menu]'))
+  click($('[data-testid=edit-exercises]'))
+
+  // Only the rows: no sets, no editor to open.
+  await waitFor(() => expect($$('[data-testid=remove-in-edit]')).toHaveLength(2))
+  expect($$('[data-testid=sets]')).toEqual([])
+  expect($$('[data-testid=edit]')).toEqual([])
+
+  // Nothing done in Vader: it goes at once.
+  click($$('[data-testid=remove-in-edit]')[1]!)
+  await waitFor(() => expect(names()).toEqual(['Bröst maskin']))
+  expect($$('[role=alertdialog]')).toEqual([])
+
+  // A set done in Bröst maskin: asked first.
+  click($('[data-testid=remove-in-edit]'))
+  click($('[data-testid=confirm-remove]'))
+  await waitFor(async () => expect((await reload(w.id)).exercises).toEqual([]))
+  // With nothing left, edit mode ends with the list, and the menu is back.
+  await waitForElement('[data-testid=no-exercises]')
+  expect($$('[data-testid=done-editing]')).toEqual([])
+  click($('[data-testid=workout-menu]'))
+  expect($('[data-testid=edit-exercises]').hasAttribute('disabled')).toBe(true)
+})
+
+it('leaves edit mode with Done, the cards as they were', async () => {
+  const w = await seed(workout({ date: '2026-09-23', exercises: [entry({ exerciseId: BENCH.id })] }))
+  open(w.id)
+  click(await waitForElement('[data-testid=workout-menu]'))
+  click($('[data-testid=edit-exercises]'))
+  await waitForElement('[data-testid=done-editing]')
+  expect($$('[data-testid=sets]')).toEqual([])
+
+  click($('[data-testid=done-editing]'))
+
+  await waitForElement('[data-testid=sets]')
+  expect($$('[data-testid=drag-handle]')).toEqual([])
+  expect($$('[data-testid=workout-menu]')).toHaveLength(1)
 })
 
 it('prefetches only the pictures a workout uses', async () => {
@@ -327,6 +388,7 @@ it('opens a workout of an earlier day locked, and saves nothing until it is unlo
   // Its menu offers to unlock it, and nothing that changes it.
   click($('[data-testid=workout-menu]'))
   expect($('[data-testid=edit-details]').hasAttribute('disabled')).toBe(true)
+  expect($('[data-testid=edit-exercises]').hasAttribute('disabled')).toBe(true)
   expect($('[data-testid=delete-workout]').hasAttribute('disabled')).toBe(true)
   $('[data-testid=menu-unlock]')
   fireEvent.keyDown(document, { key: 'Escape' })

@@ -19,17 +19,19 @@ import {
   type WorkoutExercise,
 } from '../training/model'
 import { target } from '../training/text'
+import { ActionSheet } from '../ui/ActionSheet'
 import { DoneRow } from '../ui/EditorActions'
 import { ModalSheet } from '../ui/ModalSheet'
+import { Chevron } from '../ui/List'
 import { button } from '../ui/styles'
 import { EntryCardio } from './EntryCardio'
 import { EntryContextLines } from './EntryContextLines'
 import { EntryEditor } from './EntryEditor'
 import { EntrySets } from './EntrySets'
 
-// Compact by default: the name and plan on one line, the set buttons, one grey line of context.
+// Compact by default: the name with the plan under it, the set buttons, one grey line of context.
 // Everything else opens in place on a tap and closes with Klar: one editor under the name, opened
-// from the plan beside it, except a set's fields, which open under the sets. At the gym, with a plan that
+// from the name's row, except a set's fields, which open under the sets. At the gym, with a plan that
 // was right, the set buttons are all that gets touched — so they stay large and always first.
 
 type Panel = 'None' | 'Edit' | 'Set' | 'Illustration' | 'CardioResult'
@@ -43,6 +45,7 @@ export function ExerciseEntryCard({
   active,
   onActivate,
   forTemplate,
+  editing,
   onChange,
   onRemove,
 }: {
@@ -53,7 +56,7 @@ export function ExerciseEntryCard({
   lastTimeDate?: DateOnly
   /**
    * Whether this is the exercise the user is on, the first one not finished. Only it takes new
-   * sets, and its next set pulses: the rest show their plan dashed, so there is one place to tap.
+   * sets, and its next set is tinted: the rest show their plan in grey, so there is one place to tap.
    * Done sets and "+" stay tappable everywhere, for corrections and an extra set.
    */
   current: boolean
@@ -62,18 +65,21 @@ export function ExerciseEntryCard({
   onActivate: () => void
   /** In a template: only the plan, no sets, no comment and no "last time". */
   forTemplate: boolean
+  /** The list's edit mode: only the top row, with a minus to remove and a handle to reorder. */
+  editing: boolean
   onChange: (entry: WorkoutExercise) => void
   onRemove: () => void
 }) {
   const { path } = useLocation()
   const [openPanel, setOpenPanel] = useState<Panel>('None')
   const [setIndex, setSetIndex] = useState(0)
+  const [confirmingRemove, setConfirmingRemove] = useState(false)
 
   const slug = slugFor(exercise)
   // The exercise's own page, with the way back to this workout or template.
   const exerciseHref = `/exercises/${exercise?.id}?back=${encodeURIComponent(path.replace(/^\//, ''))}`
   const weightStep = exercise?.weightStepKg ?? DEFAULT_WEIGHT_STEP_KG
-  const panel: Panel = active ? openPanel : 'None'
+  const panel: Panel = active && !editing ? openPanel : 'None'
   const kind: ExerciseKind = exercise?.kind ?? 'Strength'
   const timeOnly = kind === 'Cardio' && exercise?.measuresTimeOnly === true
 
@@ -94,7 +100,7 @@ export function ExerciseEntryCard({
   // Only the top row, on an exercise that is neither the one the user is on nor done in any
   // part: the rest of the list stays quiet. One skipped whole is struck through at that row;
   // one skipped part way shows its sets, with the skipped ones struck through.
-  const collapsed = !forTemplate && !current && !hasResult(entry)
+  const collapsed = editing || (!forTemplate && !current && !hasResult(entry))
   const whollySkipped = !forTemplate && entry.isSkipped && !hasResult(entry)
 
   /**
@@ -175,6 +181,12 @@ export function ExerciseEntryCard({
     change(clearCardio(entry))
   }
 
+  /** Asked first only when something done would go with it; a plan alone goes at once, as on iOS. */
+  function requestRemove() {
+    if (hasResult(entry)) setConfirmingRemove(true)
+    else onRemove()
+  }
+
   function removeSetAt(index: number) {
     setOpenPanel('None')
     change(removeSet(entry, index))
@@ -187,30 +199,34 @@ export function ExerciseEntryCard({
       data-testid="exercise-entry"
       data-current={current ? 'true' : 'false'}
     >
-      <div className="flex items-center gap-1">
-        <span
-          className="drag-handle -my-1 -ml-1 flex shrink-0 cursor-grab touch-none items-center self-stretch px-1 text-gray-300 active:cursor-grabbing dark:text-gray-600"
-          title={t('Entry.Drag')}
-          aria-hidden="true"
-          data-testid="drag-handle"
-        >
-          <svg className="size-5" viewBox="0 0 24 24" fill="currentColor">
-            <circle cx="9" cy="6" r="1.5" />
-            <circle cx="15" cy="6" r="1.5" />
-            <circle cx="9" cy="12" r="1.5" />
-            <circle cx="15" cy="12" r="1.5" />
-            <circle cx="9" cy="18" r="1.5" />
-            <circle cx="15" cy="18" r="1.5" />
-          </svg>
-        </span>
+      {/* The name with the plan in grey under it, the whole row opening the editor, as an iOS row
+          that leads further in. In edit mode the row only reorders and removes: a red minus at its
+          left, the handle at its right, as iOS edits a list. */}
+      <div className="relative flex items-center gap-3">
+        {editing && (
+          <button
+            type="button"
+            onClick={requestRemove}
+            aria-label={`${t('Entry.Remove')}: ${exercise?.name ?? t('Exercise.Unknown')}`}
+            title={t('Entry.Remove')}
+            data-testid="remove-in-edit"
+            className="-mr-1 flex size-7 shrink-0 items-center justify-center rounded-full focus-visible:outline-2 focus-visible:outline-blue-500"
+          >
+            <svg className="size-[1.375rem]" viewBox="0 0 22 22" aria-hidden="true">
+              <circle cx="11" cy="11" r="11" className="fill-red-500" />
+              <path d="M6.5 11h9" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" />
+            </svg>
+          </button>
+        )}
         <button
           type="button"
           onClick={() => toggle('Illustration')}
+          disabled={editing}
           aria-expanded={expanded('Illustration')}
           aria-label={t('Illustration.Show', exercise?.name ?? '')}
           title={t('Illustration.Show', exercise?.name ?? '')}
           data-testid="thumbnail"
-          className={`size-10 shrink-0 overflow-hidden rounded-lg ${slug === undefined ? 'border border-dashed border-gray-300 text-gray-400 dark:border-gray-700' : 'bg-gray-100 dark:bg-gray-800'}`}
+          className={`relative z-10 size-10 shrink-0 overflow-hidden rounded-lg ${slug === undefined ? 'bg-fill text-label-2' : 'bg-gray-100 dark:bg-gray-800'}`}
         >
           {slug !== undefined ? (
             <img src={picture(slug)} alt="" className="illustration size-full object-contain p-0.5" />
@@ -229,29 +245,58 @@ export function ExerciseEntryCard({
             </svg>
           )}
         </button>
-        <h3
-          className={`min-w-0 flex-1 font-semibold ${current ? 'break-words' : 'truncate'} ${whollySkipped ? 'text-gray-400 line-through dark:text-gray-500' : ''}`}
-          data-skipped={whollySkipped ? 'true' : 'false'}
-        >
-          {exercise?.name ?? t('Exercise.Unknown')}
-          {whollySkipped && <span className="sr-only">({t('Entry.Skipped')})</span>}
-        </h3>
-        <button
-          type="button"
-          onClick={() => toggle('Edit')}
-          aria-expanded={expanded('Edit')}
-          title={t('Entry.Edit')}
-          data-testid="edit"
-          className="flex h-8 shrink-0 items-center rounded-full bg-fill px-3 text-[0.9375rem] font-medium text-gray-900 tabular-nums active:opacity-60 focus-visible:outline-2 focus-visible:outline-blue-500 dark:text-white"
-        >
-          <span
-            className={whollySkipped ? 'text-gray-400 line-through dark:text-gray-500' : undefined}
+        <div className="min-w-0 flex-1">
+          <h3
+            className={`font-semibold ${current && !editing ? 'break-words' : 'truncate'} ${whollySkipped ? 'text-gray-400 line-through dark:text-gray-500' : ''}`}
+            data-skipped={whollySkipped ? 'true' : 'false'}
+          >
+            {exercise?.name ?? t('Exercise.Unknown')}
+            {whollySkipped && <span className="sr-only">({t('Entry.Skipped')})</span>}
+          </h3>
+          <p
+            className={`truncate text-[0.9375rem] text-label-2 tabular-nums ${whollySkipped ? 'line-through' : ''}`}
             data-testid="target"
           >
             {targetText}
+          </p>
+        </div>
+        {editing ? (
+          <span
+            className="drag-handle -my-2 -mr-1 flex shrink-0 cursor-grab touch-none items-center self-stretch px-2 text-label-3 active:cursor-grabbing"
+            title={t('Entry.Drag')}
+            aria-hidden="true"
+            data-testid="drag-handle"
+          >
+            <svg className="size-5" viewBox="0 0 20 20" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+              <path d="M3.5 6.5h13M3.5 10h13M3.5 13.5h13" />
+            </svg>
           </span>
-        </button>
+        ) : (
+          <>
+            <Chevron />
+            {/* Over the whole row, under the picture's own button. */}
+            <button
+              type="button"
+              onClick={() => toggle('Edit')}
+              aria-expanded={expanded('Edit')}
+              aria-label={`${t('Entry.Edit')}: ${exercise?.name ?? t('Exercise.Unknown')}, ${targetText}`}
+              title={t('Entry.Edit')}
+              data-testid="edit"
+              className="absolute -inset-1.5 rounded-xl active:bg-black/5 focus-visible:outline-2 focus-visible:outline-blue-500 dark:active:bg-white/10"
+            />
+          </>
+        )}
       </div>
+
+      {confirmingRemove && (
+        <ActionSheet
+          message={t('Entry.RemoveConfirm')}
+          action={t('Entry.Remove')}
+          onAction={onRemove}
+          onCancel={() => setConfirmingRemove(false)}
+          actionTestId="confirm-remove"
+        />
+      )}
 
       {/* Editing is a task of its own, as on iOS: a sheet over the workout, the card unchanged under it. */}
       {panel === 'Edit' && (
