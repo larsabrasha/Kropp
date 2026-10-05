@@ -146,7 +146,7 @@ export function readEntry(json: Json): WorkoutExercise {
     order: typeof e.order === 'number' ? e.order : 0,
     sets: Array.isArray(e.sets) ? e.sets.map((s: Json) => readSet(s)) : [],
     isSkipped: e.isSkipped === true,
-  } as WorkoutExercise
+  }
 }
 
 export function readWorkout(json: Json): Workout {

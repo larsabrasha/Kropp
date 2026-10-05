@@ -30,8 +30,8 @@ const SELECT =
 
 /**
  * The workout or template the user came from, to go back to it. Only a workout or a template of
- * this app, never a URL from elsewhere. The leading slash is optional, as the .NET version's
- * links were relative.
+ * this app, never a URL from elsewhere. The leading slash is optional: links from before 2026-10-05
+ * were relative.
  */
 function safeBack(back: string | null): string | undefined {
   return back !== null && /^\/?(workouts|templates)\/[0-9a-fA-F-]{36}$/.test(back)

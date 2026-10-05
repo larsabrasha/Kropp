@@ -215,5 +215,5 @@ it('changes the kind, and a weight then stops showing', async () => {
   expect(screen.queryByTestId('weight-step')).toBeNull()
   cleanup()
   app.renderAt(`/workouts/${workout.id}`)
-  expect((await screen.findByTestId('target')).textContent!.trim()).toBe('3 × 20')
+  expect((await screen.findByTestId('target')).textContent.trim()).toBe('3 × 20')
 })

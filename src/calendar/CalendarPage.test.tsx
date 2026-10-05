@@ -26,7 +26,7 @@ it('opens on this month with the days that have workouts as buttons', async () =
   // 31 August is in the first week of the grid but belongs to another month.
   await waitFor(() => expect(dates()).toEqual(['2026-09-21']))
   expect(screen.getByTestId('day').getAttribute('aria-label')).toBe('måndag 21 september: 2 pass')
-  expect(screen.getByTestId('shown-heading').textContent!.trim()).toBe('Alla pass i september (2 st)')
+  expect(screen.getByTestId('shown-heading').textContent.trim()).toBe('Alla pass i september (2 st)')
   expect(
     [...screen.getByTestId('calendar-workouts').querySelectorAll('[data-testid=workout-name]')].map(
       (e) => e.textContent,
@@ -44,7 +44,7 @@ it('shows the chosen day’s workouts, and the way back leads to that day', asyn
   fireEvent.click(document.querySelector("[data-date='2026-09-21']")!)
 
   expect(document.querySelector("[data-date='2026-09-21']")!.getAttribute('aria-pressed')).toBe('true')
-  expect(screen.getByTestId('shown-heading').textContent!.trim()).toBe('måndag 21 september')
+  expect(screen.getByTestId('shown-heading').textContent.trim()).toBe('måndag 21 september')
   expect([...screen.getByTestId('calendar-workouts').querySelectorAll('a')].map((a) => a.getAttribute('href'))).toEqual(
     [`/workouts/${ben.id}?back=calendar%3Fday%3D2026-09-21`],
   )
@@ -100,5 +100,5 @@ it.each([
 
   const link = await screen.findByTestId('back')
   expect(link.getAttribute('href')).toBe(href)
-  expect(link.textContent!.trim()).toBe(text)
+  expect(link.textContent.trim()).toBe(text)
 })

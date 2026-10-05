@@ -11,9 +11,12 @@
     "typecheck": "tsc -b --noEmit",
     "lint": "eslint .",
     "test": "vitest run",
+    "e2e": "playwright test",
+    "check": "npm run format:check && npm run typecheck && npm run lint && npm test",
     "preview": "vite preview",
     "start": "tsx server/index.ts",
-    "format": "prettier --write src server scripts"
+    "format": "prettier --write src server scripts e2e playwright.config.ts",
+    "format:check": "prettier --check src server scripts e2e playwright.config.ts"
   },
   "dependencies": {
     "@hono/node-server": "^2.1.1",
@@ -23,6 +26,7 @@
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.8",
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/vite": "^4.3.3",
     "@testing-library/dom": "^10.4.2",
     "@testing-library/react": "^16.3.3",

@@ -38,7 +38,7 @@ const template = (name: string, exercises: WorkoutExercise[] = []): WorkoutTempl
 })
 
 const radios = () => [...document.querySelectorAll('[data-testid=template-choices] [role=radio]')]
-const texts = (elements: Element[]) => elements.map((e) => e.textContent!.trim())
+const texts = (elements: Element[]) => elements.map((e) => e.textContent.trim())
 
 it('shows the empty state when there are no workouts', async () => {
   createTestApp().renderAt('/')
@@ -86,7 +86,7 @@ it('lists workouts as links with a summary', async () => {
     const link = within(screen.getByTestId('workout-list')).getByRole('link')
     expect(link.getAttribute('href')).toBe(`/workouts/${w.id}`)
     expect(within(link).getByTestId('workout-name').textContent).toBe('Ben och bröst')
-    expect(within(link).getByTestId('workout-meta').textContent!.toLowerCase()).toContain('måndag 21 sep')
+    expect(within(link).getByTestId('workout-meta').textContent.toLowerCase()).toContain('måndag 21 sep')
     expect(within(link).getByTestId('workout-icon').getAttribute('src')).toBe(picture('squat'))
     expect(link.textContent).not.toContain('Nr 101')
     expect(link.textContent).toContain('2 övningar')
@@ -106,7 +106,7 @@ it('groups workouts by weeks that start on monday', async () => {
 
   await waitFor(() => {
     const weeks = screen.getAllByTestId('week')
-    expect(weeks.map((w) => [...w.querySelectorAll('h3 span')].map((x) => x.textContent!.trim()).join(' '))).toEqual([
+    expect(weeks.map((w) => [...w.querySelectorAll('h3 span')].map((x) => x.textContent.trim()).join(' '))).toEqual([
       'Vecka 39 21–27 september',
       'Vecka 38 14–20 september',
     ])
@@ -175,7 +175,7 @@ it('plans the suggested template in one tap', async () => {
   await waitFor(() => expect(screen.getByTestId('next-name').textContent).toBe('Rygg'))
   expect(screen.queryByTestId('next')).toBeNull()
   expect(screen.getByTestId('plan-card').querySelector('h2')!.textContent).toBe('Planera nästa pass')
-  expect(screen.getByTestId('next-date').textContent!.toLowerCase()).toBe('i morgon, 24 sep.')
+  expect(screen.getByTestId('next-date').textContent.toLowerCase()).toBe('i morgon, 24 sep.')
   expect(texts(radios())).toEqual(['Bröst', 'Rygg', 'Tomt pass'])
 
   fireEvent.click(screen.getByTestId('plan'))
@@ -199,7 +199,7 @@ it('lets another template be chosen before planning', async () => {
   app.renderAt('/')
 
   await waitFor(() => expect(radios().length).toBeGreaterThan(0))
-  fireEvent.click(radios().find((b) => b.textContent!.trim() === 'Bröst')!)
+  fireEvent.click(radios().find((b) => b.textContent.trim() === 'Bröst')!)
   expect(screen.getByTestId('next-name').textContent).toBe('Bröst')
   fireEvent.click(screen.getByTestId('plan'))
 
@@ -223,7 +223,7 @@ it('shows an existing plan instead of a suggestion', async () => {
 
   // Planning another waits behind a quiet button, and folds away again.
   expect(screen.queryByTestId('plan-card')).toBeNull()
-  expect(screen.getByTestId('open-planning').textContent!.trim()).toBe('Lägg till ett träningspass')
+  expect(screen.getByTestId('open-planning').textContent.trim()).toBe('Lägg till ett träningspass')
   fireEvent.click(screen.getByTestId('open-planning'))
   expect(screen.getByTestId('plan-card').querySelector('h2')!.textContent).toBe('Lägg till ett träningspass')
   fireEvent.click(screen.getByTestId('close-planning'))
@@ -242,7 +242,7 @@ it('plans another workout from a template beside an existing plan', async () => 
 
   fireEvent.click(await screen.findByTestId('open-planning'))
   expect(screen.getByTestId('next-name').textContent).toBe('Bröst')
-  expect(screen.getByTestId('next-date').textContent!.toLowerCase()).toBe('fredag 25 sep.')
+  expect(screen.getByTestId('next-date').textContent.toLowerCase()).toBe('fredag 25 sep.')
   fireEvent.click(screen.getByTestId('plan'))
 
   await waitFor(() => expect(window.location.pathname).toContain('/workouts/'))

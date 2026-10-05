@@ -43,7 +43,7 @@ const part = (date: Date, options: Intl.DateTimeFormatOptions) =>
   new Intl.DateTimeFormat(locale(), { ...options, timeZone: 'UTC' }).format(date)
 
 /**
- * A calendar date by a pattern of .NET-style tokens, as the .NET version showed them:
+ * A calendar date by a pattern of these tokens:
  * dddd (weekday), ddd (short weekday), d (day), MMMM (month), MMM (short month), yyyy (year).
  */
 export function formatDate(date: DateOnly, pattern: string): string {

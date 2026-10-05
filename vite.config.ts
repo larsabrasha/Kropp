@@ -1,7 +1,7 @@
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
-import { defineConfig } from 'vitest/config'
+import { configDefaults, defineConfig } from 'vitest/config'
 import { kroppApi } from './server/devPlugin'
 
 export default defineConfig({
@@ -63,5 +63,7 @@ export default defineConfig({
     environment: 'node',
     // Dates in the tests are days in Sweden, wherever the tests run.
     env: { TZ: 'Europe/Stockholm' },
+    // e2e/*.spec.ts are Playwright's, run by `npm run e2e` against the production build.
+    exclude: [...configDefaults.exclude, 'e2e/**'],
   },
 })

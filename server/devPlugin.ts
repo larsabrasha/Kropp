@@ -7,16 +7,18 @@ import { migrate } from './migrate'
 
 /**
  * Runs the API inside Vite's dev server, so `npm run dev` is all it takes and the app and the API
- * share a port. The database is PGlite in ./data/pglite (gitignored; never commit it), or a real
- * Postgres when DATABASE_URL is set. Also in `vite preview`, so the production build can be tried
- * with sync.
+ * share a port. The database is PGlite in ./data/pglite (gitignored; never commit it), or in
+ * KROPP_PGLITE_DIR when set, or a real Postgres when DATABASE_URL is set. Also in `vite preview`,
+ * so the production build can be tried with sync.
  */
 export function kroppApi(): Plugin {
   let db: Promise<Db> | null = null
   const open = async () => {
     const url = process.env.DATABASE_URL
-    if (!url) mkdirSync('./data', { recursive: true })
-    const opened = url ? connect(url) : await (await import('./pglite')).pglite('./data/pglite')
+    // The e2e tests set KROPP_PGLITE_DIR (memory://), so they never see or touch the dev data.
+    const dir = process.env.KROPP_PGLITE_DIR
+    if (!url && !dir) mkdirSync('./data', { recursive: true })
+    const opened = url ? connect(url) : await (await import('./pglite')).pglite(dir ?? './data/pglite')
     await migrate(opened, (message) => console.log(`[kropp] ${message}`))
     return opened
   }

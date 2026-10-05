@@ -30,8 +30,8 @@ const plank: Exercise = {
   measuresTimeOnly: false,
 }
 
-/** C#'s default(DateOnly). */
-const DEFAULT_DATE: DateOnly = '0001-01-01'
+/** A day that does not matter to the test. */
+const ANY_DATE: DateOnly = '0001-01-01'
 
 const workout = (
   date: DateOnly,
@@ -40,7 +40,7 @@ const workout = (
   ...entries: WorkoutExercise[]
 ): Workout => ({ id: crypto.randomUUID(), date, sessionNumber: session, status, exercises: entries })
 
-/** The C# helper's named arguments: Workout(date, status: ..., entries: ...). */
+/** A done workout without a session number. */
 const workoutOf = (date: DateOnly, ...entries: WorkoutExercise[]) => workout(date, undefined, 'Done', ...entries)
 
 const plain = (fields: Partial<WorkoutExercise> = {}): WorkoutExercise => ({
@@ -140,19 +140,19 @@ describe('workout editing', () => {
     const walk = plain({ durationMinutes: 20 })
     const started = entry(bench, { reps: 8 })
 
-    expect(statusOf(workoutOf(DEFAULT_DATE, walk), DEFAULT_DATE)).toBe('Done')
-    expect(statusOf(workoutOf(DEFAULT_DATE, walk, started), DEFAULT_DATE)).toBe('InProgress')
+    expect(statusOf(workoutOf(ANY_DATE, walk), ANY_DATE)).toBe('Done')
+    expect(statusOf(workoutOf(ANY_DATE, walk, started), ANY_DATE)).toBe('InProgress')
     expect(
       statusOf(
-        workoutOf(DEFAULT_DATE, walk, { ...started, isSkipped: true }, { ...entry(bench), isSkipped: true }),
-        DEFAULT_DATE,
+        workoutOf(ANY_DATE, walk, { ...started, isSkipped: true }, { ...entry(bench), isSkipped: true }),
+        ANY_DATE,
       ),
     ).toBe('Done')
-    expect(statusOf(workoutOf(DEFAULT_DATE, { ...entry(bench), isSkipped: true }), DEFAULT_DATE)).toBe('Planned')
+    expect(statusOf(workoutOf(ANY_DATE, { ...entry(bench), isSkipped: true }), ANY_DATE)).toBe('Planned')
   })
 
   it('the next session number follows the highest', () => {
-    expect(nextSessionNumber([workout(DEFAULT_DATE, 101), workout(DEFAULT_DATE, 103), workout(DEFAULT_DATE)])).toBe(104)
+    expect(nextSessionNumber([workout(ANY_DATE, 101), workout(ANY_DATE, 103), workout(ANY_DATE)])).toBe(104)
     expect(nextSessionNumber([])).toBe(1)
   })
 
@@ -160,7 +160,7 @@ describe('workout editing', () => {
     const a = plain()
     const b = plain()
     const c = plain()
-    const w = workoutOf(DEFAULT_DATE, { ...a, order: 0 }, { ...b, order: 1 }, { ...c, order: 2 })
+    const w = workoutOf(ANY_DATE, { ...a, order: 0 }, { ...b, order: 1 }, { ...c, order: 2 })
 
     const moved = moveEntry(w, 2, 0)
     expect(moved.exercises.map((e) => e.exerciseId)).toEqual([c.exerciseId, a.exerciseId, b.exerciseId])
@@ -185,18 +185,18 @@ describe('workout editing', () => {
     const finished = entry(bench, {}, {}, {})
     const started = entry(bench, {})
 
-    expect(currentEntry(workoutOf(DEFAULT_DATE, warmUp, finished, started, entry(bench)))).toBe(2)
-    expect(currentEntry(workoutOf(DEFAULT_DATE, { ...warmUp, durationMinutes: undefined }, finished))).toBe(0)
-    expect(currentEntry(workoutOf(DEFAULT_DATE, warmUp, plain({ exerciseId: bench.id })))).toBe(1)
-    expect(currentEntry(workoutOf(DEFAULT_DATE, warmUp, finished))).toBeUndefined()
-    expect(currentEntry(workoutOf(DEFAULT_DATE))).toBeUndefined()
+    expect(currentEntry(workoutOf(ANY_DATE, warmUp, finished, started, entry(bench)))).toBe(2)
+    expect(currentEntry(workoutOf(ANY_DATE, { ...warmUp, durationMinutes: undefined }, finished))).toBe(0)
+    expect(currentEntry(workoutOf(ANY_DATE, warmUp, plain({ exerciseId: bench.id })))).toBe(1)
+    expect(currentEntry(workoutOf(ANY_DATE, warmUp, finished))).toBeUndefined()
+    expect(currentEntry(workoutOf(ANY_DATE))).toBeUndefined()
   })
 
   it('a skipped exercise is finished whatever its sets', () => {
     const started = entry(bench, { reps: 8 })
 
-    expect(currentEntry(workoutOf(DEFAULT_DATE, { ...started, isSkipped: true }, entry(bench)))).toBe(1)
-    expect(currentEntry(workoutOf(DEFAULT_DATE, { ...entry(bench), isSkipped: true }))).toBeUndefined()
+    expect(currentEntry(workoutOf(ANY_DATE, { ...started, isSkipped: true }, entry(bench)))).toBe(1)
+    expect(currentEntry(workoutOf(ANY_DATE, { ...entry(bench), isSkipped: true }))).toBeUndefined()
   })
 
   it('no set is added past ten', () => {
