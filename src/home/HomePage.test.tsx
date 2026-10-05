@@ -37,8 +37,8 @@ const template = (name: string, exercises: WorkoutExercise[] = []): WorkoutTempl
   exercises,
 })
 
-const radios = () => [...document.querySelectorAll('[data-testid=template-choices] [role=radio]')]
-const texts = (elements: Element[]) => elements.map((e) => e.textContent.trim())
+const rows = () => [...document.querySelectorAll<HTMLElement>('[data-testid=template-choices] [data-template]')]
+const rowNames = () => rows().map((r) => r.querySelector('.font-semibold')!.textContent)
 
 it('shows the empty state when there are no workouts', async () => {
   createTestApp().renderAt('/')
@@ -57,7 +57,7 @@ it('shows the workouts in its very first render, with nothing in between', async
   expect(screen.getByTestId('workout-list').querySelectorAll('a')).toHaveLength(1)
 })
 
-it('plans an empty workout from the last choice', async () => {
+it('plans an empty workout from the last row', async () => {
   const app = createTestApp()
   const tp = template('Bröst')
   await app.repository.save('template', tp.id, tp)
@@ -65,11 +65,9 @@ it('plans an empty workout from the last choice', async () => {
   await app.repository.save('workout', old.id, old)
   app.renderAt('/')
 
-  await waitFor(() => expect(texts(radios())).toEqual(['Bröst', 'Tomt pass']))
+  await waitFor(() => expect(rowNames()).toEqual(['Bröst', 'Tomt pass']))
   expect(document.querySelectorAll('form')).toHaveLength(0)
   fireEvent.click(document.querySelector('[data-template=empty]')!)
-  expect(screen.getByTestId('next-name').textContent).toBe('Tomt pass')
-  fireEvent.click(screen.getByTestId('plan'))
 
   await waitFor(() => expect(window.location.pathname).toContain('/workouts/'))
   const added = (await app.repository.getAll('workout')).find((w) => w.id !== old.id)!
@@ -117,7 +115,7 @@ it('groups workouts by weeks that start on monday', async () => {
 
   await waitFor(() => {
     const weeks = screen.getAllByTestId('week')
-    expect(weeks.map((w) => [...w.querySelectorAll('h3 span')].map((x) => x.textContent.trim()).join(' '))).toEqual([
+    expect(weeks.map((w) => [...w.querySelectorAll('h2 span')].map((x) => x.textContent.trim()).join(' '))).toEqual([
       'Vecka 39 21–27 september',
       'Vecka 38 14–20 september',
     ])
@@ -155,12 +153,12 @@ it('says one exercise in the singular', async () => {
   expect(within(screen.getByTestId('workout-list')).getByRole('link').textContent).not.toContain('övningar')
 })
 
-it('without templates plans an empty workout and explains templates', async () => {
+it('without templates offers only an empty workout, as the suggestion, and explains templates', async () => {
   createTestApp().renderAt('/')
 
   await screen.findByTestId('no-templates')
-  expect(screen.getByTestId('next-name').textContent).toBe('Tomt pass')
-  expect(screen.queryByTestId('template-choices')).toBeNull()
+  expect(rowNames()).toEqual(['Tomt pass'])
+  expect(screen.getByTestId('plan').getAttribute('data-template')).toBe('empty')
 })
 
 it('plans the suggested template in one tap', async () => {
@@ -183,11 +181,15 @@ it('plans the suggested template in one tap', async () => {
 
   app.renderAt('/')
 
-  await waitFor(() => expect(screen.getByTestId('next-name').textContent).toBe('Rygg'))
+  // The suggestion first and marked, the other templates after it, an empty workout last.
+  await waitFor(() => expect(rowNames()).toEqual(['Rygg', 'Bröst', 'Tomt pass']))
+  expect(screen.getByTestId('plan').textContent).toContain('Föreslås')
+  expect(document.querySelectorAll('[data-suggested]')).toHaveLength(1)
   expect(screen.queryByTestId('next')).toBeNull()
   expect(screen.getByTestId('plan-card').querySelector('h2')!.textContent).toBe('Planera nästa pass')
   expect(screen.getByTestId('next-date').textContent.toLowerCase()).toBe('i morgon, 24 sep.')
-  expect(texts(radios())).toEqual(['Bröst', 'Rygg', 'Tomt pass'])
+  // Tomorrow says how far it is already.
+  expect(screen.queryByTestId('plan-days')).toBeNull()
 
   fireEvent.click(screen.getByTestId('plan'))
 
@@ -199,7 +201,7 @@ it('plans the suggested template in one tap', async () => {
   expect(plan.exercises.map((e) => e.exerciseId)).toEqual([pull.id])
 })
 
-it('lets another template be chosen before planning', async () => {
+it('plans another template than the suggestion with a tap on its row', async () => {
   const app = createTestApp()
   const bench = exercise('Bröst maskin')
   await app.repository.save('exercise', bench.id, bench)
@@ -209,10 +211,8 @@ it('lets another template be chosen before planning', async () => {
   await app.repository.save('template', other.id, other)
   app.renderAt('/')
 
-  await waitFor(() => expect(radios().length).toBeGreaterThan(0))
-  fireEvent.click(radios().find((b) => b.textContent.trim() === 'Bröst')!)
-  expect(screen.getByTestId('next-name').textContent).toBe('Bröst')
-  fireEvent.click(screen.getByTestId('plan'))
+  await waitFor(() => expect(rows().length).toBeGreaterThan(0))
+  fireEvent.click(rows().find((r) => r.textContent.startsWith('Bröst'))!)
 
   await waitFor(() => expect(window.location.pathname).toContain('/workouts/'))
   const all = await app.repository.getAll('workout')
@@ -232,13 +232,15 @@ it('shows an existing plan instead of a suggestion', async () => {
   expect((await screen.findByTestId('upcoming')).getAttribute('href')).toBe(`/workouts/${planned.id}`)
   expect(screen.getByTestId('next')).not.toBeNull()
 
-  // Planning another waits behind a quiet button, and folds away again.
+  // Planning another waits behind the plus button, in a sheet that Escape closes again.
   expect(screen.queryByTestId('plan-card')).toBeNull()
   expect(screen.getByTestId('open-planning').textContent.trim()).toBe('Lägg till ett träningspass')
   fireEvent.click(screen.getByTestId('open-planning'))
-  expect(screen.getByTestId('plan-card').querySelector('h2')!.textContent).toBe('Lägg till ett träningspass')
-  fireEvent.click(screen.getByTestId('close-planning'))
-  expect(screen.queryByTestId('plan-card')).toBeNull()
+  const sheet = screen.getByTestId('planning-sheet')
+  expect(sheet.getAttribute('aria-label')).toBe('Lägg till ett träningspass')
+  expect(sheet.querySelector('[data-testid=plan-card]')).not.toBeNull()
+  fireEvent.keyDown(document, { key: 'Escape' })
+  await waitFor(() => expect(screen.queryByTestId('planning-sheet')).toBeNull())
 })
 
 it('plans another workout from a template beside an existing plan', async () => {
@@ -252,8 +254,9 @@ it('plans another workout from a template beside an existing plan', async () => 
   app.renderAt('/')
 
   fireEvent.click(await screen.findByTestId('open-planning'))
-  expect(screen.getByTestId('next-name').textContent).toBe('Bröst')
+  expect(rowNames()[0]).toBe('Bröst')
   expect(screen.getByTestId('next-date').textContent.toLowerCase()).toBe('fredag 25 sep.')
+  expect(screen.getByTestId('plan-days').textContent).toBe('Om 2 dagar')
   fireEvent.click(screen.getByTestId('plan'))
 
   await waitFor(() => expect(window.location.pathname).toContain('/workouts/'))
@@ -261,23 +264,36 @@ it('plans another workout from a template beside an existing plan', async () => 
   expect([second.date, second.templateId, second.sessionNumber]).toEqual(['2026-09-25', tp.id, 103])
 })
 
-it('fills the chosen template and never makes it bolder', async () => {
+it('closes the planning sheet when pulled down from a row, without planning it', async () => {
   const app = createTestApp()
-  const a = template('Ben och bröst')
-  const b = template('Rygg')
-  await app.repository.save('template', a.id, a)
-  await app.repository.save('template', b.id, b)
+  const tp = template('Bröst')
+  await app.repository.save('template', tp.id, tp)
+  const planned = workout('2026-09-24')
+  await app.repository.save('workout', planned.id, planned)
   app.renderAt('/')
+  fireEvent.click(await screen.findByTestId('open-planning'))
+  const row = rows()[0]!
 
-  const chips = () => [...document.querySelectorAll('[data-testid=template-choices] button')]
-  await waitFor(() => expect(chips()).toHaveLength(3))
-  // Same weight, border and padding either way, so choosing never resizes a chip.
-  for (const chip of chips()) {
-    expect(chip.classList).toContain('font-medium')
-    expect(chip.classList).toContain('border')
-    expect(chip.classList).toContain('px-4')
-  }
-  const checked = document.querySelectorAll('[data-testid=template-choices] button[aria-checked=true]')
-  expect(checked).toHaveLength(1)
-  expect(checked[0]!.classList).toContain('bg-accent-600')
+  // A pull with the mouse that starts on a template's row, as on iOS from anywhere on a sheet.
+  fireEvent.pointerDown(row, { pointerType: 'mouse', button: 0, clientX: 100, clientY: 300 })
+  fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 100, clientY: 320 })
+  fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 100, clientY: 600 })
+  fireEvent.pointerUp(window, { pointerType: 'mouse', clientX: 100, clientY: 600 })
+  fireEvent.click(row)
+
+  await waitFor(() => expect(screen.queryByTestId('planning-sheet')).toBeNull())
+  expect(await app.repository.getAll('workout')).toHaveLength(1)
+  expect(window.location.pathname).toBe('/')
+})
+
+it('says how many days away a day chosen for planning is, also one in the past', async () => {
+  createTestApp().renderAt('/')
+  const date = await screen.findByTestId('plan-date')
+
+  fireEvent.change(date, { target: { value: '2026-09-30' } })
+  expect(screen.getByTestId('plan-days').textContent).toBe('Om 7 dagar')
+  fireEvent.change(screen.getByTestId('plan-date'), { target: { value: '2026-09-22' } })
+  expect(screen.getByTestId('plan-days').textContent).toBe('I går')
+  fireEvent.change(screen.getByTestId('plan-date'), { target: { value: '2026-09-20' } })
+  expect(screen.getByTestId('plan-days').textContent).toBe('För 3 dagar sedan')
 })

@@ -128,11 +128,10 @@ it('asks before deleting, and returns to the list', async () => {
   const template = await seed()
   app.renderAt(`/templates/${template.id}`)
 
-  const del = await waitFor(() => {
-    const found = $$('button').filter((b) => text(b) === 'Ta bort mallen')
-    expect(found).toHaveLength(1)
-    return found[0]!
-  })
+  // From the template's menu in the bar, as the workout's.
+  click(await waitForElement('[data-testid=template-menu]'))
+  const del = $('[role=menu] [data-testid=delete-template]')
+  expect(text(del)).toBe('Ta bort mallen')
   click(del)
   click($('[role=alertdialog] button'))
 

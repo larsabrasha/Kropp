@@ -1,15 +1,21 @@
+import { useState } from 'react'
 import { t } from '../i18n/i18n'
 import { MAX_SETS } from '../training/editing'
 import { Limits } from '../training/limits'
 import type { ExerciseKind, WorkoutExercise } from '../training/model'
-import { EditorActions } from '../ui/EditorActions'
 import { Stepper } from '../ui/Stepper'
-import { TextField } from '../ui/TextField'
+import { ActionSheet } from '../ui/ActionSheet'
+import { TextRow } from '../ui/Form'
+import { ROW } from '../ui/styles'
 import { toInt } from './toInt'
+
+// A grouped list of the sheet.
+const GROUP = 'ios-list overflow-hidden rounded-[1.625rem] bg-cell'
 
 /**
  * One place to change this exercise in this workout: the plan first, as it is what changes most,
- * then the notes, skipping and the actions. Every field has its label above.
+ * then the notes, skipping and removing. Drawn for a sheet (ModalSheet, which closes it): grouped
+ * lists as an iOS form, the label at the left, the value and its − and + at the right.
  */
 export function EntryEditor({
   entry,
@@ -22,7 +28,6 @@ export function EntryEditor({
   onToggleSkipped,
   onChange,
   onChangeCardioPlan,
-  onClose,
   onRemove,
 }: {
   entry: WorkoutExercise
@@ -37,74 +42,92 @@ export function EntryEditor({
   onToggleSkipped: () => void
   onChange: (entry: WorkoutExercise) => void
   onChangeCardioPlan: (entry: WorkoutExercise) => void
-  onClose: () => void
   onRemove: () => void
 }) {
+  const [confirmingRemove, setConfirmingRemove] = useState(false)
   return (
-    <div className="mt-3 flex flex-col gap-3" data-testid="editor">
-      <div className="flex flex-col gap-3" data-testid="target-editor">
+    <div className="flex flex-col gap-6" data-testid="editor">
+      <ul className={GROUP} data-testid="target-editor">
         {kind === 'Cardio' ? (
           <>
-            <Stepper
-              label={t('Entry.Minutes')}
-              value={plan.targetDurationMinutes}
-              step={0.5}
-              start={5}
-              max={Limits.minutes}
-              onChange={(v) => onChangeCardioPlan({ ...plan, targetDurationMinutes: v })}
-            />
-            {!timeOnly && (
+            <li>
               <Stepper
-                label={t('Entry.Km')}
-                value={plan.targetDistanceKm}
-                step={0.1}
-                start={1}
-                max={Limits.distanceKm}
-                onChange={(v) => onChangeCardioPlan({ ...plan, targetDistanceKm: v })}
+                row
+                label={t('Entry.Minutes')}
+                value={plan.targetDurationMinutes}
+                step={0.5}
+                start={5}
+                max={Limits.minutes}
+                onChange={(v) => onChangeCardioPlan({ ...plan, targetDurationMinutes: v })}
               />
+            </li>
+            {!timeOnly && (
+              <li>
+                <Stepper
+                  row
+                  label={t('Entry.Km')}
+                  value={plan.targetDistanceKm}
+                  step={0.1}
+                  start={1}
+                  max={Limits.distanceKm}
+                  onChange={(v) => onChangeCardioPlan({ ...plan, targetDistanceKm: v })}
+                />
+              </li>
             )}
           </>
         ) : (
           <>
-            <Stepper
-              label={t('Entry.Sets')}
-              value={entry.targetSets}
-              max={MAX_SETS}
-              onChange={(v) => {
-                const n = toInt(v)
-                onChange({ ...entry, targetSets: n === undefined ? undefined : Math.min(n, MAX_SETS) })
-              }}
-            />
+            <li>
+              <Stepper
+                row
+                label={t('Entry.Sets')}
+                value={entry.targetSets}
+                max={MAX_SETS}
+                onChange={(v) => {
+                  const n = toInt(v)
+                  onChange({ ...entry, targetSets: n === undefined ? undefined : Math.min(n, MAX_SETS) })
+                }}
+              />
+            </li>
             {kind === 'Timed' ? (
-              <Stepper
-                label={t('Entry.Seconds')}
-                value={entry.targetSeconds}
-                step={5}
-                max={Limits.seconds}
-                onChange={(v) => onChange({ ...entry, targetSeconds: toInt(v) })}
-              />
+              <li>
+                <Stepper
+                  row
+                  label={t('Entry.Seconds')}
+                  value={entry.targetSeconds}
+                  step={5}
+                  max={Limits.seconds}
+                  onChange={(v) => onChange({ ...entry, targetSeconds: toInt(v) })}
+                />
+              </li>
             ) : (
-              <Stepper
-                label={t('Entry.Reps')}
-                value={entry.targetReps}
-                max={Limits.reps}
-                onChange={(v) => onChange({ ...entry, targetReps: toInt(v) })}
-              />
+              <li>
+                <Stepper
+                  row
+                  label={t('Entry.Reps')}
+                  value={entry.targetReps}
+                  max={Limits.reps}
+                  onChange={(v) => onChange({ ...entry, targetReps: toInt(v) })}
+                />
+              </li>
             )}
             {kind === 'Strength' && (
-              <Stepper
-                label={t('Entry.Kg')}
-                value={entry.targetWeightKg}
-                step={weightStep}
-                max={Limits.weightKg}
-                onChange={(v) => onChange({ ...entry, targetWeightKg: v })}
-              />
+              <li>
+                <Stepper
+                  row
+                  label={t('Entry.Kg')}
+                  value={entry.targetWeightKg}
+                  step={weightStep}
+                  max={Limits.weightKg}
+                  onChange={(v) => onChange({ ...entry, targetWeightKg: v })}
+                />
+              </li>
             )}
           </>
         )}
-      </div>
-      <div className="flex flex-col gap-3" data-testid="notes-editor">
-        <TextField
+      </ul>
+      <ul className={GROUP} data-testid="notes-editor">
+        <TextRow
           label={t('Entry.Settings')}
           value={entry.settings}
           maxLength={Limits.shortText}
@@ -112,7 +135,7 @@ export function EntryEditor({
           onChange={(v) => onChange({ ...entry, settings: v })}
         />
         {!forTemplate && (
-          <TextField
+          <TextRow
             label={t('Entry.Comment')}
             value={entry.comment}
             maxLength={Limits.longText}
@@ -121,21 +144,41 @@ export function EntryEditor({
             onChange={(v) => onChange({ ...entry, comment: v })}
           />
         )}
-      </div>
-      {skipLabel !== undefined && (
-        <button
-          type="button"
-          onClick={onToggleSkipped}
-          data-testid={entry.isSkipped ? 'unskip' : 'skip'}
-          className="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-800 hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800"
-        >
-          {skipLabel}
-        </button>
+      </ul>
+      <ul className={GROUP}>
+        {skipLabel !== undefined && (
+          <li>
+            <button
+              type="button"
+              onClick={onToggleSkipped}
+              data-testid={entry.isSkipped ? 'unskip' : 'skip'}
+              className={`${ROW} w-full text-[1.0625rem] text-tint`}
+            >
+              {skipLabel}
+            </button>
+          </li>
+        )}
+        <li>
+          <button
+            type="button"
+            onClick={() => setConfirmingRemove(true)}
+            data-testid="remove"
+            className={`${ROW} w-full text-[1.0625rem] text-red-600 dark:text-red-500`}
+          >
+            {t('Entry.Remove')}
+          </button>
+        </li>
+      </ul>
+      {/* Asked first, as iOS asks before anything that cannot be undone. */}
+      {confirmingRemove && (
+        <ActionSheet
+          message={forTemplate ? t('Entry.RemoveConfirmTemplate') : t('Entry.RemoveConfirm')}
+          action={t('Entry.Remove')}
+          onAction={onRemove}
+          onCancel={() => setConfirmingRemove(false)}
+          actionTestId="confirm-remove"
+        />
       )}
-      {/* 20px above the actions in every editor: the column's gap plus this. */}
-      <div className="mt-2">
-        <EditorActions onDone={onClose} onDelete={onRemove} deleteLabel={t('Entry.Remove')} deleteTestId="remove" />
-      </div>
     </div>
   )
 }

@@ -42,7 +42,7 @@ export function IllustrationPicker({
         placeholder={t('Illustration.Search')}
         aria-label={t('Illustration.Search')}
         autoComplete="off"
-        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-base dark:border-gray-700 dark:bg-gray-900"
+        className="w-full rounded-xl bg-fill px-3 py-2.5 text-base"
       />
       <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{t('Illustration.Count', matches.length)}</p>
       <div className="mt-2 grid max-h-80 grid-cols-4 gap-2 overflow-y-auto sm:grid-cols-6">

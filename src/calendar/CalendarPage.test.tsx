@@ -102,3 +102,53 @@ it.each([
   expect(link.getAttribute('href')).toBe(href)
   expect(link.textContent.trim()).toBe(text)
 })
+
+const swipe = (from: number, to: number, vertical = 0) => {
+  const grid = screen.getByTestId('calendar')
+  fireEvent.pointerDown(grid, { pointerId: 1, clientX: from, clientY: 100 })
+  fireEvent.pointerMove(grid, { pointerId: 1, clientX: (from + to) / 2, clientY: 100 + vertical / 2 })
+  fireEvent.pointerMove(grid, { pointerId: 1, clientX: to, clientY: 100 + vertical })
+  fireEvent.pointerUp(grid, { pointerId: 1, clientX: to, clientY: 100 + vertical })
+}
+
+it('turns to the next month on a swipe left and back on a swipe right', async () => {
+  createTestApp().renderAt('/calendar')
+
+  swipe(300, 60)
+  await waitFor(() => expect(screen.getByTestId('month').textContent).toBe('oktober 2026'))
+  // A swipe while the month still slides is ignored.
+  await new Promise((r) => setTimeout(r, 400))
+
+  swipe(60, 300)
+  await waitFor(() => expect(screen.getByTestId('month').textContent).toBe('september 2026'))
+})
+
+it('leaves the month alone on a vertical move, and a swipe chooses no day', async () => {
+  const app = createTestApp()
+  await save(app, '2026-09-21', 'Ben')
+  app.renderAt('/calendar')
+  await waitFor(() => expect(dates()).toEqual(['2026-09-21']))
+
+  swipe(200, 190, 200)
+  await new Promise((r) => setTimeout(r, 400))
+  expect(screen.getByTestId('month').textContent).toBe('september 2026')
+
+  const day = screen.getByTestId('day')
+  fireEvent.pointerDown(day, { pointerId: 2, clientX: 300, clientY: 100 })
+  fireEvent.pointerMove(day, { pointerId: 2, clientX: 100, clientY: 100 })
+  fireEvent.pointerUp(day, { pointerId: 2, clientX: 100, clientY: 100 })
+  fireEvent.click(day)
+
+  expect(window.location.search).not.toContain('day=')
+  await waitFor(() => expect(screen.getByTestId('month').textContent).toBe('oktober 2026'))
+})
+
+it('does not turn past the first month the app accepts', async () => {
+  createTestApp().renderAt('/calendar?month=2000-01')
+  const before = screen.getByTestId('month').textContent
+
+  swipe(60, 300)
+  await new Promise((r) => setTimeout(r, 400))
+
+  expect(screen.getByTestId('month').textContent).toBe(before)
+})

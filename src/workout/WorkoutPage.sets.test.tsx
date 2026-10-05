@@ -107,7 +107,8 @@ it('opens the fields when the target is tapped, and saves a change', async () =>
   click($('[data-testid=close-editor]'))
 
   await waitFor(() => expect(text($('[data-testid=target]'))).toBe('3 × 8 @ 25 kg'))
-  expect($$('[data-testid=editor]')).toEqual([])
+  // The sheet sinks away before it is gone.
+  await waitFor(() => expect($$('[data-testid=editor]')).toEqual([]))
   await waitFor(async () => expect((await reload(w.id)).exercises[0]!.targetWeightKg).toBe(25))
 })
 
@@ -273,7 +274,6 @@ it('always shows the weight on a done set', async () => {
 
 it.each([
   ['thumbnail', 'illustration'],
-  ['edit', 'editor'],
   ['set-done', 'set-editor'],
 ])('ends the card with the panel %s opens, so its close button is last', async (tap, panel) => {
   const w = await seed(
@@ -421,7 +421,7 @@ it('offers no skip in a template', async () => {
   expect($$('[data-testid=skip]')).toEqual([])
 })
 
-it('moves the sets aside while the editor is open', async () => {
+it('edits an exercise in a sheet titled by it, over its card, which stays as it was', async () => {
   const w = await seed(
     workout({ date: '2026-09-23', exercises: [entry({ exerciseId: BENCH.id, targetSets: 3, targetReps: 8 })] }),
   )
@@ -429,14 +429,16 @@ it('moves the sets aside while the editor is open', async () => {
 
   await waitForElement('[data-testid=sets]')
   click($('[data-testid=edit]'))
-  expect($$('[data-testid=sets]')).toEqual([])
+  const sheet = $('[data-testid=exercise-entry] [data-testid=entry-sheet]')
+  expect(sheet.getAttribute('aria-label')).toBe(BENCH.name)
+  $('[data-testid=editor]', sheet)
+  expect($$('[data-testid=sets]')).toHaveLength(1)
 
   click($('[data-testid=close-editor]'))
-  await waitForElement('[data-testid=sets]')
+  await waitFor(() => expect($$('[data-testid=entry-sheet]')).toEqual([]))
 
   click($('[data-testid=settings-line]'))
-  $('[data-testid=editor]')
-  expect($$('[data-testid=sets]')).toEqual([])
+  $('[data-testid=entry-sheet] [data-testid=editor]')
 })
 
 it('has the check of a done set beside the number', async () => {

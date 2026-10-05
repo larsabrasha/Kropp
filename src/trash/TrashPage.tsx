@@ -6,6 +6,9 @@ import { workoutName, type ExerciseMap } from '../training/categories'
 import type { Exercise, TrashedWorkout } from '../training/model'
 import { deleteForGood, deletedForGoodAt, inTrash, purge, restore } from '../training/trash'
 import { BackLink } from '../ui/Layout'
+import { ActionSheet } from '../ui/ActionSheet'
+import { Group } from '../ui/List'
+import { button } from '../ui/styles'
 
 const DAY_MS = 86_400_000
 
@@ -75,8 +78,7 @@ export function TrashPage() {
   return (
     <>
       <BackLink href="/settings" label={t('Settings.Heading')} />
-      <h1 className="text-xl font-semibold">{t('Trash.Heading')}</h1>
-      <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t('Trash.Help')}</p>
+      <h1 className="large-title">{t('Trash.Heading')}</h1>
 
       {error !== null && (
         <p className="mt-3 text-sm text-red-600 dark:text-red-400" role="alert">
@@ -86,11 +88,11 @@ export function TrashPage() {
 
       {trashed.length === 0 ? (
         <div
-          className="mt-4 flex flex-col items-center gap-3 rounded-xl border border-dashed border-gray-300 px-4 py-10 text-center text-gray-500 dark:border-gray-700 dark:text-gray-400"
+          className="mt-4 flex flex-col items-center gap-3 px-6 py-14 text-center text-[1.0625rem] text-label-2"
           data-testid="trash-empty"
         >
           <svg
-            className="size-10"
+            className="size-12"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -101,24 +103,21 @@ export function TrashPage() {
           >
             <path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 002 2h6a2 2 0 002-2l1-12M9 7V4h6v3" />
           </svg>
-          <p>{t('Trash.Empty')}</p>
+          <p className="text-[1.375rem] font-bold text-gray-900 dark:text-white">{t('Trash.Empty')}</p>
+          <p className="text-[0.9375rem]">{t('Trash.Help')}</p>
         </div>
       ) : (
-        <ul className="mt-4 flex flex-col gap-2" data-testid="trash">
+        <Group className="mt-5" testId="trash" footer={t('Trash.Help')}>
           {trashed.map((item) => {
             const workout = item.workout
             const name = workoutName(workout, exercises)
             const isBusy = busyId === item.id
             return (
-              <li
-                key={item.id}
-                className="rounded-xl border border-gray-200 bg-white p-3 dark:border-gray-800 dark:bg-gray-900"
-                data-testid="trashed-workout"
-              >
-                <span className="block truncate font-semibold" data-testid="trashed-name">
+              <li key={item.id} className="px-4 py-3" data-testid="trashed-workout">
+                <span className="block truncate text-[1.0625rem] font-semibold" data-testid="trashed-name">
                   {name ?? workout.note ?? t('Home.Heading')}
                 </span>
-                <span className="block truncate text-sm text-gray-500 dark:text-gray-400">
+                <span className="block truncate text-[0.9375rem] text-label-2">
                   <span className="inline-block first-letter:uppercase">
                     {formatDate(workout.date, 'dddd d MMM yyyy')}
                   </span>
@@ -129,60 +128,44 @@ export function TrashPage() {
                       : t('Home.ExerciseCount', workout.exercises.length)}
                   </span>
                 </span>
-                <span className="mt-0.5 block text-sm text-gray-500 dark:text-gray-400" data-testid="deleted-for-good">
+                <span className="mt-0.5 block text-[0.9375rem] text-label-2" data-testid="deleted-for-good">
                   {deletedForGoodText(item)}
                 </span>
 
-                {confirmingId === item.id ? (
-                  <div
-                    className="mt-3 flex flex-wrap items-center gap-2"
-                    role="alertdialog"
-                    aria-label={t('Trash.DeleteConfirm')}
+                <div className="mt-3 flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setConfirmingId(item.id)}
+                    disabled={busyId !== null}
+                    data-testid="delete-now"
+                    className={button('destructive', 'small')}
                   >
-                    <span className="w-full text-sm">{t('Trash.DeleteConfirm')}</span>
-                    <button
-                      type="button"
-                      onClick={() => void deleteItem(item)}
-                      disabled={isBusy}
-                      data-testid="confirm-delete"
-                      className="rounded-lg bg-red-600 px-4 py-2.5 font-medium text-white hover:bg-red-700 disabled:opacity-60"
-                    >
-                      {isBusy ? t('Common.Loading') : t('Trash.DeleteNow')}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setConfirmingId(null)}
-                      className="rounded-lg px-4 py-2.5 hover:bg-gray-100 dark:hover:bg-gray-800"
-                    >
-                      {t('Common.Cancel')}
-                    </button>
-                  </div>
-                ) : (
-                  <div className="mt-3 flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setConfirmingId(item.id)}
-                      disabled={busyId !== null}
-                      data-testid="delete-now"
-                      className="rounded-lg px-3 py-2.5 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-60 dark:text-red-400 dark:hover:bg-red-950"
-                    >
-                      {t('Trash.DeleteNow')}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => void restoreItem(item)}
-                      disabled={busyId !== null}
-                      data-testid="restore"
-                      className="ml-auto rounded-lg bg-accent-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-accent-700 focus-visible:outline-2 focus-visible:outline-blue-500 disabled:opacity-60"
-                    >
-                      {isBusy ? t('Common.Loading') : t('Trash.Restore')}
-                    </button>
-                  </div>
+                    {t('Trash.DeleteNow')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void restoreItem(item)}
+                    disabled={busyId !== null}
+                    data-testid="restore"
+                    className={`ml-auto ${button('filled', 'small')}`}
+                  >
+                    {isBusy && confirmingId !== item.id ? t('Common.Loading') : t('Trash.Restore')}
+                  </button>
+                </div>
+                {confirmingId === item.id && (
+                  <ActionSheet
+                    message={t('Trash.DeleteConfirm')}
+                    action={t('Trash.DeleteNow')}
+                    busy={isBusy}
+                    onAction={() => void deleteItem(item)}
+                    onCancel={() => setConfirmingId(null)}
+                    actionTestId="confirm-delete"
+                  />
                 )}
               </li>
             )
           })}
-        </ul>
+        </Group>
       )}
     </>
   )

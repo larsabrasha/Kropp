@@ -20,6 +20,8 @@ import {
 } from '../training/model'
 import { target } from '../training/text'
 import { DoneRow } from '../ui/EditorActions'
+import { ModalSheet } from '../ui/ModalSheet'
+import { button } from '../ui/styles'
 import { EntryCardio } from './EntryCardio'
 import { EntryContextLines } from './EntryContextLines'
 import { EntryEditor } from './EntryEditor'
@@ -85,9 +87,9 @@ export function ExerciseEntryCard({
     return timeOnly && e ? { ...e, distanceKm: undefined, avgHeartRate: undefined, targetDistanceKm: undefined } : e
   }
 
-  // The editor and the picture take the card's place below the header, sets and all; the set
-  // and cardio editors open under what they edit.
-  const hidesResults = panel === 'Edit' || panel === 'Illustration'
+  // The picture takes the card's place below the header, sets and all; the set and cardio editors
+  // open under what they edit. The editor is a sheet over the card, which stays as it is.
+  const hidesResults = panel === 'Illustration'
 
   // Only the top row, on an exercise that is neither the one the user is on nor done in any
   // part: the rest of the list stays quiet. One skipped whole is struck through at that row;
@@ -180,7 +182,7 @@ export function ExerciseEntryCard({
 
   return (
     <article
-      className="rounded-xl border border-gray-200 bg-white p-3 dark:border-gray-800 dark:bg-gray-900"
+      className="rounded-[1.375rem] bg-cell p-3"
       aria-current={current ? 'step' : undefined}
       data-testid="exercise-entry"
       data-current={current ? 'true' : 'false'}
@@ -240,14 +242,10 @@ export function ExerciseEntryCard({
           aria-expanded={expanded('Edit')}
           title={t('Entry.Edit')}
           data-testid="edit"
-          className="flex shrink-0 items-center rounded-lg px-2 py-1.5 text-sm text-gray-700 tabular-nums hover:bg-gray-100 focus-visible:outline-2 focus-visible:outline-blue-500 dark:text-gray-300 dark:hover:bg-gray-800"
+          className="flex h-8 shrink-0 items-center rounded-full bg-fill px-3 text-[0.9375rem] font-medium text-gray-900 tabular-nums active:opacity-60 focus-visible:outline-2 focus-visible:outline-blue-500 dark:text-white"
         >
           <span
-            className={
-              whollySkipped
-                ? 'text-gray-400 line-through dark:text-gray-500'
-                : 'underline decoration-gray-300 decoration-dotted underline-offset-4 dark:decoration-gray-600'
-            }
+            className={whollySkipped ? 'text-gray-400 line-through dark:text-gray-500' : undefined}
             data-testid="target"
           >
             {targetText}
@@ -255,21 +253,30 @@ export function ExerciseEntryCard({
         </button>
       </div>
 
+      {/* Editing is a task of its own, as on iOS: a sheet over the workout, the card unchanged under it. */}
       {panel === 'Edit' && (
-        <EntryEditor
-          entry={entry}
-          plan={plan}
-          kind={kind}
-          timeOnly={timeOnly}
-          forTemplate={forTemplate}
-          weightStep={weightStep}
-          skipLabel={skipLabel}
-          onToggleSkipped={toggleSkipped}
-          onChange={change}
-          onChangeCardioPlan={changeCardioPlan}
+        <ModalSheet
+          title={exercise?.name ?? t('Exercise.Unknown')}
           onClose={close}
-          onRemove={onRemove}
-        />
+          testId="entry-sheet"
+          closeTestId="close-editor"
+          fit
+          portal={false}
+        >
+          <EntryEditor
+            entry={entry}
+            plan={plan}
+            kind={kind}
+            timeOnly={timeOnly}
+            forTemplate={forTemplate}
+            weightStep={weightStep}
+            skipLabel={skipLabel}
+            onToggleSkipped={toggleSkipped}
+            onChange={change}
+            onChangeCardioPlan={changeCardioPlan}
+            onRemove={onRemove}
+          />
+        </ModalSheet>
       )}
 
       {/* Only to look at here; the picture belongs to the exercise and is changed on its page. */}
@@ -287,11 +294,7 @@ export function ExerciseEntryCard({
           )}
           <DoneRow onDone={close}>
             {exercise && (
-              <Link
-                href={exerciseHref}
-                className="rounded-lg px-3 py-2 text-sm text-blue-700 hover:bg-blue-50 dark:text-blue-300 dark:hover:bg-blue-950"
-                data-testid="edit-exercise"
-              >
+              <Link href={exerciseHref} className={button('tinted', 'small')} data-testid="edit-exercise">
                 {t('Entry.EditExercise')}
               </Link>
             )}
@@ -331,7 +334,7 @@ export function ExerciseEntryCard({
       )}
 
       {/* Only with nothing open: an open panel ends the card, so its "Stäng" is the last thing in it. */}
-      {panel === 'None' && !collapsed && (
+      {(panel === 'None' || panel === 'Edit') && !collapsed && (
         <EntryContextLines
           entry={entry}
           kind={kind}

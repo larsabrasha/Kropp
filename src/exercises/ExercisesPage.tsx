@@ -8,6 +8,9 @@ import { categoriesOf } from '../training/categories'
 import { Limits } from '../training/limits'
 import type { Exercise } from '../training/model'
 import { BackLink } from '../ui/Layout'
+import { Chevron, Group } from '../ui/List'
+import { SearchField } from '../ui/SearchField'
+import { PICTURE_ROW, THUMB } from '../ui/styles'
 
 function summary(exercise: Exercise): string {
   const parts = [t(`Exercise.Kind.${exercise.kind}`), ...categoriesOf(exercise).map((a) => t(`BodyArea.${a}`))]
@@ -50,8 +53,7 @@ export function ExercisesPage() {
   return (
     <>
       <BackLink href="/settings" label={t('Settings.Heading')} />
-      <h1 className="text-xl font-semibold">{t('Exercises.Heading')}</h1>
-      <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t('Exercises.Help')}</p>
+      <h1 className="large-title">{t('Exercises.Heading')}</h1>
 
       {error !== null && (
         <p className="mt-3 text-sm text-red-600 dark:text-red-400" role="alert">
@@ -61,11 +63,11 @@ export function ExercisesPage() {
 
       {exercises.length === 0 ? (
         <div
-          className="mt-4 flex flex-col items-center gap-3 rounded-xl border border-dashed border-gray-300 px-4 py-10 text-center text-gray-500 dark:border-gray-700 dark:text-gray-400"
+          className="mt-4 flex flex-col items-center gap-3 px-6 py-14 text-center text-[1.0625rem] text-label-2"
           data-testid="exercises-empty"
         >
           <svg
-            className="size-10"
+            className="size-12"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -75,29 +77,27 @@ export function ExercisesPage() {
           >
             <path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11" />
           </svg>
-          <p>{t('Exercises.Empty')}</p>
+          <p className="text-[1.375rem] font-bold text-gray-900 dark:text-white">{t('Exercises.Empty')}</p>
+          <p className="text-[0.9375rem]">{t('Exercises.Help')}</p>
         </div>
       ) : (
         <>
-          <input
-            type="search"
+          <SearchField
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t('Exercises.Search')}
-            aria-label={t('Exercises.Search')}
-            autoComplete="off"
             maxLength={Limits.search}
             data-testid="exercise-search"
-            className="mt-4 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-base dark:border-gray-700 dark:bg-gray-900"
+            className="mt-4"
           />
 
           {matches.length === 0 ? (
             <div
-              className="mt-3 flex flex-col items-center gap-3 rounded-xl border border-dashed border-gray-300 px-4 py-8 text-center text-gray-500 dark:border-gray-700 dark:text-gray-400"
+              className="mt-3 flex flex-col items-center gap-3 px-6 py-14 text-center text-[1.0625rem] text-label-2"
               data-testid="exercises-no-match"
             >
               <svg
-                className="size-10"
+                className="size-12"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -111,19 +111,16 @@ export function ExercisesPage() {
               <p>{t('Exercises.NoMatches')}</p>
             </div>
           ) : (
-            <ul className="mt-3 flex flex-col gap-2" data-testid="exercises">
+            <Group className="mt-4" testId="exercises" separatorInset="3.75rem" footer={t('Exercises.Help')}>
               {matches.map((exercise) => {
                 const slug = slugFor(exercise)
                 return (
                   <li key={exercise.id}>
                     <Link
                       href={`/exercises/${exercise.id}`}
-                      className={`flex items-center gap-3 rounded-xl border border-gray-200 bg-white p-3 hover:bg-gray-50 focus-visible:outline-2 focus-visible:outline-blue-500 dark:border-gray-800 dark:bg-gray-900 dark:hover:bg-gray-800 ${exercise.isArchived ? 'opacity-60' : ''}`}
+                      className={`${PICTURE_ROW} ${exercise.isArchived ? 'opacity-60' : ''}`}
                     >
-                      <span
-                        className="size-10 shrink-0 overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800"
-                        aria-hidden="true"
-                      >
+                      <span className={`size-9 ${THUMB}`} aria-hidden="true">
                         {slug !== undefined && (
                           <img
                             src={picture(slug)}
@@ -134,27 +131,15 @@ export function ExercisesPage() {
                         )}
                       </span>
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate font-semibold">{exercise.name}</span>
-                        <span className="block truncate text-sm text-gray-500 dark:text-gray-400">
-                          {summary(exercise)}
-                        </span>
+                        <span className="block truncate text-[1.0625rem] font-semibold">{exercise.name}</span>
+                        <span className="block truncate text-[0.9375rem] text-label-2">{summary(exercise)}</span>
                       </span>
-                      <svg
-                        className="size-5 shrink-0 text-gray-400"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        aria-hidden="true"
-                      >
-                        <path d="M9 6l6 6-6 6" />
-                      </svg>
+                      <Chevron />
                     </Link>
                   </li>
                 )
               })}
-            </ul>
+            </Group>
           )}
         </>
       )}

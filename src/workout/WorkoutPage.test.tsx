@@ -95,6 +95,14 @@ it('removes an exercise from the menu', async () => {
   click((await waitForElements('[data-testid=edit]'))[0]!)
   expect(text($('[data-testid=editor] [data-testid=remove]'))).toBe('Radera övning')
   click($('[data-testid=editor] [data-testid=remove]'))
+  // Asked first; cancelling keeps it.
+  const ask = $('[role=alertdialog]')
+  expect(ask.getAttribute('aria-label')).toBe('Ta bort övningen ur passet? Det du har gjort i den försvinner.')
+  click($$('button', ask).find((b) => text(b) === 'Avbryt')!)
+  expect($$('[role=alertdialog]')).toEqual([])
+  expect(names()).toEqual(['Bröst maskin', 'Vader'])
+  click($('[data-testid=editor] [data-testid=remove]'))
+  click($('[data-testid=confirm-remove]'))
 
   await waitFor(() => expect(names()).toEqual(['Vader']))
   await waitFor(async () => expect((await reload(w.id)).exercises.map((e) => e.exerciseId)).toEqual([other.id]))
@@ -158,12 +166,20 @@ it('shows the details as text until tapped, and then as fields', async () => {
   expect($$('input[type=date]')).toEqual([])
 
   click($('[data-testid=unlock]'))
-  click($('[data-testid=workout-meta]'))
+  click($('[data-testid=workout-menu]'))
+  click($('[role=menu] [data-testid=edit-details]'))
+  // From the workout's menu in the bar, in a sheet of their own, as rows: the day, the number, the note.
+  expect($('[data-testid=details-sheet]').getAttribute('aria-label')).toBe('Detaljer')
+  expect($$('[data-testid=details-editor] li > :first-child').map((l) => l.textContent)).toEqual([
+    'Datum',
+    'Pass nr',
+    'Anteckning',
+  ])
   change($('[data-testid=details-editor] input[type=text]'), 'Ben och bröst')
-  click($('[data-testid=details-editor] button'))
+  click($('[data-testid=close-details]'))
 
   await waitFor(() => expect($('h1').textContent).toBe('Ben och bröst'))
-  expect($$('[data-testid=details-editor]')).toEqual([])
+  await waitFor(() => expect($$('[data-testid=details-editor]')).toEqual([]))
   await waitFor(async () => expect((await reload(w.id)).note).toBe('Ben och bröst'))
 })
 
@@ -183,7 +199,9 @@ it('shows what its row in the list shows, with the same badge', async () => {
   $('[data-testid=details] [data-testid=workout-icon]')
   const badge = $('[data-testid=details] [data-testid=status]')
   expect([badge.textContent, badge.getAttribute('data-status')]).toEqual(['Genomfört', 'Done'])
-  expect(badge.classList).toContain('bg-green-100')
+  // A symbol, the filled green check, with the word as its tooltip.
+  expect(badge.getAttribute('title')).toBe('Genomfört')
+  expect(badge.querySelector('circle')!.classList).toContain('fill-green-600')
 })
 
 it('opens a workout scrolled to the top, also when the page is reused', async () => {
@@ -248,12 +266,13 @@ it('asks before deleting, and then moves the workout to the trash', async () => 
   const w = await seed(workout({ date: '2026-09-23' }))
   open(w.id)
 
-  const del = await waitFor(() => {
-    const found = $$('button').filter((b) => text(b) === 'Ta bort passet')
-    expect(found).toHaveLength(1)
-    return found[0]!
-  })
+  // From the workout's menu, its one destructive item.
+  click(await waitForElement('[data-testid=workout-menu]'))
+  const del = $('[role=menu] [data-testid=delete-workout]')
+  expect(text(del)).toBe('Ta bort passet')
+  expect(del.className).toContain('text-red-600')
   click(del)
+  expect($$('[role=menu]')).toEqual([])
   expect(await app.repository.getAll('workout')).not.toEqual([])
   click($('[role=alertdialog] button'))
 
@@ -305,11 +324,15 @@ it('opens a workout of an earlier day locked, and saves nothing until it is unlo
     'Passet är från en tidigare dag och är låst.',
   )
   expect($('[data-testid=workout-body]').hasAttribute('disabled')).toBe(true)
-  expect($('[data-testid=workout-meta]').hasAttribute('disabled')).toBe(true)
+  // Its menu offers to unlock it, and nothing that changes it.
+  click($('[data-testid=workout-menu]'))
+  expect($('[data-testid=edit-details]').hasAttribute('disabled')).toBe(true)
+  expect($('[data-testid=delete-workout]').hasAttribute('disabled')).toBe(true)
+  $('[data-testid=menu-unlock]')
+  fireEvent.keyDown(document, { key: 'Escape' })
+  expect($$('[role=menu]')).toEqual([])
   // The browser does not click a disabled button; the page refuses to save if it happens anyway.
   click($('[data-testid=set-next]'))
-  click($('[data-testid=workout-meta]'))
-  expect($$('[data-testid=details-editor]')).toEqual([])
   expect((await reload(w.id)).exercises[0]!.sets).toEqual([])
 
   click($('[data-testid=unlock]'))
@@ -319,6 +342,7 @@ it('opens a workout of an earlier day locked, and saves nothing until it is unlo
   click($('[data-testid=set-next]'))
   await waitFor(async () => expect((await reload(w.id)).exercises[0]!.sets).toHaveLength(1))
 
+  click($('[data-testid=workout-menu]'))
   click($('[data-testid=lock]'))
   expect($('[data-testid=workout-body]').hasAttribute('disabled')).toBe(true)
 })
@@ -329,7 +353,11 @@ it.each([23, 25])('does not lock today or a later day (%i September)', async (da
 
   expect((await waitForElement('[data-testid=workout-body]')).hasAttribute('disabled')).toBe(false)
   expect($$('[data-testid=locked]')).toEqual([])
+  // Nothing to lock again in its menu either.
+  click($('[data-testid=workout-menu]'))
+  $('[role=menu] [data-testid=edit-details]')
   expect($$('[data-testid=lock]')).toEqual([])
+  expect($$('[data-testid=menu-unlock]')).toEqual([])
 })
 
 it('keeps an unlocked workout unlocked when a sync reloads it', async () => {

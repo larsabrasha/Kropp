@@ -249,6 +249,7 @@ it('gives the comment a line of its own that opens the editor', async () => {
   expect($('[data-testid=settings-line]').textContent).not.toContain('tungt')
 
   click(comment)
-  $('[data-testid=editor]')
-  expect($$('[data-testid=comment]')).toEqual([])
+  // The editor is a sheet over the card, which keeps its comment line under it.
+  $('[data-testid=entry-sheet] [data-testid=editor]')
+  expect($$('[data-testid=comment]')).toHaveLength(1)
 })

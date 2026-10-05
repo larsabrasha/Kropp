@@ -4,9 +4,9 @@ import { Link, navigate } from '../route'
 import { useAnyChange, useRepository } from '../services'
 import type { LocalRepository } from '../sync/localRepo'
 import { iconFor, workoutName } from '../training/categories'
-import { addDays, dayOf, isDateOnly, mondayOf, monthOf, today, weekNumber } from '../training/dates'
-import { compareOptional, nextSessionNumber, withDerivedStatus } from '../training/editing'
-import { isInRange, Limits } from '../training/limits'
+import { addDays, dayOf, daysBetween, isDateOnly, mondayOf, monthOf, today, weekNumber } from '../training/dates'
+import { compareOptional, nextSessionNumber, statusOf, withDerivedStatus } from '../training/editing'
+import { isInRange } from '../training/limits'
 import {
   DEFAULT_SETTINGS,
   EMPTY_ID,
@@ -18,9 +18,12 @@ import {
   type WorkoutTemplate,
 } from '../training/model'
 import { planFrom, suggestDate, suggestDateAfter, suggestTemplate, upcoming as upcomingOf } from '../training/planning'
-import { chipStyle } from '../ui/chipStyle'
+import { Chevron, Group } from '../ui/List'
+import { ModalSheet } from '../ui/ModalSheet'
 import { PlanIcon } from '../ui/PlanIcon'
-import { useCommit } from '../ui/useCommit'
+import { StatusBadge } from '../ui/StatusBadge'
+import { button } from '../ui/styles'
+import { PlanList } from './PlanList'
 import { WorkoutRow } from './WorkoutRow'
 
 interface Data {
@@ -64,18 +67,22 @@ function weekRange(monday: DateOnly): string {
     : `${formatDate(monday, 'd MMM')} – ${formatDate(sunday, 'd MMM')}`
 }
 
+/**
+ * How far the day is from today, for planning: "Om 3 dagar". Nothing for today and tomorrow, which
+ * dayText already says.
+ */
+function daysAway(date: DateOnly, day: DateOnly): string | undefined {
+  const days = daysBetween(day, date)
+  if (days === 0 || days === 1) return undefined
+  if (days === -1) return t('Next.Yesterday')
+  return days > 0 ? t('Next.InDays', days) : t('Next.DaysAgo', -days)
+}
+
 function dayText(date: DateOnly, day: DateOnly): string {
   if (date === day) return t('Next.Today')
   if (date === addDays(day, 1)) return t('Next.Tomorrow', formatDate(date, 'd MMM'))
   return formatDate(date, 'dddd d MMM')
 }
-
-const asWorkout = (template: WorkoutTemplate): Workout => ({
-  id: template.id,
-  date: '0001-01-01',
-  status: 'Planned',
-  exercises: template.exercises,
-})
 
 /** Everything the page shows, and the day to plan on, from the repository's memory. */
 function read(repository: LocalRepository): Data & { planDate: DateOnly } {
@@ -110,11 +117,11 @@ export function HomePage() {
   // Read during the first render, so the page never shows without its data.
   const [initial] = useState(() => readOrFail(repository))
   const [data, setData] = useState<Data>(initial.data)
-  const [chosenId, setChosenId] = useState<string>()
   const [planningOpen, setPlanningOpen] = useState(false)
   const [planDate, setPlanDate] = useState<DateOnly>(initial.planDate ?? day)
-  const [saving, setSaving] = useState(false)
-  const savingRef = useRef(false)
+  // The template being planned, while it saves.
+  const [planning, setPlanning] = useState<string>()
+  const planningRef = useRef(false)
   const [error, setError] = useState<string | undefined>(initial.error)
   const [weeksShown, setWeeksShown] = useState(WEEKS_PER_PAGE)
 
@@ -127,9 +134,10 @@ export function HomePage() {
 
   useAnyChange(load)
 
-  const commitDate = useCommit<HTMLInputElement>((value) => {
+  const changeDate = (value: string) => {
     if (isDateOnly(value) && isInRange(value)) setPlanDate(value)
-  })
+  }
+  const closePlanning = useCallback(() => setPlanningOpen(false), [])
 
   const { workouts, exercises, templates, upcoming } = data
 
@@ -137,19 +145,20 @@ export function HomePage() {
   // suggestion unless there are no templates at all.
   const emptyTemplate: WorkoutTemplate = { id: EMPTY_ID, name: t('Next.Empty'), exercises: [] }
 
-  // The chosen template, or the suggested one until another is tapped.
-  const chosen =
-    chosenId === EMPTY_ID
-      ? emptyTemplate
-      : (templates.find((tp) => tp.id === chosenId) ??
-        suggestTemplate(templates, workouts, (id) => exercises.get(id), day) ??
-        emptyTemplate)
+  // The suggestion first, then the other templates by name, the empty workout last; without
+  // templates the empty workout alone, and suggested.
+  const suggested = suggestTemplate(templates, workouts, (id) => exercises.get(id), day) ?? emptyTemplate
+  const choices = [
+    suggested,
+    ...templates.filter((tp) => tp.id !== suggested.id),
+    ...(suggested.id === EMPTY_ID ? [] : [emptyTemplate]),
+  ]
 
-  const plan = async () => {
-    if (savingRef.current) return
-    const template = chosen
-    savingRef.current = true
-    setSaving(true)
+  // One tap plans the template on the day shown and opens the new workout.
+  const plan = async (template: WorkoutTemplate) => {
+    if (planningRef.current) return
+    planningRef.current = true
+    setPlanning(template.id)
     setError(undefined)
     try {
       const history = workouts
@@ -162,237 +171,83 @@ export function HomePage() {
       console.error('Could not plan from template', e)
       setError(t('Home.SaveFailed'))
     } finally {
-      savingRef.current = false
-      setSaving(false)
+      planningRef.current = false
+      setPlanning(undefined)
     }
   }
 
   const weeks = weeksOf(workouts)
 
-  /** The planning card: at the top when nothing is planned, above the list otherwise. */
-  const planCard = () => (
-    <section
-      className="rounded-xl border border-blue-200 bg-blue-50 p-4 dark:border-blue-900 dark:bg-blue-950/30"
-      data-testid="plan-card"
-    >
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <h2 className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
-          {upcoming === undefined ? t('Next.PlanNext') : t('Next.Another')}
-        </h2>
-        {upcoming !== undefined && (
-          <button
-            type="button"
-            onClick={() => setPlanningOpen(false)}
-            aria-label={t('Next.HidePlanning')}
-            title={t('Next.HidePlanning')}
-            aria-expanded="true"
-            data-testid="close-planning"
-            className="-my-2 -mr-2 flex size-9 items-center justify-center rounded-lg text-gray-500 hover:bg-blue-100 focus-visible:outline-2 focus-visible:outline-blue-500 dark:text-gray-400 dark:hover:bg-blue-900"
-          >
-            <svg
-              className="size-5"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              aria-hidden="true"
-            >
-              <path d="M6 6l12 12M18 6L6 18" />
-            </svg>
-          </button>
-        )}
-      </div>
-
-      <div className="flex items-center gap-3">
-        <PlanIcon slug={iconFor(asWorkout(chosen), exercises)} />
-        <span className="min-w-0 flex-1">
-          <span
-            className="block truncate text-lg font-semibold text-gray-900 dark:text-gray-50"
-            data-testid="next-name"
-          >
-            {chosen.name}
-          </span>
-          {/* The whole day is the date picker: a transparent input over the text. A click on a date
-              input's text only focuses a part of the date in desktop browsers, so the click opens the
-              picker itself. */}
-          <label className="relative mt-1 inline-flex min-h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-blue-200 bg-white px-2.5 text-sm text-gray-700 hover:bg-blue-50 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-blue-500 dark:border-blue-900 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800">
-            <svg
-              className="size-4 shrink-0 text-blue-700 dark:text-blue-300"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <rect x="3" y="5" width="18" height="16" rx="2" />
-              <path d="M3 10h18M8 3v4M16 3v4" />
-            </svg>
-            <span className="first-letter:uppercase inline-block whitespace-nowrap" data-testid="next-date">
-              {dayText(planDate, day)}
-            </span>
-            <svg
-              className="size-4 shrink-0 text-gray-400"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M6 9l6 6 6-6" />
-            </svg>
-            <input
-              type="date"
-              key={planDate}
-              defaultValue={planDate}
-              min={Limits.firstDate}
-              max={Limits.lastDate}
-              ref={commitDate}
-              aria-label={t('Next.ChangeDay')}
-              onClick={(e) => {
-                try {
-                  e.currentTarget.showPicker()
-                } catch {
-                  // Not every browser has showPicker; the input still opens on its own there.
-                }
-              }}
-              data-testid="plan-date"
-              className="absolute inset-0 size-full cursor-pointer opacity-0"
-            />
-          </label>
-        </span>
-        <button
-          type="button"
-          onClick={() => void plan()}
-          disabled={saving}
-          data-testid="plan"
-          className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-accent-600 px-4 py-2.5 font-medium text-white hover:bg-accent-700 disabled:opacity-60"
-        >
-          {saving && (
-            <svg className="size-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="3" strokeDasharray="42 100" />
-            </svg>
-          )}
-          {t('Next.Plan')}
-        </button>
-      </div>
-      {templates.length > 0 && (
-        <div
-          className="mt-3 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]"
-          role="radiogroup"
-          aria-label={t('Next.Templates')}
-          data-testid="template-choices"
-        >
-          {[...templates, emptyTemplate].map((template) => {
-            const on = template.id === chosen.id
-            return (
-              <button
-                key={template.id}
-                type="button"
-                role="radio"
-                aria-checked={on ? 'true' : 'false'}
-                onClick={() => setChosenId(template.id)}
-                data-template={template.id === EMPTY_ID ? 'empty' : template.id}
-                className={chipStyle(on)}
-              >
-                {template.name}
-              </button>
-            )
-          })}
-        </div>
-      )}
-      {templates.length === 0 && (
-        <p className="mt-3 text-sm text-gray-600 dark:text-gray-300" data-testid="no-templates">
-          {t('Next.NoTemplates')}
-        </p>
-      )}
-
-      {error !== undefined && (
-        <p className="mt-3 text-sm text-red-600 dark:text-red-400" role="alert">
-          {error}
-        </p>
-      )}
-    </section>
+  const planList = (title?: string) => (
+    <PlanList
+      title={title}
+      choices={choices}
+      suggestedId={suggested.id}
+      noTemplates={templates.length === 0}
+      exercises={exercises}
+      date={planDate}
+      dateText={dayText(planDate, day)}
+      dateNote={daysAway(planDate, day)}
+      onDate={changeDate}
+      planning={planning}
+      onPlan={(template) => void plan(template)}
+      error={error}
+    />
   )
 
   return (
     <>
-      <h1 className="sr-only">{t('Home.Heading')}</h1>
+      {/* The app's name and mark, only here: the large title of the page everything starts from. */}
+      <h1 className="large-title mb-4 flex items-center gap-2.5" data-testid="brand">
+        <svg className="size-9 shrink-0" viewBox="0 0 32 32" aria-hidden="true">
+          <rect width="32" height="32" rx="8" className="fill-accent-600" />
+          <g stroke="#fff" strokeWidth="2.6" strokeLinecap="round">
+            <path d="M10.5 10v12M21.5 10v12M7 13v6M25 13v6M10.5 16h11" />
+          </g>
+        </svg>
+        {t('App.Title')}
+      </h1>
 
-      {/* Colour follows priority: only the action (Planera/Öppna) is blue; the name reads first in
-          weight, the day second; template choices and links stay neutral so they do not compete. */}
-      {/* Two cards: what is next (green, when a plan exists) and planning (blue). Only their actions
-          carry the accent colour; everything else in them stays neutral. */}
+      {/* What is next, lifted out of the list: a larger green row of its own that opens it, with a
+          chevron like every row that leads further in. */}
       {upcoming !== undefined && (
-        <section
-          className="mb-3 rounded-xl border border-green-200 bg-green-50 p-4 dark:border-green-900 dark:bg-green-950/30"
-          data-testid="next"
-        >
-          <h2 className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+        <section data-testid="next">
+          <h2 className="px-4 pb-2 text-[1.0625rem] font-semibold text-green-700 dark:text-green-400">
             {t('Next.Heading')}
           </h2>
-          <Link href={`/workouts/${upcoming.id}`} className="flex items-center gap-3" data-testid="upcoming">
-            <PlanIcon slug={iconFor(upcoming, exercises)} />
+          <Link
+            href={`/workouts/${upcoming.id}`}
+            className="flex items-center gap-3 rounded-[1.625rem] bg-green-50 p-3 pr-4 ring-1 ring-green-600/15 ring-inset active:bg-green-100 focus-visible:outline-2 focus-visible:outline-blue-500 dark:bg-green-950/50 dark:ring-green-400/20 dark:active:bg-green-900/60"
+            data-testid="upcoming"
+          >
+            <PlanIcon
+              slug={iconFor(upcoming, exercises)}
+              className="shrink-0 overflow-hidden rounded-[0.875rem] bg-white dark:bg-gray-900"
+            />
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-lg font-semibold">
+              <span className="block truncate text-xl font-bold">
                 {workoutName(upcoming, exercises) ?? t('Home.Heading')}
               </span>
-              <span className="block text-sm text-gray-600 first-letter:uppercase dark:text-gray-300">
+              <span className="block text-[0.9375rem] font-medium text-green-800 first-letter:uppercase dark:text-green-300">
                 {dayText(upcoming.date, day)}
               </span>
             </span>
-            <span className="shrink-0 rounded-lg bg-green-600 px-4 py-2.5 font-medium text-white hover:bg-green-700">
-              {t('Next.Open')}
-            </span>
+            <StatusBadge status={statusOf(upcoming, day)} />
+            <Chevron />
           </Link>
         </section>
       )}
 
-      {upcoming === undefined && planCard()}
+      {upcoming === undefined && planList(t('Next.PlanNext'))}
 
-      <section className="mt-6">
-        {/* With a workout already planned, adding another is the exception: it waits behind a quiet
-            button above the list instead of competing with the green card. */}
-        {upcoming !== undefined && (
-          <div className="mb-5">
-            {planningOpen ? (
-              planCard()
-            ) : (
-              <button
-                type="button"
-                onClick={() => setPlanningOpen(true)}
-                aria-expanded="false"
-                data-testid="open-planning"
-                className="flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-gray-300 px-4 text-sm font-medium text-gray-600 hover:bg-white focus-visible:outline-2 focus-visible:outline-blue-500 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-900"
-              >
-                <svg
-                  className="size-4"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  aria-hidden="true"
-                >
-                  <path d="M12 5v14M5 12h14" />
-                </svg>
-                {t('Next.PlanAnother')}
-              </button>
-            )}
-          </div>
-        )}
-
+      <section className="mt-5">
         {workouts.length === 0 && (
           <div
-            className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-gray-300 px-4 py-10 text-center text-gray-500 dark:border-gray-700 dark:text-gray-400"
+            className="flex flex-col items-center gap-3 px-6 py-14 text-center text-[1.0625rem] text-label-2"
             data-testid="empty-state"
           >
             <svg
-              className="size-10"
+              className="size-12"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -408,26 +263,30 @@ export function HomePage() {
         {workouts.length > 0 && (
           <div className="flex flex-col gap-5" data-testid="workout-list">
             {weeks.slice(0, weeksShown).map((week) => (
-              <section key={week.key} data-testid="week">
-                <h3 className="mb-2 flex items-baseline gap-2 pl-inset text-sm">
-                  <span className="font-semibold">{t('Home.Week', week.number)}</span>
-                  <span className="text-gray-500 dark:text-gray-400">{weekRange(week.monday)}</span>
-                </h3>
-                <ul className="flex flex-col gap-2">
+              <div key={week.key} data-testid="week">
+                <Group
+                  separatorInset="4.25rem"
+                  header={
+                    <>
+                      <span>{t('Home.Week', week.number)}</span>
+                      <span className="ml-2 font-normal text-label-2">{weekRange(week.monday)}</span>
+                    </>
+                  }
+                >
                   {week.workouts.map((workout) => (
                     <li key={workout.id}>
                       <WorkoutRow workout={workout} exercises={exercises} today={day} />
                     </li>
                   ))}
-                </ul>
-              </section>
+                </Group>
+              </div>
             ))}
             {weeks.length > weeksShown && (
               <button
                 type="button"
                 onClick={() => setWeeksShown((n) => n + WEEKS_PER_PAGE)}
                 data-testid="more-weeks"
-                className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
+                className={`${button('gray')} w-full`}
               >
                 {t('Home.MoreWeeks', weeks.length - weeksShown)}
               </button>
@@ -435,6 +294,39 @@ export function HomePage() {
           </div>
         )}
       </section>
+
+      {/* With a workout already planned, adding another is the exception: a floating plus button at
+          the bottom right opens the templates in a sheet. */}
+      {upcoming !== undefined && (
+        <>
+          <div className="h-20" aria-hidden="true" />
+          {planningOpen && (
+            <ModalSheet title={t('Next.Another')} onClose={closePlanning} testId="planning-sheet" fit>
+              {planList()}
+            </ModalSheet>
+          )}
+          <button
+            type="button"
+            onClick={() => setPlanningOpen(true)}
+            aria-expanded={planningOpen}
+            data-testid="open-planning"
+            className="fab fixed right-4 z-40 flex size-14 items-center justify-center rounded-full bg-accent-600 text-white shadow-[0_8px_24px_rgb(0_0_0/0.25)] transition-transform duration-200 active:scale-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
+          >
+            <svg
+              className="size-7"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.4"
+              strokeLinecap="round"
+              aria-hidden="true"
+            >
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+            <span className="sr-only">{t('Next.PlanAnother')}</span>
+          </button>
+        </>
+      )}
     </>
   )
 }

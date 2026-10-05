@@ -2,8 +2,9 @@ import { t } from '../i18n/i18n'
 import { invariant, parseDecimal } from '../training/text'
 import { useCommit } from './useCommit'
 
+// The two halves of iOS's stepper: one grey capsule, split by a hairline.
 const BUTTON =
-  'flex size-11 shrink-0 items-center justify-center rounded-xl bg-gray-200 text-2xl font-medium text-gray-800 hover:bg-gray-300 active:bg-gray-400 disabled:opacity-40 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700'
+  'flex h-11 w-14 shrink-0 items-center justify-center text-2xl font-medium text-gray-900 active:bg-black/10 disabled:opacity-30 dark:text-white dark:active:bg-white/15'
 
 /**
  * A number with large − and + buttons, for adjusting reps and weight with a thumb. The label sits
@@ -11,7 +12,8 @@ const BUTTON =
  * below min (0 unless given).
  *
  * max: the highest value + goes to. start: what + gives an empty field, where one step from zero
- * is no use (a pulse of 1).
+ * is no use (a pulse of 1). row lays it out as a row of an iOS form (List.tsx): the label at the
+ * left, the value and the capsule at the right.
  */
 export function Stepper({
   label,
@@ -21,6 +23,7 @@ export function Stepper({
   max,
   min = 0,
   start,
+  row = false,
 }: {
   label: string
   value: number | undefined
@@ -29,6 +32,7 @@ export function Stepper({
   max?: number
   min?: number
   start?: number
+  row?: boolean
 }) {
   // A typed value kept within min and max, as − and + keep it.
   const clamp = (v: number | undefined) => (v === undefined ? undefined : Math.min(Math.max(v, min), max ?? Infinity))
@@ -45,8 +49,14 @@ export function Stepper({
   }
 
   return (
-    <div className="flex flex-col gap-1" data-testid="stepper" data-label={label}>
-      <span className="pl-inset text-xs text-gray-600 dark:text-gray-400">{label}</span>
+    <div
+      className={row ? 'flex min-h-[3.25rem] items-center gap-3 px-4 py-1.5' : 'flex flex-col gap-1'}
+      data-testid="stepper"
+      data-label={label}
+    >
+      <span className={row ? 'min-w-0 flex-1 text-[1.0625rem]' : 'pl-inset text-[0.8125rem] text-label-2'}>
+        {label}
+      </span>
       <div className="flex items-center gap-2">
         <input
           key={invariant(value)}
@@ -58,9 +68,13 @@ export function Stepper({
           step={invariant(step)}
           defaultValue={invariant(value)}
           aria-label={label}
-          className="h-11 w-full max-w-32 min-w-0 rounded-xl border border-gray-300 bg-white px-3 text-left text-lg font-semibold text-gray-900 tabular-nums dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+          className={
+            row
+              ? 'h-11 w-12 min-w-0 bg-transparent text-right text-[1.0625rem] text-label-2 tabular-nums outline-none focus:text-gray-900 dark:focus:text-white'
+              : 'h-11 w-full max-w-32 min-w-0 rounded-xl bg-fill px-3 text-left text-lg font-semibold text-gray-900 tabular-nums dark:text-white'
+          }
         />
-        <div className="flex shrink-0 gap-3">
+        <div className="flex shrink-0 items-center overflow-hidden rounded-full bg-fill">
           <button
             type="button"
             onClick={() => change(-step)}
@@ -72,6 +86,7 @@ export function Stepper({
           >
             −
           </button>
+          <span className="h-5 w-px bg-separator" aria-hidden="true" />
           <button
             type="button"
             onClick={() => change(step)}

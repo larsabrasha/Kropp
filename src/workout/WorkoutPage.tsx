@@ -11,11 +11,13 @@ import { isInRange, Limits } from '../training/limits'
 import type { Exercise, Workout } from '../training/model'
 import { invariant, parseInt0 } from '../training/text'
 import { moveToTrash } from '../training/trash'
-import { DoneRow } from '../ui/EditorActions'
-import { BackLink } from '../ui/Layout'
+import { BackLink, BarItem } from '../ui/Layout'
+import { MenuButton } from '../ui/Menu'
 import { StatusBadge } from '../ui/StatusBadge'
-import { NumberField, TextField } from '../ui/TextField'
-import { useCommit } from '../ui/useCommit'
+import { ActionSheet } from '../ui/ActionSheet'
+import { DateRow, NumberRow, TextRow } from '../ui/Form'
+import { ModalSheet } from '../ui/ModalSheet'
+import { button } from '../ui/styles'
 import { ExerciseList } from './ExerciseList'
 
 // Only the calendar of this app, never a URL from elsewhere.
@@ -59,6 +61,27 @@ function read(repository: LocalRepository, id: string) {
     return { all: [], exercises: new Map<string, Exercise>(), workout: undefined, error: t('Home.LoadFailed') }
   }
 }
+
+// The menu's symbols, drawn as SF Symbols' outlines.
+const PENCIL = 'M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4'
+const LOCK = 'M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 0 1 7 0v3'
+const LOCK_OPEN = 'M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 0 1 6.8-1.2'
+const TRASH = 'M5 7h14M10 11v6M14 11v6M7 7l1 13h8l1-13M9.5 7V4.5h5V7'
+
+const Symbol = ({ d }: { d: string }) => (
+  <svg
+    className="size-5"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <path d={d} />
+  </svg>
+)
 
 export function WorkoutPage({ id }: { id: string }) {
   const repository = useRepository()
@@ -114,7 +137,7 @@ export function WorkoutPage({ id }: { id: string }) {
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
   }, [id, workout, exercises])
 
-  const toggleDetails = () => setEditingDetails(!locked && !editingDetails)
+  const closeDetails = useCallback(() => setEditingDetails(false), [])
 
   const lock = () => {
     setLocked(true)
@@ -156,10 +179,6 @@ export function WorkoutPage({ id }: { id: string }) {
     }
   }
 
-  const dateField = useCommit<HTMLInputElement>((value) => {
-    if (isDateOnly(value) && isInRange(value) && workout) void save({ ...workout, date: value })
-  })
-
   async function remove() {
     if (deletingNow.current || locked) return
     deletingNow.current = true
@@ -199,13 +218,54 @@ export function WorkoutPage({ id }: { id: string }) {
         testId="back"
       />
 
+      {/* The workout's own actions, as iOS gathers a page's: behind "⋯" in the bar. */}
+      {workout && (
+        <BarItem side="trailing">
+          <MenuButton
+            label={t('Workout.Actions')}
+            testId="workout-menu"
+            groups={[
+              [
+                {
+                  label: t('Workout.EditDetails'),
+                  icon: <Symbol d={PENCIL} />,
+                  onSelect: () => setEditingDetails(true),
+                  disabled: locked,
+                  testId: 'edit-details',
+                },
+                locked
+                  ? {
+                      label: t('Workout.Unlock'),
+                      icon: <Symbol d={LOCK_OPEN} />,
+                      onSelect: () => setLocked(false),
+                      testId: 'menu-unlock',
+                    }
+                  : opensLocked
+                    ? { label: t('Workout.Lock'), icon: <Symbol d={LOCK} />, onSelect: lock, testId: 'lock' }
+                    : undefined,
+              ].filter((item) => item !== undefined),
+              [
+                {
+                  label: t('Workout.Delete'),
+                  icon: <Symbol d={TRASH} />,
+                  onSelect: () => setConfirmingDelete(true),
+                  destructive: true,
+                  disabled: locked,
+                  testId: 'delete-workout',
+                },
+              ],
+            ]}
+          />
+        </BarItem>
+      )}
+
       {!workout ? (
         <div
-          className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-gray-300 px-4 py-10 text-center text-gray-500 dark:border-gray-700 dark:text-gray-400"
+          className="flex flex-col items-center gap-3 px-6 py-14 text-center text-[1.0625rem] text-label-2"
           data-testid="not-found"
         >
           <svg
-            className="size-10"
+            className="size-12"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -223,7 +283,7 @@ export function WorkoutPage({ id }: { id: string }) {
           {/* The same as the workout's row in the list: picture, name, day, exercises and status. The
               grey line, with the number and note too, opens the details for editing. */}
           <div className="mt-2 flex items-center gap-3" data-testid="details">
-            <span className="size-14 shrink-0 overflow-hidden rounded-xl bg-white dark:bg-gray-900" aria-hidden="true">
+            <span className="size-14 shrink-0 overflow-hidden rounded-[0.875rem] bg-cell" aria-hidden="true">
               {icon && (
                 <img
                   src={picture(icon)}
@@ -235,30 +295,20 @@ export function WorkoutPage({ id }: { id: string }) {
             </span>
             <div className="min-w-0 flex-1">
               <div className="flex items-start justify-between gap-2">
-                <h1 className="min-w-0 text-xl leading-tight font-semibold break-words">{title}</h1>
-                <span className="mt-0.5">
+                <h1 className="min-w-0 text-[1.75rem] leading-tight font-bold break-words">{title}</h1>
+                <span className="mt-1.5">
                   <StatusBadge status={statusOf(workout, today())} />
                 </span>
               </div>
-              <button
-                type="button"
-                onClick={toggleDetails}
-                disabled={locked}
-                aria-expanded={editingDetails}
-                data-testid="workout-meta"
-                className="mt-0.5 block max-w-full text-left text-sm text-gray-500 underline decoration-gray-300 decoration-dotted underline-offset-4 hover:text-gray-700 dark:text-gray-400 dark:decoration-gray-600 dark:hover:text-gray-200"
-              >
+              <p className="mt-1 text-[0.9375rem] text-label-2" data-testid="workout-meta">
                 <span className="inline-block first-letter:uppercase">{formatDate(workout.date, 'dddd d MMM')}</span>
                 {metaParts.map((p) => ' · ' + p).join('')}
-              </button>
+              </p>
             </div>
           </div>
 
-          {locked ? (
-            <section
-              className="mt-4 flex items-center gap-3 rounded-xl border border-gray-200 bg-white p-3 dark:border-gray-800 dark:bg-gray-900"
-              data-testid="locked"
-            >
+          {locked && (
+            <section className="mt-4 flex items-center gap-3 rounded-[1.375rem] bg-cell p-3" data-testid="locked">
               <svg
                 className="size-5 shrink-0 text-gray-500 dark:text-gray-400"
                 viewBox="0 0 24 24"
@@ -277,55 +327,34 @@ export function WorkoutPage({ id }: { id: string }) {
                 type="button"
                 onClick={() => setLocked(false)}
                 data-testid="unlock"
-                className="shrink-0 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus-visible:outline-2 focus-visible:outline-blue-500 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
+                className={button('gray', 'small')}
               >
                 {t('Workout.Unlock')}
               </button>
             </section>
-          ) : (
-            opensLocked && (
-              <div className="mt-3 flex justify-end">
-                <button
-                  type="button"
-                  onClick={lock}
-                  data-testid="lock"
-                  className="inline-flex min-h-9 items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-gray-600 hover:bg-gray-100 focus-visible:outline-2 focus-visible:outline-blue-500 dark:text-gray-300 dark:hover:bg-gray-800"
-                >
-                  <svg
-                    className="size-4"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
-                  >
-                    <rect x="5" y="11" width="14" height="10" rx="2" />
-                    <path d="M8 11V7a4 4 0 0 1 8 0v4" />
-                  </svg>
-                  {t('Workout.Lock')}
-                </button>
-              </div>
-            )
           )}
 
+          {/* The details are a task of their own, as on iOS: a sheet over the workout. */}
           {editingDetails && (
-            <section className="mt-2 rounded-lg bg-gray-50 p-2 dark:bg-gray-900" data-testid="details-editor">
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                <label className="flex flex-col gap-1 text-xs text-gray-600 dark:text-gray-400">
-                  <span className="pl-inset">{t('Home.Date')}</span>
-                  <input
-                    key={workout.date}
-                    ref={dateField}
-                    type="date"
-                    defaultValue={workout.date}
-                    min={Limits.firstDate}
-                    max={Limits.lastDate}
-                    className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-base text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
-                  />
-                </label>
-                <NumberField
+            <ModalSheet
+              title={t('Workout.Details')}
+              onClose={closeDetails}
+              testId="details-sheet"
+              closeTestId="close-details"
+              fit
+            >
+              <ul className="ios-list overflow-hidden rounded-[1.625rem] bg-cell" data-testid="details-editor">
+                <DateRow
+                  label={t('Home.Date')}
+                  value={workout.date}
+                  text={formatDate(workout.date, 'dddd d MMM yyyy')}
+                  min={Limits.firstDate}
+                  max={Limits.lastDate}
+                  onChange={(value) => {
+                    if (isDateOnly(value) && isInRange(value)) void save({ ...workout, date: value })
+                  }}
+                />
+                <NumberRow
                   label={t('Workout.SessionNumber')}
                   value={invariant(workout.sessionNumber)}
                   max={Limits.sessionNumber}
@@ -337,17 +366,14 @@ export function WorkoutPage({ id }: { id: string }) {
                     })
                   }}
                 />
-                <div className="col-span-2 sm:col-span-1">
-                  <TextField
-                    label={t('Home.Note')}
-                    value={workout.note}
-                    maxLength={Limits.longText}
-                    onChange={(v) => void save({ ...workout, note: v })}
-                  />
-                </div>
-              </div>
-              <DoneRow onDone={() => setEditingDetails(false)} />
-            </section>
+                <TextRow
+                  label={t('Home.Note')}
+                  value={workout.note}
+                  maxLength={Limits.longText}
+                  onChange={(v) => void save({ ...workout, note: v })}
+                />
+              </ul>
+            </ModalSheet>
           )}
 
           {error !== undefined && (
@@ -369,36 +395,15 @@ export function WorkoutPage({ id }: { id: string }) {
               />
             </div>
 
-            <section className="mt-8 flex justify-end border-t border-gray-200 pt-4 dark:border-gray-800">
-              {confirmingDelete ? (
-                <div className="flex items-center gap-2" role="alertdialog" aria-label={t('Workout.DeleteConfirm')}>
-                  <span className="text-sm">{t('Workout.DeleteConfirm')}</span>
-                  <button
-                    type="button"
-                    onClick={() => void remove()}
-                    disabled={deleting}
-                    className="rounded-lg bg-red-600 px-4 py-2.5 font-medium text-white hover:bg-red-700 disabled:opacity-60"
-                  >
-                    {deleting ? t('Common.Loading') : t('Workout.Delete')}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setConfirmingDelete(false)}
-                    className="rounded-lg px-4 py-2.5 hover:bg-gray-100 dark:hover:bg-gray-800"
-                  >
-                    {t('Common.Cancel')}
-                  </button>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setConfirmingDelete(true)}
-                  className="rounded-lg px-4 py-2.5 font-medium text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950"
-                >
-                  {t('Workout.Delete')}
-                </button>
-              )}
-            </section>
+            {confirmingDelete && (
+              <ActionSheet
+                message={t('Workout.DeleteConfirm')}
+                action={t('Workout.Delete')}
+                busy={deleting}
+                onAction={() => void remove()}
+                onCancel={() => setConfirmingDelete(false)}
+              />
+            )}
           </fieldset>
         </>
       )}

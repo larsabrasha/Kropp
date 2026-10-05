@@ -1,7 +1,6 @@
 import { useCommit } from './useCommit'
 
-const FIELD =
-  'w-full min-w-0 rounded-lg border border-gray-300 bg-white px-3 py-2 text-base text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100'
+const FIELD = 'w-full min-w-0 rounded-xl bg-fill px-3 py-2.5 text-base text-gray-900 dark:text-white'
 
 /**
  * A labelled text field that reports its text, trimmed and undefined for empty, when the user
@@ -27,7 +26,7 @@ export function TextField({
     onChange(trimmed === '' ? undefined : trimmed)
   })
   return (
-    <label className="flex min-w-0 flex-col gap-1 text-xs text-gray-600 dark:text-gray-400">
+    <label className="flex min-w-0 flex-col gap-1 text-[0.8125rem] text-label-2">
       <span className="pl-inset">{label}</span>
       {multiline ? (
         <textarea
@@ -70,7 +69,7 @@ export function NumberField({
 }) {
   const ref = useCommit<HTMLInputElement>(onChange)
   return (
-    <label className="flex min-w-0 flex-col gap-1 text-xs text-gray-600 dark:text-gray-400">
+    <label className="flex min-w-0 flex-col gap-1 text-[0.8125rem] text-label-2">
       <span className="pl-inset">{label}</span>
       <input
         key={value}

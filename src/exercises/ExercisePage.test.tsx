@@ -35,7 +35,7 @@ function renderExercise(id: string, back?: string) {
 
 const reload = async (id: string) => (await app.repository.get('exercise', id))!
 
-const textInputs = () => document.querySelectorAll<HTMLInputElement>('main input[type=text]')
+const textInputs = () => document.querySelectorAll<HTMLInputElement>('[role=dialog] input[type=text]')
 
 it('says where exercises come from when there are none', async () => {
   app.renderAt('/exercises')
@@ -113,7 +113,7 @@ it('saves the name, the setting, the weight step and hidden', async () => {
       true,
     ])
   })
-  expect(document.querySelector('main h1')!.textContent).toBe('Bröstpress')
+  expect(document.querySelector('[role=dialog] h1')!.textContent).toBe('Bröstpress')
 })
 
 it('refuses an empty name and keeps the old one', async () => {
@@ -168,7 +168,8 @@ it.each([
 
   renderExercise(bench.id, back)
 
-  expect((await screen.findByTestId('back')).getAttribute('href')).toBe(expected)
+  // The sheet's way back; the workout below the sheet has one of its own.
+  expect((await within(await screen.findByRole('dialog')).findByTestId('back')).getAttribute('href')).toBe(expected)
 })
 
 it('can set cardio to measure time alone', async () => {

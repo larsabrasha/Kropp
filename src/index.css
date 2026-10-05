@@ -3,6 +3,10 @@
 @layer base {
   html {
     color-scheme: light dark;
+    /* San Francisco on Apple's systems, as iOS sets it, and smoothed as iOS draws it. */
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, 'Helvetica Neue', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   /* iOS zooms into any focused field with text smaller than 16px. */
@@ -51,7 +55,111 @@
   @media (prefers-color-scheme: dark) {
     :root {
       --next-set-pulse: color-mix(in oklab, var(--color-green-900) 60%, transparent);
+      --color-ground: #000000;
+      --color-cell: #1c1c1e;
+      --color-cell-pressed: #2c2c2e;
+      --color-separator: rgb(84 84 88 / 0.5);
+      --color-label-2: rgb(235 235 245 / 0.6);
+      --color-label-3: rgb(235 235 245 / 0.3);
+      --color-fill: rgb(120 120 128 / 0.24);
+      --color-tint: oklch(0.72 0.12 257);
+      --color-switch-on: #30d158;
     }
+  }
+}
+
+/* Liquid glass, as iOS 26 and 27 draw their bar buttons: a translucent pane that blurs and
+   saturates what scrolls under it, a bright rim along its top edge and a soft shadow below. */
+@utility glass {
+  background-color: rgb(255 255 255 / 0.62);
+  backdrop-filter: blur(14px) saturate(1.8);
+  -webkit-backdrop-filter: blur(14px) saturate(1.8);
+  /* The rim catches light at the top; below, a tight contact shadow and a wide soft one lift the
+     glass off the page, as iOS's bar buttons float. */
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.95),
+    inset 0 0 0 0.5px rgb(255 255 255 / 0.5),
+    0 0 0 0.5px rgb(0 0 0 / 0.08),
+    0 1px 3px rgb(0 0 0 / 0.08),
+    0 8px 28px rgb(0 0 0 / 0.14);
+  @media (prefers-color-scheme: dark) {
+    background-color: rgb(44 44 46 / 0.6);
+    box-shadow:
+      inset 0 0.5px 0 rgb(255 255 255 / 0.22),
+      inset 0 0 0 0.5px rgb(255 255 255 / 0.1),
+      0 1px 3px rgb(0 0 0 / 0.4),
+      0 8px 28px rgb(0 0 0 / 0.55);
+  }
+}
+
+/* A page's large title, as iOS sets it under the bar: 34pt bold, SF Display's tracking. It starts
+   16pt from the edge, with the bar's buttons, while the page's groups start at 20. */
+@utility large-title {
+  margin-left: -0.25rem;
+  font-size: 2.125rem;
+  line-height: 1.2;
+  font-weight: 700;
+  letter-spacing: 0.011em;
+}
+
+/* iOS 26 and 27's switch (Form.tsx): a 63 by 28pt track, green when on, and a white pill of a knob
+   that slides. A checkbox underneath, so it is still checked and changed as one. */
+@utility ios-switch {
+  appearance: none;
+  position: relative;
+  flex-shrink: 0;
+  width: 3.9375rem;
+  height: 1.75rem;
+  border-radius: 9999px;
+  background-color: rgb(120 120 128 / 0.16);
+  cursor: pointer;
+  transition: background-color 250ms ease;
+  &::before {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 2.3125rem;
+    height: 1.5rem;
+    border-radius: 9999px;
+    background: white;
+    box-shadow:
+      0 3px 8px rgb(0 0 0 / 0.15),
+      0 3px 1px rgb(0 0 0 / 0.06);
+    transition: transform 300ms cubic-bezier(0.32, 0.72, 0, 1);
+  }
+  &:checked {
+    background-color: var(--color-switch-on);
+  }
+  &:checked::before {
+    transform: translateX(1.375rem);
+  }
+  &:disabled {
+    opacity: 0.4;
+  }
+  &:focus-visible {
+    outline: 2px solid var(--color-blue-500);
+    outline-offset: 2px;
+  }
+  @media (prefers-color-scheme: dark) {
+    background-color: rgb(120 120 128 / 0.32);
+  }
+}
+
+/* An inset grouped list (src/ui/List.tsx): hairline separators between rows, starting where the
+   row's text starts (--separator-inset), never under a leading picture. */
+@utility ios-list {
+  & > * + * {
+    position: relative;
+  }
+  & > * + *::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: var(--separator-inset, 1rem);
+    border-top: 0.5px solid var(--color-separator);
+    pointer-events: none;
   }
 }
 
@@ -62,6 +170,18 @@
 }
 
 @theme {
+  /* iOS's system colours for grouped lists (UIColor.systemGroupedBackground and friends), light
+     here and dark below; the utilities (bg-ground, bg-cell, text-label-2…) read these variables. */
+  --color-ground: #f2f2f7;
+  --color-cell: #ffffff;
+  --color-cell-pressed: #e5e5ea;
+  --color-separator: rgb(60 60 67 / 0.12);
+  --color-label-2: rgb(60 60 67 / 0.6);
+  --color-label-3: rgb(60 60 67 / 0.3);
+  --color-fill: rgb(120 120 128 / 0.12);
+  --color-tint: oklch(0.52 0.13 257);
+  --color-switch-on: #34c759;
+
   /* The app's blue for filled buttons and the logo: Tailwind's blue hue at about half its
      chroma, calm beside the greens and greys; white text on 600 holds about 5:1. */
   --color-accent-600: oklch(0.52 0.13 257);
@@ -71,6 +191,24 @@
      Still for anyone who has asked their system for less motion (motion-safe: in the markup). */
   --animate-next-set: next-set 1.6s ease-in-out infinite;
 
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+  }
+  /* A menu grows out of its button, as iOS 26 and 27 open one. */
+  @keyframes menu-in {
+    from {
+      opacity: 0;
+      transform: scale(0.3);
+    }
+  }
+  @keyframes fade-out {
+    to {
+      opacity: 0;
+    }
+  }
+
   @keyframes next-set {
     0%,
     100% {
@@ -79,5 +217,290 @@
     50% {
       background-color: var(--next-set-pulse);
     }
+  }
+}
+
+/* The bar: no background of its own. The page fades out under it, blurred a little, as iOS's
+   scroll edge effect; only the bar's buttons are glass. */
+.nav-edge {
+  position: absolute;
+  inset: 0 0 -1rem;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    var(--color-ground) 0%,
+    color-mix(in srgb, var(--color-ground) 75%, transparent) 55%,
+    transparent
+  );
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  mask-image: linear-gradient(to bottom, black 60%, transparent);
+}
+
+/* A sheet and the page below it, as iOS 26 and 27 draw a page sheet: the page stays where it is
+   and dims, as under 20% black; the sheet starts just under the status bar. */
+:root {
+  --under-dim: brightness(0.8);
+  --sheet-top: max(env(safe-area-inset-top), 0.75rem);
+}
+html:has(.sheet) {
+  overflow: hidden;
+}
+.sheet,
+.modal-sheet {
+  top: var(--sheet-top);
+}
+.modal-sheet.modal-sheet-fit {
+  top: auto;
+  bottom: max(0.5rem, env(safe-area-inset-bottom));
+  max-height: calc(100dvh - var(--sheet-top) - max(0.5rem, env(safe-area-inset-bottom)));
+}
+html:has(.modal-sheet) {
+  overflow: hidden;
+}
+
+/* The groups of an action sheet (ActionSheet.tsx): glass a little thicker than the bar's, so the
+   question stays legible over any page. */
+.action-sheet-group,
+.menu {
+  background-color: rgb(255 255 255 / 0.86);
+  backdrop-filter: blur(24px) saturate(1.8);
+  -webkit-backdrop-filter: blur(24px) saturate(1.8);
+  box-shadow: 0 8px 32px rgb(0 0 0 / 0.12);
+}
+@media (prefers-color-scheme: dark) {
+  .action-sheet-group,
+  .menu {
+    background-color: rgb(44 44 46 / 0.86);
+  }
+}
+
+/* The floating plus button on the home page. */
+.fab {
+  bottom: calc(env(safe-area-inset-bottom) + 1rem);
+  right: calc(env(safe-area-inset-right) + 1rem);
+}
+/* In dark mode a sheet is raised, as iOS draws it: its ground and rows a step lighter than the
+   black page below, so its edge shows. */
+@media (prefers-color-scheme: dark) {
+  .sheet,
+  .modal-sheet {
+    --color-ground: #1c1c1e;
+    --color-cell: #2c2c2e;
+    --color-cell-pressed: #3a3a3c;
+  }
+}
+.sheet-under {
+  filter: var(--under-dim);
+}
+
+/* Changes of page, as on iOS (route.ts sets data-transition, App.tsx decides which). Push slides
+   the new page in from the right over the old, which drifts a third of the way left and dims; pop
+   runs it backwards. The bar stays where it is and only fades what changes on it, such as a back
+   button. A sheet rises from the bottom over the page, which dims; closing lowers it again.
+   Never shown to anyone who asked for less motion: route.ts then changes page without one. */
+:root {
+  --page-ease: cubic-bezier(0.32, 0.72, 0, 1);
+  /* iOS 26's push and pop take 0.35s; a sheet a little longer. */
+  --page-duration: 350ms;
+  --sheet-duration: 450ms;
+  --page-shadow: -10px 0 32px rgb(0 0 0 / 0.16), -1px 0 4px rgb(0 0 0 / 0.08);
+  /* The same shadow, invisible: from and to it, so the shadow fades rather than jumps. */
+  --page-shadow-none: -10px 0 32px rgb(0 0 0 / 0), -1px 0 4px rgb(0 0 0 / 0);
+  --page-dim: brightness(0.86);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* A shadow hardly shows on a dark page, so the page below dims more and the edge catches light. */
+    --page-shadow: -12px 0 36px rgb(0 0 0 / 0.7), -1px 0 0 rgb(255 255 255 / 0.06);
+    --page-shadow-none: -12px 0 36px rgb(0 0 0 / 0), -1px 0 0 rgb(255 255 255 / 0);
+    --page-dim: brightness(0.55);
+  }
+}
+
+/* What moves on its own in each kind of change. Named only while it runs, so nothing else changes
+   how pages draw. */
+:root:is([data-transition='push'], [data-transition='pop']) .app-navbar {
+  view-transition-name: navbar;
+}
+:root[data-transition^='sheet'] .sheet {
+  view-transition-name: sheet;
+}
+:root:is([data-transition='sheet-push'], [data-transition='sheet-pop']) .sheet-navbar {
+  view-transition-name: sheet-navbar;
+}
+:root:is([data-transition='sheet-push'], [data-transition='sheet-pop']) .sheet-page {
+  view-transition-name: sheet-page;
+}
+
+:root[data-transition]::view-transition-group(*) {
+  animation-duration: var(--page-duration);
+  animation-timing-function: var(--page-ease);
+}
+:root[data-transition]::view-transition-old(*),
+:root[data-transition]::view-transition-new(*) {
+  animation-duration: var(--page-duration);
+  animation-timing-function: var(--page-ease);
+  animation-fill-mode: both;
+}
+/* The bars above the moving pages: what is on both stays, what changes crossfades. */
+:root[data-transition]::view-transition-group(navbar),
+:root[data-transition]::view-transition-group(sheet-navbar) {
+  z-index: 2;
+}
+:root[data-transition]::view-transition-old(navbar),
+:root[data-transition]::view-transition-new(navbar),
+:root[data-transition]::view-transition-old(sheet-navbar),
+:root[data-transition]::view-transition-new(sheet-navbar) {
+  animation-duration: calc(var(--page-duration) * 0.6);
+  animation-timing-function: ease;
+}
+
+/* The pages that slide: the whole page in the workouts' stack, the sheet's page inside a sheet. */
+:root[data-transition]::view-transition-old(root),
+:root[data-transition]::view-transition-new(root),
+:root[data-transition]::view-transition-old(sheet-page),
+:root[data-transition]::view-transition-new(sheet-page) {
+  mix-blend-mode: normal;
+}
+:root[data-transition='push']::view-transition-old(root),
+:root[data-transition='sheet-push']::view-transition-old(sheet-page) {
+  animation-name: page-to-under;
+}
+:root[data-transition='push']::view-transition-new(root),
+:root[data-transition='sheet-push']::view-transition-new(sheet-page) {
+  animation-name: page-in-over;
+}
+/* Pop: the old page slides away on top and uncovers the new. Keyframes of their own rather than
+   animation-direction: reverse, which would also turn the easing round and start the move slowly. */
+:root[data-transition='pop']::view-transition-old(root),
+:root[data-transition='sheet-pop']::view-transition-old(sheet-page) {
+  z-index: 1;
+  animation-name: page-out-over;
+}
+:root[data-transition='pop']::view-transition-new(root),
+:root[data-transition='sheet-pop']::view-transition-new(sheet-page) {
+  animation-name: page-from-under;
+}
+/* Inside a sheet the sheet itself stands still, and so does the page below it. */
+:root:is([data-transition='sheet-push'], [data-transition='sheet-pop'])::view-transition-group(root),
+:root:is([data-transition='sheet-push'], [data-transition='sheet-pop'])::view-transition-group(sheet) {
+  animation: none;
+}
+:root:is([data-transition='sheet-push'], [data-transition='sheet-pop'])::view-transition-old(root),
+:root:is([data-transition='sheet-push'], [data-transition='sheet-pop'])::view-transition-old(sheet) {
+  display: none;
+}
+:root:is([data-transition='sheet-push'], [data-transition='sheet-pop'])::view-transition-new(root),
+:root:is([data-transition='sheet-push'], [data-transition='sheet-pop'])::view-transition-new(sheet) {
+  animation: none;
+}
+/* The sheet's page slides only inside the sheet's own rounded shape. */
+:root:is([data-transition='sheet-push'], [data-transition='sheet-pop'])::view-transition-group(sheet-page) {
+  z-index: 1;
+}
+:root:is([data-transition='sheet-push'], [data-transition='sheet-pop'])::view-transition-image-pair(sheet-page) {
+  clip-path: inset(0 round 2.375rem 2.375rem 0 0);
+}
+/* So is the sheet's bar: drawn on its own, its square corners would cover the sheet's round ones.
+   Below, the clip leaves room for the shadows of its glass buttons. */
+:root:is([data-transition='sheet-push'], [data-transition='sheet-pop'])::view-transition-image-pair(sheet-navbar) {
+  clip-path: inset(0 0 -3rem 0 round 2.375rem 2.375rem 0 0);
+}
+
+/* The page on top casts its shadow onto the one below. The shadow rises and falls with the move
+   and is gone at both ends: at the right edge it would fall onto the screen, and a pop ends there,
+   so a steady shadow would linger as a strip and then vanish at once. */
+@keyframes page-in-over {
+  0% {
+    transform: translateX(100%);
+    box-shadow: var(--page-shadow-none);
+  }
+  35% {
+    box-shadow: var(--page-shadow);
+  }
+  100% {
+    transform: translateX(0);
+    box-shadow: var(--page-shadow-none);
+  }
+}
+@keyframes page-out-over {
+  0% {
+    transform: translateX(0);
+    box-shadow: var(--page-shadow-none);
+  }
+  40% {
+    box-shadow: var(--page-shadow);
+  }
+  100% {
+    transform: translateX(100%);
+    box-shadow: var(--page-shadow-none);
+  }
+}
+@keyframes page-to-under {
+  to {
+    transform: translateX(-30%);
+    filter: var(--page-dim);
+  }
+}
+@keyframes page-from-under {
+  from {
+    transform: translateX(-30%);
+    filter: var(--page-dim);
+  }
+}
+
+/* Opening a sheet: the page below dims (.sheet-under) and the sheet rises over it. Closing runs
+   both back. The page below is drawn only from its old picture while opening and its new one while
+   closing: the other is the same page, only already dimmed. */
+:root:is([data-transition='sheet-open'], [data-transition='sheet-close'])::view-transition-group(*),
+:root:is([data-transition='sheet-open'], [data-transition='sheet-close'])::view-transition-old(*),
+:root:is([data-transition='sheet-open'], [data-transition='sheet-close'])::view-transition-new(*) {
+  animation-duration: var(--sheet-duration);
+}
+:root[data-transition='sheet-open']::view-transition-group(root),
+:root[data-transition='sheet-close']::view-transition-group(root) {
+  animation: none;
+}
+:root[data-transition='sheet-open']::view-transition-old(root) {
+  animation-name: page-sink;
+}
+:root[data-transition='sheet-open']::view-transition-new(root),
+:root[data-transition='sheet-close']::view-transition-old(root) {
+  animation: none;
+  opacity: 0;
+}
+:root[data-transition='sheet-close']::view-transition-new(root) {
+  animation-name: page-rise;
+}
+:root:is([data-transition='sheet-open'], [data-transition='sheet-close'])::view-transition-group(sheet) {
+  z-index: 1;
+  animation: none;
+}
+:root[data-transition='sheet-open']::view-transition-new(sheet) {
+  animation-name: sheet-up;
+}
+:root[data-transition='sheet-close']::view-transition-old(sheet) {
+  animation-name: sheet-down;
+}
+
+@keyframes page-sink {
+  to {
+    filter: var(--under-dim);
+  }
+}
+@keyframes page-rise {
+  from {
+    filter: var(--under-dim);
+  }
+}
+@keyframes sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+}
+@keyframes sheet-down {
+  to {
+    transform: translateY(100%);
   }
 }

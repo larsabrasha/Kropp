@@ -1,7 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Sortable from 'sortablejs'
 import { t } from '../i18n/i18n'
 import type { ExerciseMap } from '../training/categories'
+import { ModalSheet } from '../ui/ModalSheet'
+import { button } from '../ui/styles'
 import {
   addExercise,
   currentEntry as currentEntryOf,
@@ -41,6 +43,7 @@ export function ExerciseList({
 }) {
   const [activeEntry, setActiveEntry] = useState<number>()
   const [picking, setPicking] = useState(false)
+  const stopPicking = useCallback(() => setPicking(false), [])
   const entryList = useRef<HTMLDivElement>(null)
 
   const currentEntry = forTemplate ? undefined : currentEntryOf(owner)
@@ -111,11 +114,11 @@ export function ExerciseList({
     <section className="flex flex-col gap-2">
       {owner.exercises.length === 0 && !picking && (
         <div
-          className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-gray-300 px-4 py-8 text-center text-gray-500 dark:border-gray-700 dark:text-gray-400"
+          className="flex flex-col items-center gap-3 px-6 py-14 text-center text-[1.0625rem] text-label-2"
           data-testid="no-exercises"
         >
           <svg
-            className="size-10"
+            className="size-12"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -150,22 +153,23 @@ export function ExerciseList({
         })}
       </div>
 
-      {picking ? (
-        <ExercisePicker
-          exercises={[...exercises.values()]}
-          onPick={(exercise) => void add(exercise)}
-          onCreate={(request) => void create(request)}
-          onCancel={() => setPicking(false)}
-        />
-      ) : (
-        <button
-          type="button"
-          onClick={() => setPicking(true)}
-          data-testid="add-exercise"
-          className="rounded-xl border-2 border-dashed border-blue-300 px-4 py-4 font-medium text-blue-700 hover:bg-blue-50 focus-visible:outline-2 focus-visible:outline-blue-500 dark:border-blue-800 dark:text-blue-300 dark:hover:bg-blue-950"
-        >
-          + {t('Workout.AddExercise')}
-        </button>
+      <button
+        type="button"
+        onClick={() => setPicking(true)}
+        data-testid="add-exercise"
+        className={button('tinted', 'large')}
+      >
+        + {t('Workout.AddExercise')}
+      </button>
+      {/* Choosing the exercise is a task of its own, in a sheet over the workout. */}
+      {picking && (
+        <ModalSheet title={t('Workout.AddExercise')} onClose={stopPicking} testId="exercise-sheet">
+          <ExercisePicker
+            exercises={[...exercises.values()]}
+            onPick={(exercise) => void add(exercise)}
+            onCreate={(request) => void create(request)}
+          />
+        </ModalSheet>
       )}
     </section>
   )

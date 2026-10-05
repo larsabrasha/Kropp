@@ -17,16 +17,15 @@ import { invariant, num, parseDecimal } from '../training/text'
 import { CategoryChips } from '../ui/CategoryChips'
 import { DoneRow } from '../ui/EditorActions'
 import { BackLink } from '../ui/Layout'
-import { TextField } from '../ui/TextField'
+import { FreeRow, SelectRow, SwitchRow, TextRow } from '../ui/Form'
+import { Group } from '../ui/List'
+import { ROW } from '../ui/styles'
 import { IllustrationPicker } from './IllustrationPicker'
 
 // What belongs to the exercise itself and holds in every workout and template that uses it.
 // What belongs to one occasion stays on the workout's card.
 
 const MAX_NAME = 200
-
-const SELECT =
-  'rounded-lg border border-gray-300 bg-white px-3 py-2 text-base text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100'
 
 /**
  * The workout or template the user came from, to go back to it. Only a workout or a template of
@@ -125,11 +124,11 @@ export function ExercisePage({ id: routeId }: { id: string }) {
 
       {!exercise ? (
         <div
-          className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-gray-300 px-4 py-10 text-center text-gray-500 dark:border-gray-700 dark:text-gray-400"
+          className="flex flex-col items-center gap-3 px-6 py-14 text-center text-[1.0625rem] text-label-2"
           data-testid="not-found"
         >
           <svg
-            className="size-10"
+            className="size-12"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -144,8 +143,8 @@ export function ExercisePage({ id: routeId }: { id: string }) {
         </div>
       ) : (
         <>
-          <h1 className="text-xl font-semibold">{exercise.name}</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400" data-testid="usage">
+          <h1 className="large-title">{exercise.name}</h1>
+          <p className="text-[0.9375rem] text-label-2" data-testid="usage">
             {t(`Exercise.Kind.${exercise.kind}`)} ·{' '}
             {usedIn === 0
               ? t('Exercises.UsedInNone')
@@ -160,124 +159,114 @@ export function ExercisePage({ id: routeId }: { id: string }) {
             </p>
           )}
 
-          <section className="mt-4 flex flex-col gap-4 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
-            <TextField
+          {/* An iOS form: the fields as rows of grouped lists, help as the lists' footers. */}
+          <Group className="mt-5">
+            <TextRow
               key={nameKey}
               label={t('Exercises.Name')}
               value={exercise.name}
               maxLength={Limits.name}
               onChange={rename}
             />
-            <label className="flex flex-col gap-1 text-xs text-gray-600 dark:text-gray-400">
-              <span className="pl-inset">{t('Exercises.Kind')}</span>
-              <select
-                value={exercise.kind}
-                onChange={(e) => changeKind(e.target.value)}
-                data-testid="kind"
-                className={SELECT}
-              >
-                {EXERCISE_KINDS.map((kind) => (
-                  <option key={kind} value={kind}>
-                    {t(`Exercise.Kind.${kind}`)}
-                  </option>
-                ))}
-              </select>
-              <span className="pl-inset">{t('Exercises.KindHelp')}</span>
-            </label>
-            <TextField
+            <TextRow
               label={t('Exercises.SettingsNote')}
               value={exercise.settingsNote}
               maxLength={Limits.shortText}
               placeholder={t('Exercises.SettingsNotePlaceholder')}
               onChange={(v) => void save({ ...exercise, settingsNote: v })}
             />
+          </Group>
 
-            <div className="flex flex-col gap-1 text-xs text-gray-600 dark:text-gray-400">
-              <span className="pl-inset">{t('Entry.Categories')}</span>
+          <Group className="mt-6" footer={t('Exercises.KindHelp')}>
+            <SelectRow
+              label={t('Exercises.Kind')}
+              value={exercise.kind}
+              onChange={(e) => changeKind(e.target.value)}
+              data-testid="kind"
+            >
+              {EXERCISE_KINDS.map((kind) => (
+                <option key={kind} value={kind}>
+                  {t(`Exercise.Kind.${kind}`)}
+                </option>
+              ))}
+            </SelectRow>
+            {exercise.kind === 'Strength' && (
+              <SelectRow
+                label={t('Exercises.WeightStep')}
+                value={invariant(exercise.weightStepKg ?? DEFAULT_WEIGHT_STEP_KG)}
+                onChange={(e) => changeWeightStep(e.target.value)}
+                data-testid="weight-step"
+              >
+                {WEIGHT_STEPS.map((step) => (
+                  <option key={step} value={invariant(step)}>
+                    {num(step)} kg
+                  </option>
+                ))}
+              </SelectRow>
+            )}
+            {exercise.kind === 'Cardio' && (
+              <SwitchRow
+                label={t('Exercises.TimeOnly')}
+                checked={exercise.measuresTimeOnly}
+                onChange={(on) => void save({ ...exercise, measuresTimeOnly: on })}
+                testId="time-only"
+              />
+            )}
+          </Group>
+
+          <Group className="mt-6" header={t('Entry.Categories')}>
+            <FreeRow>
               <CategoryChips
                 selected={categoriesOf(exercise)}
                 onChange={(areas) => void save({ ...exercise, categories: areas })}
               />
-            </div>
+            </FreeRow>
+          </Group>
 
-            {exercise.kind === 'Strength' && (
-              <label className="flex flex-col gap-1 text-xs text-gray-600 dark:text-gray-400">
-                <span className="pl-inset">{t('Exercises.WeightStep')}</span>
-                <select
-                  value={invariant(exercise.weightStepKg ?? DEFAULT_WEIGHT_STEP_KG)}
-                  onChange={(e) => changeWeightStep(e.target.value)}
-                  data-testid="weight-step"
-                  className={`w-32 ${SELECT}`}
-                >
-                  {WEIGHT_STEPS.map((step) => (
-                    <option key={step} value={invariant(step)}>
-                      {num(step)} kg
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
+          <Group className="mt-6">
+            <SwitchRow
+              label={t('Exercises.Archived')}
+              checked={exercise.isArchived}
+              onChange={(on) => void save({ ...exercise, isArchived: on })}
+              testId="archived"
+            />
+          </Group>
 
-            {exercise.kind === 'Cardio' && (
-              <label className="flex items-start gap-3 text-sm">
-                <input
-                  type="checkbox"
-                  checked={exercise.measuresTimeOnly}
-                  onChange={(e) => void save({ ...exercise, measuresTimeOnly: e.target.checked })}
-                  data-testid="time-only"
-                  className="mt-0.5 size-5 shrink-0 rounded border-gray-300 dark:border-gray-700"
-                />
-                <span>{t('Exercises.TimeOnly')}</span>
-              </label>
-            )}
-
-            <label className="flex items-start gap-3 text-sm">
-              <input
-                type="checkbox"
-                checked={exercise.isArchived}
-                onChange={(e) => void save({ ...exercise, isArchived: e.target.checked })}
-                data-testid="archived"
-                className="mt-0.5 size-5 shrink-0 rounded border-gray-300 dark:border-gray-700"
-              />
-              <span>{t('Exercises.Archived')}</span>
-            </label>
-          </section>
-
-          <section
-            className="mt-4 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900"
-            data-testid="illustration"
-          >
-            <h2 className="mb-2 text-base font-semibold">{t('Exercises.Picture')}</h2>
-            {choosingIllustration ? (
-              <>
-                <IllustrationPicker selected={slug} onPick={pickIllustration} />
-                <DoneRow onDone={() => setChoosingIllustration(false)} />
-              </>
-            ) : (
-              <>
-                {slug !== undefined ? (
-                  <div
-                    className="mx-auto aspect-square w-full max-w-48 rounded-lg bg-gray-100 p-2 dark:bg-gray-800"
-                    data-testid="illustration-large"
-                  >
-                    <img src={picture(slug)} alt={nameOf(slug)} className="illustration size-full object-contain" />
-                  </div>
-                ) : (
-                  <p className="text-sm text-gray-500 dark:text-gray-400">{t('Illustration.None')}</p>
-                )}
-                <div className="mt-2 flex justify-end">
-                  <button
-                    type="button"
-                    onClick={() => setChoosingIllustration(true)}
-                    data-testid="change-illustration"
-                    className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800"
-                  >
-                    {t('Illustration.Change')}
-                  </button>
-                </div>
-              </>
-            )}
-          </section>
+          <div className="mt-6" data-testid="illustration">
+            <Group header={t('Exercises.Picture')}>
+              {choosingIllustration ? (
+                <FreeRow>
+                  <IllustrationPicker selected={slug} onPick={pickIllustration} />
+                  <DoneRow onDone={() => setChoosingIllustration(false)} />
+                </FreeRow>
+              ) : (
+                <>
+                  <FreeRow>
+                    {slug !== undefined ? (
+                      <div
+                        className="mx-auto aspect-square w-full max-w-48 rounded-[0.875rem] bg-fill p-2"
+                        data-testid="illustration-large"
+                      >
+                        <img src={picture(slug)} alt={nameOf(slug)} className="illustration size-full object-contain" />
+                      </div>
+                    ) : (
+                      <p className="text-[0.9375rem] text-label-2">{t('Illustration.None')}</p>
+                    )}
+                  </FreeRow>
+                  <li>
+                    <button
+                      type="button"
+                      onClick={() => setChoosingIllustration(true)}
+                      data-testid="change-illustration"
+                      className={`${ROW} w-full text-[1.0625rem] text-tint`}
+                    >
+                      {t('Illustration.Change')}
+                    </button>
+                  </li>
+                </>
+              )}
+            </Group>
+          </div>
         </>
       )}
     </>

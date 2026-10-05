@@ -42,7 +42,8 @@ it('plans cardio at the top and corrects what was done on its button', async () 
   await waitFor(() => expect(text($('[data-testid=target]'))).toBe('5,5 min · 60'))
   await waitFor(async () => expect((await reload(w.id)).exercises[0]!.targetDurationMinutes).toBe(5.5))
   expect((await reload(w.id)).status).toBe('Planned')
-  expect($$('[data-testid=cardio]')).toEqual([])
+  // The card stays as it is under the editor's sheet.
+  expect($$('[data-testid=cardio]')).toHaveLength(1)
 
   click($('[data-testid=close-editor]'))
   click($('[data-testid=cardio-next]'))

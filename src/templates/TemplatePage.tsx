@@ -5,8 +5,11 @@ import { useRemoteChange, useRepository } from '../services'
 import type { LocalRepository } from '../sync/localRepo'
 import { Limits } from '../training/limits'
 import type { Exercise, Workout, WorkoutTemplate } from '../training/model'
-import { BackLink } from '../ui/Layout'
-import { TextField } from '../ui/TextField'
+import { BackLink, BarItem } from '../ui/Layout'
+import { MenuButton } from '../ui/Menu'
+import { ActionSheet } from '../ui/ActionSheet'
+import { TextRow } from '../ui/Form'
+import { Group } from '../ui/List'
 import { ExerciseList } from '../workout/ExerciseList'
 
 // The editing helpers work on a workout's entry list; a template is the same list without results.
@@ -30,6 +33,21 @@ function read(repository: LocalRepository, id: string) {
     return { template: undefined, exercises: new Map<string, Exercise>(), workouts: [], error: t('Home.LoadFailed') }
   }
 }
+
+const TrashSymbol = () => (
+  <svg
+    className="size-5"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <path d="M5 7h14M10 11v6M14 11v6M7 7l1 13h8l1-13M9.5 7V4.5h5V7" />
+  </svg>
+)
 
 export function TemplatePage({ id }: { id: string }) {
   const repository = useRepository()
@@ -92,9 +110,30 @@ export function TemplatePage({ id }: { id: string }) {
     <>
       <BackLink href="/templates" label={t('Templates.Heading')} />
 
+      {/* The template's actions behind "⋯" in the bar, as the workout's. */}
+      {template && (
+        <BarItem side="trailing">
+          <MenuButton
+            label={t('Workout.Actions')}
+            testId="template-menu"
+            groups={[
+              [
+                {
+                  label: t('Templates.DeleteTemplate'),
+                  icon: <TrashSymbol />,
+                  onSelect: () => setConfirmingDelete(true),
+                  destructive: true,
+                  testId: 'delete-template',
+                },
+              ],
+            ]}
+          />
+        </BarItem>
+      )}
+
       {!template ? (
         <div
-          className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-gray-300 px-4 py-10 text-center text-gray-500 dark:border-gray-700 dark:text-gray-400"
+          className="flex flex-col items-center gap-3 px-6 py-14 text-center text-[1.0625rem] text-label-2"
           data-testid="not-found"
         >
           <p>{t('Templates.NotFound')}</p>
@@ -102,7 +141,9 @@ export function TemplatePage({ id }: { id: string }) {
       ) : (
         <>
           <h1 className="sr-only">{template.name}</h1>
-          <TextField label={t('Templates.Name')} value={template.name} maxLength={Limits.name} onChange={rename} />
+          <Group>
+            <TextRow label={t('Templates.Name')} value={template.name} maxLength={Limits.name} onChange={rename} />
+          </Group>
 
           {error !== undefined && (
             <p className="mt-3 text-sm text-red-600 dark:text-red-400" role="alert">
@@ -122,35 +163,14 @@ export function TemplatePage({ id }: { id: string }) {
             />
           </div>
 
-          <section className="mt-8 flex justify-end border-t border-gray-200 pt-4 dark:border-gray-800">
-            {confirmingDelete ? (
-              <div className="flex items-center gap-2" role="alertdialog" aria-label={t('Templates.DeleteConfirm')}>
-                <span className="text-sm">{t('Templates.DeleteConfirm')}</span>
-                <button
-                  type="button"
-                  onClick={() => void remove()}
-                  className="rounded-lg bg-red-600 px-4 py-2.5 font-medium text-white hover:bg-red-700"
-                >
-                  {t('Templates.Delete')}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setConfirmingDelete(false)}
-                  className="rounded-lg px-4 py-2.5 hover:bg-gray-100 dark:hover:bg-gray-800"
-                >
-                  {t('Common.Cancel')}
-                </button>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setConfirmingDelete(true)}
-                className="rounded-lg px-4 py-2.5 font-medium text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950"
-              >
-                {t('Templates.DeleteTemplate')}
-              </button>
-            )}
-          </section>
+          {confirmingDelete && (
+            <ActionSheet
+              message={t('Templates.DeleteConfirm')}
+              action={t('Templates.Delete')}
+              onAction={() => void remove()}
+              onCancel={() => setConfirmingDelete(false)}
+            />
+          )}
         </>
       )}
     </>

@@ -5,7 +5,9 @@ import { useRemoteChange, useRepository } from '../services'
 import type { LocalRepository } from '../sync/localRepo'
 import { iconFor } from '../training/categories'
 import { newId, type Exercise, type WorkoutTemplate } from '../training/model'
-import { BackLink } from '../ui/Layout'
+import { BackLink, BarItem, GLASS_CIRCLE } from '../ui/Layout'
+import { Chevron, Group } from '../ui/List'
+import { PICTURE_ROW } from '../ui/styles'
 import { PlanIcon } from '../ui/PlanIcon'
 
 /** The templates by name and the exercises, from the repository's memory. */
@@ -61,18 +63,38 @@ export function TemplatesPage() {
   return (
     <>
       <BackLink href="/settings" label={t('Settings.Heading')} />
-      <h1 className="text-xl font-semibold">{t('Templates.Heading')}</h1>
-      <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t('Templates.Help')}</p>
+      <h1 className="large-title">{t('Templates.Heading')}</h1>
 
-      <button
-        type="button"
-        onClick={() => void create()}
-        disabled={creating}
-        data-testid="new-template"
-        className="mt-4 w-full rounded-xl border-2 border-dashed border-blue-300 px-4 py-4 font-medium text-blue-700 hover:bg-blue-50 focus-visible:outline-2 focus-visible:outline-blue-500 disabled:opacity-60 dark:border-blue-800 dark:text-blue-300 dark:hover:bg-blue-950"
-      >
-        {creating ? t('Common.Loading') : '+ ' + t('Templates.New')}
-      </button>
+      {/* Adding, as iOS places it: a plus on glass at the right of the bar. */}
+      <BarItem side="trailing">
+        <button
+          type="button"
+          onClick={() => void create()}
+          disabled={creating}
+          data-testid="new-template"
+          aria-label={t('Templates.New')}
+          title={t('Templates.New')}
+          className={`${GLASS_CIRCLE} disabled:opacity-50`}
+        >
+          {creating ? (
+            <svg className="size-5 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2.5" strokeDasharray="42 100" />
+            </svg>
+          ) : (
+            <svg
+              className="size-[1.375rem]"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              aria-hidden="true"
+            >
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+          )}
+        </button>
+      </BarItem>
 
       {error !== undefined && (
         <p className="mt-3 text-sm text-red-600 dark:text-red-400" role="alert">
@@ -82,11 +104,11 @@ export function TemplatesPage() {
 
       {templates.length === 0 ? (
         <div
-          className="mt-4 flex flex-col items-center gap-3 rounded-xl border border-dashed border-gray-300 px-4 py-10 text-center text-gray-500 dark:border-gray-700 dark:text-gray-400"
+          className="mt-4 flex flex-col items-center gap-3 px-6 py-14 text-center text-[1.0625rem] text-label-2"
           data-testid="templates-empty"
         >
           <svg
-            className="size-10"
+            className="size-12"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -97,16 +119,14 @@ export function TemplatesPage() {
             <rect x="5" y="3" width="14" height="18" rx="2" />
             <path d="M9 8h6M9 12h6M9 16h3" />
           </svg>
-          <p>{t('Next.NoTemplates')}</p>
+          <p className="text-[1.375rem] font-bold text-gray-900 dark:text-white">{t('Next.NoTemplates')}</p>
+          <p className="text-[0.9375rem]">{t('Templates.Help')}</p>
         </div>
       ) : (
-        <ul className="mt-4 flex flex-col gap-2" data-testid="templates">
+        <Group className="mt-5" testId="templates" separatorInset="4.5rem" footer={t('Templates.Help')}>
           {templates.map((template) => (
             <li key={template.id}>
-              <Link
-                href={`/templates/${template.id}`}
-                className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white p-3 hover:bg-gray-50 focus-visible:outline-2 focus-visible:outline-blue-500 dark:border-gray-800 dark:bg-gray-900 dark:hover:bg-gray-800"
-              >
+              <Link href={`/templates/${template.id}`} className={PICTURE_ROW}>
                 <PlanIcon
                   slug={iconFor(
                     { id: template.id, date: '0001-01-01', status: 'Planned', exercises: template.exercises },
@@ -114,28 +134,18 @@ export function TemplatesPage() {
                   )}
                 />
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate font-semibold">{template.name}</span>
-                  <span className="block truncate text-sm text-gray-500 dark:text-gray-400">
+                  <span className="block truncate text-[1.0625rem] font-semibold">{template.name}</span>
+                  <span className="block truncate text-[0.9375rem] text-label-2">
                     {template.exercises
                       .map((e) => exercises.get(e.exerciseId)?.name ?? t('Exercise.Unknown'))
                       .join(', ')}
                   </span>
                 </span>
-                <svg
-                  className="size-5 shrink-0 text-gray-400"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  aria-hidden="true"
-                >
-                  <path d="M9 6l6 6-6 6" />
-                </svg>
+                <Chevron />
               </Link>
             </li>
           ))}
-        </ul>
+        </Group>
       )}
     </>
   )
