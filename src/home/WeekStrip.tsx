@@ -1,5 +1,6 @@
 import { formatDate, t } from '../i18n/i18n'
 import { Link } from '../route'
+import { FROM_TRAINING } from '../ui/tabs'
 import { addDays, mondayOf, weekNumber } from '../training/dates'
 import { shortWorkoutName, type ExerciseMap } from '../training/categories'
 import { statusOf } from '../training/editing'
@@ -125,7 +126,7 @@ export function WeekStrip({
       </SectionHeader>
       <div className="overflow-hidden rounded-[1.625rem] bg-cell">
         <Link
-          href={`/calendar?week=${monday}`}
+          href={`/calendar?week=${monday}&${FROM_TRAINING}`}
           aria-label={`${heading}: ${summary}. ${t('Calendar.Heading')}`}
           data-testid="week-link"
           className="block px-3 py-3 active:bg-cell-pressed focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-500"

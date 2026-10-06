@@ -147,7 +147,13 @@ it('stops at the first month the app accepts', () => {
 
 it.each([
   ['calendar?day=2026-09-21', '/calendar?day=2026-09-21', 'Kalender'],
+  // A week, a month beside a day, and the training tab's calendar all lead back as they were.
+  ['calendar?week=2026-09-21', '/calendar?week=2026-09-21', 'Kalender'],
+  ['calendar?month=2026-10&day=2026-09-21', '/calendar?month=2026-10&day=2026-09-21', 'Kalender'],
+  ['calendar?week=2026-09-21&from=training', '/calendar?week=2026-09-21&from=training', 'Kalender'],
   ['https://example.com', '/', 'Alla pass'],
+  ['calendar?week=2026-09-21&next=https://example.com', '/', 'Alla pass'],
+  ['calendar', '/', 'Alla pass'],
 ])('lets a workout lead back only to the calendar (%s)', async (back, href, text) => {
   const app = createTestApp()
   const workout = await save(app, '2026-09-21', 'Ben')

@@ -8,7 +8,8 @@ import { addDays, addMonths, dayOf, isDateOnly, mondayOf, today, weekNumber } fr
 import { compareOptional, statusOf } from '../training/editing'
 import { isInRange, Limits } from '../training/limits'
 import type { DateOnly, Exercise, Workout, WorkoutStatus } from '../training/model'
-import { BarItem, GLASS_CAPSULE } from '../ui/Layout'
+import { BackLink, BarItem, GLASS_CAPSULE } from '../ui/Layout'
+import { fromTrainingQuery } from '../ui/tabs'
 import { ModalSheet } from '../ui/ModalSheet'
 import { Chevron, Group } from '../ui/List'
 import { ROW } from '../ui/styles'
@@ -148,9 +149,13 @@ export function CalendarPage() {
         ? workouts.filter((w) => w.date >= selectedWeek && w.date <= addDays(selectedWeek, 6))
         : workouts.filter((w) => w.date.slice(0, 7) === month.slice(0, 7))
 
+  // Opened from the training tab, the calendar stays in its stack while it moves (tabs.ts).
+  const stack = fromTrainingQuery(query)
+  const withStack = (search: string) => [search, stack].filter(Boolean).join('&')
+
   const show = (first: DateOnly, selection: Selection) => {
     // Replace, not push: stepping through months should not fill the history.
-    const search = queryFor(first, selection, day)
+    const search = withStack(queryFor(first, selection, day))
     navigate(window.location.pathname + (search ? `?${search}` : ''), { replace: true })
   }
 
@@ -167,7 +172,7 @@ export function CalendarPage() {
 
   const workoutHref = (workout: Workout) =>
     `/workouts/${workout.id}?back=${encodeURIComponent(
-      `calendar?${queryFor(month, selected, day) || `month=${month.slice(0, 7)}`}`,
+      `calendar?${withStack(queryFor(month, selected, day) || `month=${month.slice(0, 7)}`)}`,
     )}`
 
   const stepButton = (months: number, label: string, path: string, testId: string) => {
@@ -394,6 +399,7 @@ export function CalendarPage() {
 
   return (
     <>
+      {stack && <BackLink href="/" label={t('Home.Title')} />}
       <h1 className="sr-only">{t('Calendar.Heading')}</h1>
 
       {/* As iOS's date picker: the month's name at the left, which turns the days into a choice of
@@ -551,7 +557,7 @@ export function CalendarPage() {
           to look for a workout that is gone. */}
       <Group className="mt-section">
         <li>
-          <Link href="/trash" className={ROW} data-testid="trash-link">
+          <Link href={stack ? `/trash?${stack}` : '/trash'} className={ROW} data-testid="trash-link">
             <svg
               className="size-6 shrink-0 text-tint"
               viewBox="0 0 24 24"

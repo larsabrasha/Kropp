@@ -63,19 +63,40 @@ it('raises the profile as a sheet and lowers it again', async () => {
   expect(started).toEqual(['sheet-open', 'sheet-close'])
 })
 
-it('shows the templates in the library from planning, and pushes and pops a template there', async () => {
+it('pushes the templates from planning onto the training tab, and pops back to it', async () => {
   const template = { id: newId(), name: 'Ben', exercises: [] }
   await app.repository.save('template', template.id, template)
   app.renderAt('/')
 
-  // Another tab: no move. Inside it, a template pushes and pops.
   fireEvent.click($('[data-testid=edit-templates]'))
-  fireEvent.click($(`main a[href="/templates/${template.id}"]`))
+  expect(screen.getByTestId('tab-training').getAttribute('aria-current')).toBe('page')
+  fireEvent.click($(`main a[href="/templates/${template.id}?from=training"]`))
   fireEvent.click(screen.getByTitle('Mallar'))
-  fireEvent.click(screen.getByTitle('Bibliotek'))
+  fireEvent.click(screen.getByTitle('Träning'))
 
-  expect(window.location.pathname).toBe('/library')
-  expect(started).toEqual(['push', 'pop', 'pop'])
+  expect(window.location.pathname).toBe('/')
+  expect(started).toEqual(['push', 'push', 'pop', 'pop'])
+})
+
+it('pushes the week from the home page onto the training tab, and keeps it there as it moves', async () => {
+  const w = await seed(workout({ date: TODAY, exercises: [entry({ exerciseId: BENCH.id })] }))
+  app.renderAt('/')
+
+  fireEvent.click($('[data-testid=week-link]'))
+  expect(window.location.search).toContain('from=training')
+  expect(screen.getByTestId('tab-training').getAttribute('aria-current')).toBe('page')
+
+  // Another month is still the training tab's calendar, and so is a workout opened from it.
+  fireEvent.click($('[data-testid=next-month]'))
+  expect(window.location.search).toContain('from=training')
+  fireEvent.click($('[data-testid=previous-month]'))
+  fireEvent.click($(`main a[href^="/workouts/${w.id}"]`))
+  expect(screen.getByTestId('tab-training').getAttribute('aria-current')).toBe('page')
+  fireEvent.click($('[data-testid=back]'))
+  fireEvent.click(screen.getByTitle('Träning'))
+
+  expect(window.location.pathname).toBe('/')
+  expect(started).toEqual(['push', 'push', 'pop', 'pop'])
 })
 
 it('pushes a workout opened from the calendar inside the calendar tab', async () => {

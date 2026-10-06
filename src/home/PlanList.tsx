@@ -7,6 +7,7 @@ import { Picture } from '../ui/Picture'
 import { useState } from 'react'
 import { button, PICTURE_ROW } from '../ui/styles'
 import { useCommit } from '../ui/useCommit'
+import { FROM_TRAINING } from '../ui/tabs'
 
 // Planning a workout as an iOS list: the day on a row of its own, then every template as a row,
 // the suggested one first, marked and chosen, an empty workout last. A tap on a row chooses it,
@@ -111,7 +112,7 @@ export function PlanList({
         <div className="mt-section flex items-baseline justify-between gap-3 px-4 pb-2">
           <h3 className="min-w-0 text-[1.0625rem] font-semibold text-label-2">{t('Next.FromTemplate')}</h3>
           <Link
-            href="/templates"
+            href={`/templates?${FROM_TRAINING}`}
             onClick={onEditTemplates}
             aria-label={t('Next.EditTemplates')}
             data-testid="edit-templates"
@@ -197,7 +198,12 @@ export function PlanList({
       {noTemplates && (
         <p className="px-4 pt-1.5 text-[0.8125rem] text-label-2" data-testid="no-templates">
           {t('Next.NoTemplates')}{' '}
-          <Link href="/templates" onClick={onEditTemplates} data-testid="create-template" className="text-tint">
+          <Link
+            href={`/templates?${FROM_TRAINING}`}
+            onClick={onEditTemplates}
+            data-testid="create-template"
+            className="text-tint"
+          >
             {t('Next.CreateTemplate')}
           </Link>
         </p>

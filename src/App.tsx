@@ -13,7 +13,7 @@ import { TemplatesPage } from './templates/TemplatesPage'
 import { TrashPage } from './trash/TrashPage'
 import { Layout, Sheet, StackInfo } from './ui/Layout'
 import { TabBar } from './ui/TabBar'
-import type { Tab } from './ui/tabs'
+import { isFromTraining, type Tab } from './ui/tabs'
 import { WorkoutPage } from './workout/WorkoutPage'
 
 // The pages as iOS stacks them. Four tabs at the bottom, each a stack of its own: the workouts,
@@ -35,6 +35,9 @@ interface Route {
 /** A workout belongs to the tab of the page it was opened from, which its way back names. */
 const tabOfWorkout = (query: URLSearchParams): Tab => backPage(query)?.tab ?? 'training'
 
+/** The templates are in the library, unless opened from the training tab (tabs.ts). */
+const libraryOrTraining = (query: URLSearchParams): Tab => (isFromTraining(query) ? 'training' : 'library')
+
 /** An exercise's progress is in the library when opened from its list there, else in the statistics. */
 const fromLibrary = (query: URLSearchParams) => query.get('from') === 'library'
 
@@ -47,8 +50,18 @@ const routes: Route[] = [
     depth: (query) => (backPage(query)?.depth ?? 0) + 1,
     tab: tabOfWorkout,
   },
-  { pattern: '/calendar', page: () => <CalendarPage />, depth: 0, tab: 'calendar' },
-  { pattern: '/trash', page: () => <TrashPage />, depth: 1, tab: 'calendar' },
+  {
+    pattern: '/calendar',
+    page: () => <CalendarPage />,
+    depth: (query) => (isFromTraining(query) ? 1 : 0),
+    tab: (query) => (isFromTraining(query) ? 'training' : 'calendar'),
+  },
+  {
+    pattern: '/trash',
+    page: () => <TrashPage />,
+    depth: (query) => (isFromTraining(query) ? 2 : 1),
+    tab: (query) => (isFromTraining(query) ? 'training' : 'calendar'),
+  },
   { pattern: '/stats', page: () => <StatsPage />, depth: 0, tab: 'stats' },
   {
     pattern: '/stats/exercises/:id',
@@ -57,8 +70,13 @@ const routes: Route[] = [
     tab: (query) => (fromLibrary(query) ? 'library' : 'stats'),
   },
   { pattern: '/library', page: () => <LibraryPage />, depth: 0, tab: 'library' },
-  { pattern: '/templates', page: () => <TemplatesPage />, depth: 1, tab: 'library' },
-  { pattern: '/templates/:id', page: ({ id }) => <TemplatePage key={id} id={id!} />, depth: 2, tab: 'library' },
+  { pattern: '/templates', page: () => <TemplatesPage />, depth: 1, tab: libraryOrTraining },
+  {
+    pattern: '/templates/:id',
+    page: ({ id }) => <TemplatePage key={id} id={id!} />,
+    depth: 2,
+    tab: libraryOrTraining,
+  },
   { pattern: '/exercises', page: () => <ExerciseListPage />, depth: 1, tab: 'library' },
   { pattern: '/settings', page: () => <SettingsPage />, depth: 1 },
   { pattern: '/exercises/:id', page: ({ id }) => <ExercisePage key={id} id={id!} />, depth: 3 },

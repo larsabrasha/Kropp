@@ -163,7 +163,7 @@ it('shows the week as days done and planned, and opens the calendar from it', as
     'Pass',
   ])
   const link = screen.getByTestId('week-link')
-  expect(link.getAttribute('href')).toBe('/calendar?week=2026-09-21')
+  expect(link.getAttribute('href')).toBe('/calendar?week=2026-09-21&from=training')
   expect(link.getAttribute('aria-label')).toBe('Den här veckan: 1 gjort · 2 planerade. Kalender')
 })
 
@@ -437,7 +437,7 @@ it('shows this week only, and opens the calendar on it', async () => {
 
   expect(screen.getByTestId('week-heading').textContent).toBe('Den här veckanVecka 39')
   expect(screen.getByTestId('week-summary').textContent).toBe('1 gjort')
-  expect(screen.getByTestId('week-link').getAttribute('href')).toBe('/calendar?week=2026-09-21')
+  expect(screen.getByTestId('week-link').getAttribute('href')).toBe('/calendar?week=2026-09-21&from=training')
   // No other week beside it to turn to.
   expect(screen.getByTestId('week-strip').querySelectorAll('[inert]')).toHaveLength(0)
 })
@@ -470,16 +470,17 @@ it('opens the templates from planning, closing the planning sheet on the way', a
   expect(edit.getAttribute('aria-label')).toBe('Ändra mallar')
   fireEvent.click(edit)
 
-  // In the library, where the templates live.
+  // Pushed onto the training tab, with the way back to it, though the templates live in the library.
   expect(window.location.pathname).toBe('/templates')
   expect(screen.queryByTestId('planning-sheet')).toBeNull()
   expect(document.querySelector('main h1')!.textContent).toBe('Mallar')
-  expect(screen.getByTestId('tab-library').getAttribute('aria-current')).toBe('page')
+  expect(screen.getByTestId('tab-training').getAttribute('aria-current')).toBe('page')
+  expect(screen.getByTitle('Träning')).toBeTruthy()
 })
 
 it('offers to create a template where there are none to plan from', () => {
   createTestApp().renderAt('/')
 
   expect(screen.getByTestId('no-templates').textContent).toBe('Inga mallar än. Skapa en mall')
-  expect(screen.getByTestId('create-template').getAttribute('href')).toBe('/templates')
+  expect(screen.getByTestId('create-template').getAttribute('href')).toBe('/templates?from=training')
 })

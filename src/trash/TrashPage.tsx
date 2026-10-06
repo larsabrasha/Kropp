@@ -5,10 +5,12 @@ import type { LocalRepository } from '../sync/localRepo'
 import { workoutName, type ExerciseMap } from '../training/categories'
 import type { Exercise, TrashedWorkout } from '../training/model'
 import { deleteForGood, deletedForGoodAt, inTrash, purge, restore } from '../training/trash'
+import { useLocation } from '../route'
 import { BackLink } from '../ui/Layout'
 import { ActionSheet } from '../ui/ActionSheet'
 import { Group } from '../ui/List'
 import { button } from '../ui/styles'
+import { fromTrainingQuery } from '../ui/tabs'
 
 const DAY_MS = 86_400_000
 
@@ -29,6 +31,7 @@ function read(repository: LocalRepository) {
 }
 
 export function TrashPage() {
+  const stack = fromTrainingQuery(useLocation().query)
   const repository = useRepository()
   // Read during the first render, so the page never shows without its data.
   const [initial] = useState(() => read(repository))
@@ -77,7 +80,7 @@ export function TrashPage() {
 
   return (
     <>
-      <BackLink href="/calendar" label={t('Calendar.Heading')} />
+      <BackLink href={stack ? `/calendar?${stack}` : '/calendar'} label={t('Calendar.Heading')} />
       <h1 className="large-title">{t('Trash.Heading')}</h1>
 
       {error !== null && (

@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react'
 import { t } from '../i18n/i18n'
-import { navigate } from '../route'
+import { navigate, useLocation } from '../route'
 import { useLocalChange, useRemoteChange, useRepository } from '../services'
 import type { LocalRepository } from '../sync/localRepo'
 import { Limits } from '../training/limits'
@@ -11,6 +11,7 @@ import { ActionSheet } from '../ui/ActionSheet'
 import { TextRow } from '../ui/Form'
 import { Group } from '../ui/List'
 import { ExerciseList } from '../workout/ExerciseList'
+import { fromTrainingQuery } from '../ui/tabs'
 
 // The editing helpers work on a workout's entry list; a template is the same list without results.
 const asWorkout = (template: WorkoutTemplate): Workout => ({
@@ -65,6 +66,9 @@ const TrashSymbol = () => (
 )
 
 export function TemplatePage({ id }: { id: string }) {
+  // Opened from the training tab, the templates stay in its stack (tabs.ts).
+  const stack = fromTrainingQuery(useLocation().query)
+  const suffix = stack ? `?${stack}` : ''
   const repository = useRepository()
   // Read during the first render, so the page never shows without its data.
   const [initial] = useState(() => read(repository, id))
@@ -120,7 +124,7 @@ export function TemplatePage({ id }: { id: string }) {
   async function remove() {
     try {
       await repository.delete('template', id)
-      navigate('/templates')
+      navigate(`/templates${suffix}`)
     } catch (e) {
       console.error('Could not delete template', e)
       setError(t('Home.SaveFailed'))
@@ -129,7 +133,7 @@ export function TemplatePage({ id }: { id: string }) {
 
   return (
     <>
-      <BackLink href="/templates" label={t('Templates.Heading')} />
+      <BackLink href={`/templates${suffix}`} label={t('Templates.Heading')} />
 
       {/* The template's actions behind "⋯" in the bar, as the workout's; Done in its place in edit mode. */}
       {template && editing && (

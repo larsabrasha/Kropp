@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'react'
 import { compareText, t } from '../i18n/i18n'
-import { Link, navigate } from '../route'
+import { Link, navigate, useLocation } from '../route'
 import { useRemoteChange, useRepository } from '../services'
 import type { LocalRepository } from '../sync/localRepo'
 import { iconFor } from '../training/categories'
@@ -12,6 +12,7 @@ import { ActionSheet } from '../ui/ActionSheet'
 import { Picture } from '../ui/Picture'
 import { SwipeActions } from '../ui/SwipeActions'
 import { TrashSymbol } from '../ui/symbols'
+import { fromTrainingQuery } from '../ui/tabs'
 
 /** The templates by name and the exercises, from the repository's memory. */
 function read(repository: LocalRepository) {
@@ -27,6 +28,9 @@ function read(repository: LocalRepository) {
 }
 
 export function TemplatesPage() {
+  // Opened from the training tab, the templates stay in its stack (tabs.ts).
+  const stack = fromTrainingQuery(useLocation().query)
+  const suffix = stack ? `?${stack}` : ''
   const repository = useRepository()
   // Read during the first render, so the page never shows without its data.
   const [initial] = useState(() => read(repository))
@@ -55,7 +59,7 @@ export function TemplatesPage() {
     try {
       const template: WorkoutTemplate = { id: newId(), name: t('Templates.New'), exercises: [] }
       await repository.save('template', template.id, template)
-      navigate(`/templates/${template.id}`)
+      navigate(`/templates/${template.id}${suffix}`)
     } catch (e) {
       console.error('Could not create template', e)
       setError(t('Home.SaveFailed'))
@@ -78,7 +82,11 @@ export function TemplatesPage() {
 
   return (
     <>
-      <BackLink href="/library" label={t('Library.Heading')} />
+      {stack ? (
+        <BackLink href="/" label={t('Home.Title')} />
+      ) : (
+        <BackLink href="/library" label={t('Library.Heading')} />
+      )}
       <h1 className="large-title">{t('Templates.Heading')}</h1>
 
       {/* Adding, as iOS places it: a plus on glass at the right of the bar. */}
@@ -154,7 +162,7 @@ export function TemplatesPage() {
                   },
                 ]}
               >
-                <Link href={`/templates/${template.id}`} className={PICTURE_ROW}>
+                <Link href={`/templates/${template.id}${suffix}`} className={PICTURE_ROW}>
                   <Picture
                     size="plan"
                     slug={iconFor(

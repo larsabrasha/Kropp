@@ -25,9 +25,20 @@ import { CheerCard } from './CheerCard'
 import { ExerciseList } from './ExerciseList'
 import { Picture } from '../ui/Picture'
 
-// Only the calendar or an exercise's statistics of this app, never a URL from elsewhere.
-const CALENDAR_BACK =
-  /^\/?(calendar\?(month=\d{4}-\d{2}|day=\d{4}-\d{2}-\d{2})|stats\/exercises\/[0-9a-fA-F-]{36}(\?from=library)?)$/
+// The way back is only ever the calendar or an exercise's statistics of this app, never a URL from
+// elsewhere: the calendar with any of its own parameters (CalendarPage's queryFor, and the
+// training tab's from=training), each checked on its own.
+const STATS_BACK = /^stats\/exercises\/[0-9a-fA-F-]{36}(\?from=library)?$/
+const CALENDAR_PARAM = /^(month=\d{4}-\d{2}|day=\d{4}-\d{2}-\d{2}|week=\d{4}-\d{2}-\d{2}|from=training)$/
+
+/** The way back without its leading slash, when it is one of those; else undefined. */
+function safeBackOf(back: string): string | undefined {
+  const path = back.replace(/^\//, '')
+  if (STATS_BACK.test(path)) return path
+  const [page, search = ''] = path.split('?')
+  const params = search.split('&')
+  return page === 'calendar' && search !== '' && params.every((p) => CALENDAR_PARAM.test(p)) ? path : undefined
+}
 
 /** The pictures of a workout's exercises: only the ones in use, never the whole catalog. */
 function picturesOf(workout: Workout | undefined, exercises: ExerciseMap): string[] {
@@ -103,7 +114,7 @@ const Symbol = ({ d }: { d: string }) => (
 export function WorkoutPage({ id }: { id: string }) {
   const repository = useRepository()
   const { query } = useLocation()
-  const safeBack = CALENDAR_BACK.exec(query.get('back') ?? '')?.[1]
+  const safeBack = safeBackOf(query.get('back') ?? '')
 
   // Read during the first render, so the page never shows without its data.
   // A plan for today or later opens carried on from what was done last time (refreshPlan), and is
