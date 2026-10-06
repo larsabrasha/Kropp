@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { t } from '../i18n/i18n'
 import { completeCardio, hasResult } from '../training/editing'
 import { Limits } from '../training/limits'
@@ -42,6 +43,9 @@ export function EntryCardio({
   onClose: () => void
   onClear: () => void
 }) {
+  // The result tapped, for its fields to pop over it on an iPad or a computer.
+  const [anchor, setAnchor] = useState<HTMLElement | null>(null)
+
   // Correcting what was done is a task of its own, as for a set: a small sheet over the workout.
   const editor = editing && (
     <ModalSheet
@@ -49,6 +53,7 @@ export function EntryCardio({
       onClose={onClose}
       testId="cardio-editor"
       closeTestId="close-editor"
+      anchor={anchor}
       confirm
       fit
       portal={false}
@@ -116,7 +121,10 @@ export function EntryCardio({
       <div className="mt-4 flex" data-testid="cardio">
         <button
           type="button"
-          onClick={onToggle}
+          onClick={(e) => {
+            setAnchor(e.currentTarget)
+            onToggle()
+          }}
           aria-expanded="false"
           aria-label={t('Entry.CardioDone', done)}
           className="relative inline-flex min-h-14 flex-1 items-center justify-center rounded-full bg-green-700 px-3 text-lg font-semibold text-white tabular-nums hover:bg-green-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-500"

@@ -25,6 +25,8 @@ export function useSheetDrag(
   bar: RefObject<HTMLElement | null>,
   page: RefObject<HTMLElement | null>,
   dismiss: () => void,
+  /** Whether it may be pulled now: not while it shows as a popover (ModalSheet). */
+  canDrag: () => boolean = () => true,
 ) {
   useEffect(() => {
     const el = sheet.current
@@ -32,6 +34,10 @@ export function useSheetDrag(
     let pull: Pull | null = null
 
     const start = (x: number, y: number, time: number, target: EventTarget | null) => {
+      if (!canDrag()) {
+        pull = null
+        return
+      }
       const fromBar = target instanceof Node && !!bar.current?.contains(target)
       const atTop = (page.current?.scrollTop ?? 0) <= 0
       pull = { x, y, time, canPull: fromBar || atTop, pulling: false, dy: 0 }
@@ -124,5 +130,5 @@ export function useSheetDrag(
       el.removeEventListener('touchcancel', touchEnd)
       el.removeEventListener('pointerdown', mouseDown)
     }
-  }, [sheet, bar, page, dismiss])
+  }, [sheet, bar, page, dismiss, canDrag])
 }

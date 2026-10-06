@@ -270,6 +270,42 @@ html:has(.modal-sheet) {
   overflow: hidden;
 }
 
+/* On an iPad or a computer (a regular width, from 768px), as iPadOS presents them: a sheet is no
+   longer the width of the screen but a card in its middle, round at every corner, without a
+   grabber. The calendar's and the settings' sheets (.sheet) as a page sheet, 704pt wide; a task's
+   sheet (.modal-sheet) as a form sheet, 540pt wide, as tall as it needs; an action sheet's
+   question centred as an alert. Centred by margins, not transforms, which the slide up uses. */
+@media (min-width: 768px) {
+  .sheet,
+  .modal-sheet {
+    inset: 0;
+    margin: auto;
+    border-radius: 2.375rem;
+  }
+  .sheet {
+    width: min(44rem, 100% - 2rem);
+    height: min(100dvh - 4rem, 60rem);
+  }
+  .modal-sheet {
+    width: min(34rem, 100% - 2rem);
+    height: min(100dvh - 4rem, 46rem);
+  }
+  .modal-sheet.modal-sheet-fit {
+    inset: 0;
+    height: fit-content;
+    max-height: calc(100dvh - 4rem);
+  }
+  .sheet-grabber {
+    display: none;
+  }
+  .action-sheet {
+    inset: 0;
+    margin: auto;
+    height: fit-content;
+    width: min(28rem, 100% - 2rem);
+  }
+}
+
 /* The groups of an action sheet (ActionSheet.tsx): glass a little thicker than the bar's, so the
    question stays legible over any page. */
 .action-sheet-group,
@@ -295,7 +331,8 @@ html:has(.modal-sheet) {
    black page below, so its edge shows. */
 @media (prefers-color-scheme: dark) {
   .sheet,
-  .modal-sheet {
+  .modal-sheet,
+  .popover {
     --color-ground: #1c1c1e;
     --color-cell: #2c2c2e;
     --color-cell-pressed: #3a3a3c;

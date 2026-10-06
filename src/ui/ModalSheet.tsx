@@ -11,6 +11,32 @@ import { useSheetDrag } from './useSheetDrag'
 
 const CLOSE_MS = 280
 
+// On an iPad or a computer, a small choice opened from a control shows as a popover beside it, as
+// iPadOS presents one: glass, as wide as it needs, pointing at what opened it, with nothing dimmed.
+const REGULAR_WIDTH = '(min-width: 768px)'
+const POPOVER_WIDTH = 352
+
+interface Place {
+  left: number
+  top?: number
+  bottom?: number
+  maxHeight: number
+}
+
+/** Below the anchor when there is room, else above it; never past the window's edges. */
+function placeBy(anchor: HTMLElement): Place {
+  const box = anchor.getBoundingClientRect()
+  const left = Math.min(
+    Math.max(box.left + box.width / 2 - POPOVER_WIDTH / 2, 12),
+    window.innerWidth - POPOVER_WIDTH - 12,
+  )
+  const below = window.innerHeight - box.bottom - 20
+  const above = box.top - 20
+  return below >= 320 || below >= above
+    ? { left, top: box.bottom + 8, maxHeight: below }
+    : { left, bottom: window.innerHeight - box.top + 8, maxHeight: above }
+}
+
 export function ModalSheet({
   title,
   onClose,
@@ -21,6 +47,7 @@ export function ModalSheet({
   portal = true,
   dismissed = false,
   confirm = false,
+  anchor,
 }: {
   title: string
   onClose: () => void
@@ -44,12 +71,37 @@ export function ModalSheet({
    * app's colour, as iOS 26 ends an edit, rather than a cross, which reads as leaving it undone.
    */
   confirm?: boolean
+  /**
+   * What opened it, for a small choice (a set, a month): on an iPad or a computer the sheet is
+   * then a popover beside it. On a phone it is a sheet either way.
+   */
+  anchor?: HTMLElement | null
 }) {
   const [closing, setClosing] = useState(false)
   const sheet = useRef<HTMLDivElement>(null)
   const bar = useRef<HTMLElement>(null)
   const page = useRef<HTMLDivElement>(null)
   const root = useRef<HTMLDivElement>(null)
+  // Where it pops over; undefined for a sheet. Measured again whenever the window changes size, so
+  // it turns from one into the other while open, and a popover follows what opened it.
+  const placeNow = useCallback(
+    () =>
+      anchor?.isConnected && typeof matchMedia === 'function' && matchMedia(REGULAR_WIDTH).matches
+        ? placeBy(anchor)
+        : undefined,
+    [anchor],
+  )
+  const [place, setPlace] = useState<Place | undefined>(placeNow)
+  const placeRef = useRef(place)
+  useEffect(() => {
+    placeRef.current = place
+  }, [place])
+  useEffect(() => {
+    const update = () => setPlace(placeNow())
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
+  }, [placeNow])
+  const canDrag = useCallback(() => placeRef.current === undefined, [])
 
   const close = useCallback(() => {
     if (dismissed) return
@@ -58,7 +110,7 @@ export function ModalSheet({
     setTimeout(onClose, CLOSE_MS)
   }, [onClose, dismissed])
 
-  useSheetDrag(sheet, bar, page, close)
+  useSheetDrag(sheet, bar, page, close, canDrag)
 
   // Done from inside: sinks away as when closed; close above ignores a tap meanwhile.
   const reduced = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -91,7 +143,11 @@ export function ModalSheet({
   const content = (
     <div ref={root} className="fixed inset-0 z-50">
       <div
-        className={`absolute inset-0 bg-black/30 dark:bg-black/50 ${sinking ? 'motion-safe:animate-[fade-out_280ms_ease-in_forwards]' : 'motion-safe:animate-[fade-in_300ms_ease-out]'}`}
+        className={
+          place
+            ? 'absolute inset-0'
+            : `absolute inset-0 bg-black/30 dark:bg-black/50 ${sinking ? 'motion-safe:animate-[fade-out_280ms_ease-in_forwards]' : 'motion-safe:animate-[fade-in_300ms_ease-out]'}`
+        }
         onClick={close}
         aria-hidden="true"
       />
@@ -101,11 +157,26 @@ export function ModalSheet({
         aria-modal="true"
         aria-label={title}
         data-testid={testId}
-        className={`modal-sheet absolute flex flex-col overflow-hidden ${fit ? 'modal-sheet-fit inset-x-2 rounded-[2.375rem]' : 'inset-x-0 bottom-0 rounded-t-[2.375rem]'} bg-ground text-gray-900 shadow-[0_-4px_40px_rgb(0_0_0/0.2)] dark:text-white ${sinking ? 'motion-safe:animate-[sheet-down_280ms_cubic-bezier(0.32,0.72,0,1)_forwards]' : 'motion-safe:animate-[sheet-up_420ms_cubic-bezier(0.32,0.72,0,1)]'}`}
+        style={
+          place
+            ? {
+                left: place.left,
+                top: place.top,
+                bottom: place.bottom,
+                maxHeight: place.maxHeight,
+                width: POPOVER_WIDTH,
+              }
+            : undefined
+        }
+        className={
+          place
+            ? `popover menu absolute flex flex-col overflow-hidden rounded-[1.625rem] text-gray-900 dark:text-white ${place.top !== undefined ? 'origin-top' : 'origin-bottom'} ${sinking ? 'motion-safe:animate-[fade-out_200ms_ease-in_forwards]' : 'motion-safe:animate-[menu-in_320ms_cubic-bezier(0.32,0.72,0,1)]'}`
+            : `modal-sheet absolute flex flex-col overflow-hidden ${fit ? 'modal-sheet-fit inset-x-2 rounded-[2.375rem]' : 'inset-x-0 bottom-0 rounded-t-[2.375rem]'} bg-ground text-gray-900 shadow-[0_-4px_40px_rgb(0_0_0/0.2)] dark:text-white ${sinking ? 'motion-safe:animate-[sheet-down_280ms_cubic-bezier(0.32,0.72,0,1)_forwards]' : 'motion-safe:animate-[sheet-up_420ms_cubic-bezier(0.32,0.72,0,1)]'}`
+        }
       >
-        <header ref={bar} className="relative shrink-0 touch-none pt-2">
+        <header ref={bar} className={`relative shrink-0 touch-none ${place ? '' : 'pt-2'}`}>
           <div
-            className="absolute top-1.5 left-1/2 h-[0.3125rem] w-9 -translate-x-1/2 rounded-full bg-label-3"
+            className={`sheet-grabber absolute ${place ? 'hidden' : ''} top-1.5 left-1/2 h-[0.3125rem] w-9 -translate-x-1/2 rounded-full bg-label-3`}
             aria-hidden="true"
           />
           <div className="mx-auto flex h-14 max-w-2xl items-center gap-3 px-4">
@@ -139,7 +210,7 @@ export function ModalSheet({
         </header>
         <div ref={page} className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
           <div
-            className={`mx-auto max-w-2xl px-5 pt-2 ${fit ? 'pb-5' : 'pb-[calc(2rem+env(safe-area-inset-bottom))]'}`}
+            className={`mx-auto max-w-2xl pt-2 ${place ? 'px-4 pb-4' : fit ? 'px-5 pb-5' : 'px-5 pb-[calc(2rem+env(safe-area-inset-bottom))]'}`}
           >
             {children}
           </div>

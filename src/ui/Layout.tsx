@@ -275,7 +275,7 @@ export function Sheet({ children, pageKey }: { children: ReactNode; pageKey: str
         trailingSlot={setTrailing}
       >
         <div
-          className="absolute top-1.5 left-1/2 h-[0.3125rem] w-9 -translate-x-1/2 rounded-full bg-label-3"
+          className="sheet-grabber absolute top-1.5 left-1/2 h-[0.3125rem] w-9 -translate-x-1/2 rounded-full bg-label-3"
           aria-hidden="true"
         />
       </NavBar>

@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
-import { waitFor } from '@testing-library/react'
-import { expect, it } from 'vitest'
+import { act, waitFor } from '@testing-library/react'
+import { expect, it, vi } from 'vitest'
 import {
   $,
   $$,
@@ -471,4 +471,38 @@ it('has the check of a done set beside the number', async () => {
   const check = await waitForElement('[data-testid=set-done] [data-testid=check]')
   expect(check.classList).not.toContain('absolute')
   expect(text(check.parentElement!)).toBe('8')
+})
+
+it('pops a done set over its button on a wide screen, and turns into a sheet when it narrows', async () => {
+  let wide = true
+  vi.stubGlobal('matchMedia', (query: string) => ({
+    matches: query === '(min-width: 768px)' ? wide : false,
+    media: query,
+  }))
+  try {
+    const w = await seed(
+      workout({
+        date: '2026-09-23',
+        exercises: [entry({ exerciseId: BENCH.id, targetSets: 3, targetReps: 8, sets: [{ reps: 8 }] })],
+      }),
+    )
+    open(w.id)
+
+    click(await waitForElement('[data-testid=set-done]'))
+    expect($('[data-testid=set-editor]').classList).toContain('popover')
+
+    wide = false
+    act(() => {
+      window.dispatchEvent(new Event('resize'))
+    })
+    expect($('[data-testid=set-editor]').classList).toContain('modal-sheet')
+
+    wide = true
+    act(() => {
+      window.dispatchEvent(new Event('resize'))
+    })
+    expect($('[data-testid=set-editor]').classList).toContain('popover')
+  } finally {
+    vi.unstubAllGlobals()
+  }
 })

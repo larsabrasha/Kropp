@@ -123,6 +123,8 @@ export function CalendarPage() {
   const [choosing, setChoosing] = useState<number>()
   // Set once a month is chosen there: the sheet sinks away.
   const [chosen, setChosen] = useState(false)
+  // The month's name, for the choice to pop over it on an iPad or a computer.
+  const [monthButton, setMonthButton] = useState<HTMLElement | null>(null)
   const closeChoice = useCallback(() => {
     setChoosing(undefined)
     setChosen(false)
@@ -399,7 +401,10 @@ export function CalendarPage() {
         <h2 className="flex min-w-0 flex-1" aria-live="polite">
           <button
             type="button"
-            onClick={() => setChoosing(Number(month.slice(0, 4)))}
+            onClick={(e) => {
+              setMonthButton(e.currentTarget)
+              setChoosing(Number(month.slice(0, 4)))
+            }}
             aria-haspopup="dialog"
             aria-label={`${monthName}, ${t('Calendar.ChooseMonth')}`}
             data-testid="month-picker"
@@ -461,7 +466,14 @@ export function CalendarPage() {
 
       {/* Choosing a month further away is a task of its own, in a sheet, as a choice is on iOS. */}
       {choosing !== undefined && (
-        <ModalSheet title={t('Calendar.ChooseMonth')} onClose={closeChoice} dismissed={chosen} testId="month-sheet" fit>
+        <ModalSheet
+          title={t('Calendar.ChooseMonth')}
+          onClose={closeChoice}
+          dismissed={chosen}
+          testId="month-sheet"
+          fit
+          anchor={monthButton}
+        >
           {monthChoice(choosing)}
         </ModalSheet>
       )}

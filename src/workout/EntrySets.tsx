@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { t } from '../i18n/i18n'
 import { completeNextSet, replaceSet } from '../training/editing'
 import { Limits } from '../training/limits'
@@ -42,6 +42,8 @@ export function EntrySets({
   onRemoveSet: (index: number) => void
 }) {
   const plannedSlots = Math.max(entry.targetSets ?? 0, entry.sets.length)
+  // The set tapped, for its fields to pop over it on an iPad or a computer.
+  const [anchor, setAnchor] = useState<HTMLElement | null>(null)
 
   // Three to a row on a phone whatever the count, since three sets is the common case.
   const setColumns =
@@ -91,7 +93,10 @@ export function EntrySets({
               <button
                 key={index}
                 type="button"
-                onClick={() => onToggleSet(index)}
+                onClick={(e) => {
+                  setAnchor(e.currentTarget)
+                  onToggleSet(index)
+                }}
                 aria-expanded={open}
                 aria-label={t('Entry.SetDone', index + 1, setText(set, kind))}
                 className={`relative inline-flex min-h-14 min-w-0 flex-col items-center justify-center rounded-full px-1 whitespace-nowrap tabular-nums focus-visible:outline-2 focus-visible:outline-offset-2 ${shortSet ? 'bg-amber-300 text-gray-900 hover:bg-amber-400 focus-visible:outline-amber-500' : 'bg-green-700 text-white hover:bg-green-800 focus-visible:outline-green-500'}`}
@@ -149,6 +154,7 @@ export function EntrySets({
           onClose={onClose}
           testId="set-editor"
           closeTestId="close-editor"
+          anchor={anchor}
           confirm
           fit
           portal={false}

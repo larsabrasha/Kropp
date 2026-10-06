@@ -38,7 +38,7 @@ export function ActionSheet({
       <div
         role="alertdialog"
         aria-label={message}
-        className="absolute inset-x-2 bottom-[calc(env(safe-area-inset-bottom)+0.5rem)] mx-auto flex max-w-md flex-col gap-2 motion-safe:animate-[sheet-up_380ms_cubic-bezier(0.32,0.72,0,1)]"
+        className="action-sheet absolute inset-x-2 bottom-[calc(env(safe-area-inset-bottom)+0.5rem)] mx-auto flex max-w-md flex-col gap-2 motion-safe:animate-[sheet-up_380ms_cubic-bezier(0.32,0.72,0,1)]"
       >
         <div className="action-sheet-group overflow-hidden rounded-[1.75rem]">
           <p className="px-4 py-3.5 text-center text-[0.8125rem] text-label-2">{message}</p>
