@@ -67,6 +67,12 @@ function queryFor(month: DateOnly, selected: Selection, day: DateOnly): string {
 
 /** The tint under a chosen week (CalendarPage): light enough for every number on it to keep 4.5:1. */
 const WEEK_BAND = 'bg-tint/12 dark:bg-tint/20'
+/**
+ * The capsule reaches 6pt past the grid at both ends, its content where it was, so the week's
+ * number and Sunday are not pressed against its round ends.
+ */
+const BAND_OUT_LEFT = '-ml-1.5 pl-1.5'
+const BAND_OUT_RIGHT = '-mr-1.5 pr-1.5'
 
 function dotColour(status: WorkoutStatus): string {
   switch (status) {
@@ -188,7 +194,9 @@ export function CalendarPage() {
     const isToday = date === day && inMonth
     // A chosen week lies on one tinted capsule, from its number to its Sunday, so it reads as one.
     const inWeek = selectedWeek !== undefined && date >= selectedWeek && date <= addDays(selectedWeek, 6)
-    const band = inWeek ? `${WEEK_BAND} ${date === addDays(selectedWeek, 6) ? 'rounded-r-full' : ''}` : ''
+    const band = inWeek
+      ? `${WEEK_BAND} ${date === addDays(selectedWeek, 6) ? `rounded-r-full ${BAND_OUT_RIGHT}` : ''}`
+      : ''
     // As iOS's calendar marks days: today's number red, the chosen day's in a filled circle, red
     // when it is today, else black (white in dark mode). Workouts are dots under the number.
     const number = (on: boolean) =>
@@ -273,7 +281,7 @@ export function CalendarPage() {
           <div role="row" className="contents" key={monday}>
             <span
               role="rowheader"
-              className={`flex items-center justify-center ${selectedWeek === monday ? `${WEEK_BAND} rounded-l-full` : ''}`}
+              className={`flex items-center justify-center ${selectedWeek === monday ? `${WEEK_BAND} rounded-l-full ${BAND_OUT_LEFT}` : ''}`}
             >
               <button
                 type="button"
