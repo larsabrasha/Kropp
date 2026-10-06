@@ -1,17 +1,61 @@
 // @vitest-environment happy-dom
 import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { expect, it } from 'vitest'
+import { newId } from '../training/model'
 import { createTestApp } from '../test/render'
 
-it('names the home page for what it holds, and shows the bar buttons on every page', async () => {
+it('names the home page for what it holds, with the tabs below and settings in the bar', async () => {
   const app = createTestApp()
   app.renderAt('/')
 
   expect(screen.getByTestId('title').textContent).toBe('Träning')
-  expect(screen.getByTestId('calendar-link').getAttribute('aria-label')).toBe('Kalender')
-  expect(screen.getByTestId('settings-link').getAttribute('aria-label')).toBe('Inställningar')
+  const tabs = within(screen.getByTestId('tab-bar')).getAllByRole('link')
+  expect(tabs.map((a) => [a.textContent, a.getAttribute('href')])).toEqual([
+    ['Träning', '/'],
+    ['Kalender', '/calendar'],
+    ['Statistik', '/stats'],
+  ])
+  expect(screen.getByTestId('tab-training').getAttribute('aria-current')).toBe('page')
+  // Settings behind a picture of the user, as Health has the account; named for what it opens.
+  const settings = screen.getByTestId('settings-link')
+  expect(settings.getAttribute('aria-label')).toBe('Inställningar')
+  expect(within(settings).getByTestId('profile-picture')).toBeTruthy()
   // Sync keeps out of the way, in the settings.
   expect(screen.queryByTestId('sync-status')).toBeNull()
+})
+
+it('shows the calendar and the statistics as tabs, not sheets, each with settings in its bar', () => {
+  const app = createTestApp()
+  app.renderAt('/')
+
+  fireEvent.click(screen.getByTestId('tab-calendar'))
+  expect(window.location.pathname).toBe('/calendar')
+  expect(screen.queryByRole('dialog')).toBeNull()
+  expect(screen.getByTestId('tab-calendar').getAttribute('aria-current')).toBe('page')
+  expect(screen.getByTestId('settings-link')).toBeTruthy()
+
+  fireEvent.click(screen.getByTestId('tab-stats'))
+  expect(window.location.pathname).toBe('/stats')
+  expect(screen.queryByRole('dialog')).toBeNull()
+})
+
+it('keeps where each tab was, and takes a tab back to its first page when tapped again', async () => {
+  const app = createTestApp()
+  const id = newId()
+  await app.repository.save('workout', id, { id, date: '2026-09-21', status: 'Planned', exercises: [] })
+  app.renderAt(`/workouts/${id}`)
+  // Settings belong to a tab's first page only.
+  expect(screen.queryByTestId('settings-link')).toBeNull()
+
+  fireEvent.click(screen.getByTestId('tab-calendar'))
+  expect(window.location.pathname).toBe('/calendar')
+  // Back on Träning, the workout is still open.
+  expect(screen.getByTestId('tab-training').getAttribute('href')).toBe(`/workouts/${id}`)
+  fireEvent.click(screen.getByTestId('tab-training'))
+  expect(window.location.pathname).toBe(`/workouts/${id}`)
+
+  fireEvent.click(screen.getByTestId('tab-training'))
+  expect(window.location.pathname).toBe('/')
 })
 
 it('opens settings as a sheet over the page below, which takes no input meanwhile', () => {

@@ -312,9 +312,12 @@ it('shows an existing plan instead of a suggestion', async () => {
   expect((await screen.findByTestId('upcoming')).getAttribute('href')).toBe(`/workouts/${planned.id}`)
   expect(screen.getByTestId('next')).not.toBeNull()
 
-  // Planning another waits behind the plus button, in a sheet that Escape closes again.
+  // Planning another waits behind a row of the list under the card, as iOS adds to a list, in a
+  // sheet that Escape closes again.
   expect(screen.queryByTestId('plan-card')).toBeNull()
   expect(screen.getByTestId('open-planning').textContent.trim()).toBe('Lägg till ett träningspass')
+  expect(screen.getByTestId('open-planning').closest('main ul')).not.toBeNull()
+  expect(screen.getByTestId('open-planning').closest('header')).toBeNull()
   fireEvent.click(screen.getByTestId('open-planning'))
   const sheet = screen.getByTestId('planning-sheet')
   expect(sheet.getAttribute('aria-label')).toBe('Lägg till ett träningspass')

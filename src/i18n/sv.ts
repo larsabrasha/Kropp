@@ -236,6 +236,7 @@ export const sv: Messages = {
   'Stats.Total': 'Totalt',
   'Stats.Volume': 'Lyft vikt',
   'Stats.Workouts': 'Pass',
+  'Tabs.Label': 'Flikar',
   'Templates.Delete': 'Ta bort',
   'Templates.DeleteConfirm': 'Ta bort mallen? Pass som planerats från den finns kvar.',
   'Templates.DeleteTemplate': 'Ta bort mallen',

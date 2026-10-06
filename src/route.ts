@@ -67,12 +67,12 @@ const scrollTo = (top: number) => window.scrollTo({ top, left: 0, behavior: 'ins
  * back, the page below is scrolled to where it was once it has rendered. A sheet scrolls on its
  * own and leaves the page below it where it was, so no change of page in or out of one scrolls.
  */
-function show(from: string, to: string, toTop: () => void) {
+function show(from: string, to: string, toTop: () => void, restore = false) {
   shown = to
   const transition = transitionFor(from, to)
   // Back to the page below: the row that led away is lit as it is uncovered.
   if (transition === 'pop' || transition === 'sheet-pop') highlight(from)
-  const back = transition === 'pop' ? scrolls.get(to) : undefined
+  const back = transition === 'pop' ? scrolls.get(to) : restore ? (scrolls.get(to) ?? 0) : undefined
   const before = transition?.startsWith('sheet') || back !== undefined ? () => {} : toTop
   // Rendered at once (flushSync) when it must be there to scroll, or for the transition to capture.
   const render = (sync: boolean) => {
@@ -141,18 +141,24 @@ export function useLocation(): Location {
 
 /**
  * Goes to a page of the app. replace swaps the current history entry, for a change that should
- * not be a step of its own on the way back (a filter, a month in the calendar).
+ * not be a step of its own on the way back (a filter, a month in the calendar). restoreScroll
+ * puts the page where it was last left, as a tab of iOS shows its page as it was.
  */
-export function navigate(to: string, options: { replace?: boolean } = {}) {
+export function navigate(to: string, options: { replace?: boolean; restoreScroll?: boolean } = {}) {
   const from = here()
   scrolls.set(from, window.scrollY)
   // The page already there is no new step back: a second tap while a transition starts.
   const same = new URL(to, window.location.href).href === window.location.href
   if (options.replace || same) window.history.replaceState(null, '', to)
   else window.history.pushState(null, '', to)
-  show(from, here(), () => {
-    if (!options.replace) scrollTo(0)
-  })
+  show(
+    from,
+    here(),
+    () => {
+      if (!options.replace) scrollTo(0)
+    },
+    options.restoreScroll,
+  )
 }
 
 type LinkProps = AnchorHTMLAttributes<HTMLAnchorElement> & { href: string; replace?: boolean }

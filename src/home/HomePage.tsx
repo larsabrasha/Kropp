@@ -20,6 +20,7 @@ import { planFrom, suggestDate, suggestDateAfter, suggestTemplate, upcoming as u
 import { Group } from '../ui/List'
 import { SECTION_ACTION, SectionHeader } from '../ui/SectionHeader'
 import { ModalSheet } from '../ui/ModalSheet'
+import { PICTURE_ROW } from '../ui/styles'
 import { dayText, relativeDay } from './dayText'
 import { NextWorkoutCard } from './NextWorkoutCard'
 import { PlanList } from './PlanList'
@@ -194,20 +195,54 @@ export function HomePage() {
 
       {upcoming === undefined && planList(t('Next.PlanNext'))}
 
-      {workouts.length > 0 && <WeekStrip workouts={workouts} exercises={exercises} day={day} />}
-
-      {plannedLater.length > 0 && (
-        <section className="mt-section">
-          <SectionHeader>{t('Home.Planned')}</SectionHeader>
+      {/* The workouts planned after the next, and with a workout already planned, a row to add
+          another, last in the list as iOS adds to its own lists (Health's "Lägg till data"): what
+          is ahead together, under the card. With nothing more planned, the row stands right
+          under the card. The week and what was done come after. */}
+      {(plannedLater.length > 0 || upcoming !== undefined) && (
+        <section className={plannedLater.length > 0 ? 'mt-section' : 'mt-3'}>
+          {plannedLater.length > 0 && <SectionHeader>{t('Home.Planned')}</SectionHeader>}
           <Group separatorInset="4.25rem">
             {plannedLater.map((workout) => (
               <li key={workout.id} data-testid="planned-row">
                 <WorkoutRow workout={workout} exercises={exercises} today={day} />
               </li>
             ))}
+            {upcoming !== undefined && (
+              <li>
+                <button
+                  type="button"
+                  onClick={() => {
+                    // A workout planned on the page before has nothing to do with this sheet.
+                    setPlanned(false)
+                    setPlanningOpen(true)
+                  }}
+                  aria-haspopup="dialog"
+                  aria-expanded={planningOpen}
+                  data-testid="open-planning"
+                  className={`${PICTURE_ROW} w-full text-left text-[1.0625rem] text-tint`}
+                >
+                  <span className="flex size-11 shrink-0 items-center justify-center" aria-hidden="true">
+                    <svg
+                      className="size-6"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                    >
+                      <path d="M12 5v14M5 12h14" />
+                    </svg>
+                  </span>
+                  {t('Next.PlanAnother')}
+                </button>
+              </li>
+            )}
           </Group>
         </section>
       )}
+
+      {workouts.length > 0 && <WeekStrip workouts={workouts} exercises={exercises} day={day} />}
 
       <section className="mt-section">
         {workouts.length === 0 && (
@@ -256,47 +291,10 @@ export function HomePage() {
         )}
       </section>
 
-      {/* With a workout already planned, adding another is the exception: a floating plus button at
-          the bottom right opens the templates in a sheet. */}
-      {upcoming !== undefined && (
-        <>
-          <div className="h-20" aria-hidden="true" />
-          {planningOpen && (
-            <ModalSheet
-              title={t('Next.Another')}
-              onClose={closePlanning}
-              dismissed={planned}
-              testId="planning-sheet"
-              fit
-            >
-              {planList()}
-            </ModalSheet>
-          )}
-          <button
-            type="button"
-            onClick={() => {
-              // A workout planned on the page before has nothing to do with this sheet.
-              setPlanned(false)
-              setPlanningOpen(true)
-            }}
-            aria-expanded={planningOpen}
-            data-testid="open-planning"
-            className="fab fixed right-4 z-40 flex size-14 items-center justify-center rounded-full bg-accent-600 text-white shadow-[0_8px_24px_rgb(0_0_0/0.25)] transition-transform duration-200 active:scale-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
-          >
-            <svg
-              className="size-7"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.4"
-              strokeLinecap="round"
-              aria-hidden="true"
-            >
-              <path d="M12 5v14M5 12h14" />
-            </svg>
-            <span className="sr-only">{t('Next.PlanAnother')}</span>
-          </button>
-        </>
+      {upcoming !== undefined && planningOpen && (
+        <ModalSheet title={t('Next.Another')} onClose={closePlanning} dismissed={planned} testId="planning-sheet" fit>
+          {planList()}
+        </ModalSheet>
       )}
     </>
   )

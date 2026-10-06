@@ -322,10 +322,10 @@ html:has(.modal-sheet) {
   }
 }
 
-/* The floating plus button on the home page. */
-.fab {
-  bottom: calc(env(safe-area-inset-bottom) + 1rem);
-  right: calc(env(safe-area-inset-right) + 1rem);
+/* The tab bar floats over the bottom of the page, as iOS 26 sets it: a little above the home
+   indicator, never under it; on a phone without one, a little above the edge. */
+.tab-bar {
+  bottom: max(0.75rem, calc(env(safe-area-inset-bottom) - 0.375rem));
 }
 /* In dark mode a sheet is raised, as iOS draws it: its ground and rows a step lighter than the
    black page below, so its edge shows. */
@@ -370,6 +370,20 @@ html:has(.modal-sheet) {
    how pages draw. */
 :root:is([data-transition='push'], [data-transition='pop']) .app-navbar {
   view-transition-name: navbar;
+}
+/* The tab bar stays where it is while a page of its tab slides in or out under it. */
+:root:is([data-transition='push'], [data-transition='pop']) .tab-bar {
+  view-transition-name: tab-bar;
+}
+:root[data-transition]::view-transition-group(tab-bar) {
+  z-index: 2;
+  animation: none;
+}
+:root[data-transition]::view-transition-old(tab-bar) {
+  display: none;
+}
+:root[data-transition]::view-transition-new(tab-bar) {
+  animation: none;
 }
 :root[data-transition^='sheet'] .sheet {
   view-transition-name: sheet;

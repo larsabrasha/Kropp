@@ -59,10 +59,10 @@ async function seed(app: TestApp) {
 
 const tile = (id: string) => within(screen.getByTestId(id)).getByTestId('tile-value').textContent
 
-it('opens from the bar of every page', () => {
+it('is a tab of its own', () => {
   createTestApp().renderAt('/')
 
-  expect(screen.getByTestId('stats-link').getAttribute('href')).toBe('/stats')
+  expect(screen.getByTestId('tab-stats').getAttribute('href')).toBe('/stats')
 })
 
 it('shows an empty state before anything is logged, planned workouts or not', async () => {
@@ -171,7 +171,7 @@ it("follows an exercise's heaviest set over time, and its volume when chosen", a
   expect(within(screen.getByTestId('exercise-chart')).getByTestId('readout-sub').textContent).toBe('−480 kg i perioden')
 })
 
-it('opens a workout from its history in the same sheet, with the way back to the exercise', async () => {
+it('opens a workout from its history in the statistics tab, with the way back to the exercise', async () => {
   const app = createTestApp()
   const workouts = await seed(app)
   app.renderAt(`/stats/exercises/${BENCH.id}`)
@@ -182,7 +182,8 @@ it('opens a workout from its history in the same sheet, with the way back to the
   fireEvent.click(history[0]!)
 
   await waitFor(() => expect(window.location.pathname).toBe(`/workouts/${workouts[5]!.id}`))
-  expect(screen.getByTestId('sheet')).toBeTruthy()
+  expect(screen.queryByRole('dialog')).toBeNull()
+  expect(screen.getByTestId('tab-stats').getAttribute('aria-current')).toBe('page')
   const back = screen.getByTestId('back')
   expect(back.getAttribute('href')).toBe(`/stats/exercises/${BENCH.id}`)
   expect(back.getAttribute('title')).toBe('Statistik')

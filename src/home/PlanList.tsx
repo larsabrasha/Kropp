@@ -11,8 +11,8 @@ import { useCommit } from '../ui/useCommit'
 // the suggested one first, marked and chosen, an empty workout last. A tap on a row chooses it,
 // with a checkmark as iOS marks the one chosen; the large blue button under the list adds it and
 // opens it. So nothing is added by a tap meant for something else, and the suggestion is still one
-// tap away. On the home page when nothing is planned, and in the sheet behind the plus button
-// when something is.
+// tap away. On the home page when nothing is planned, and in the sheet behind the plus in the
+// bar when something is.
 
 const GROUP = 'ios-list overflow-hidden rounded-[1.625rem] bg-cell'
 

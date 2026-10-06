@@ -8,7 +8,7 @@ import { addDays, addMonths, dayOf, isDateOnly, mondayOf, today, weekNumber } fr
 import { compareOptional, statusOf } from '../training/editing'
 import { isInRange, Limits } from '../training/limits'
 import type { DateOnly, Exercise, Workout, WorkoutStatus } from '../training/model'
-import { BackLink, BarItem, GLASS_CAPSULE } from '../ui/Layout'
+import { BarItem, GLASS_CAPSULE } from '../ui/Layout'
 import { ModalSheet } from '../ui/ModalSheet'
 import { Group } from '../ui/List'
 import { useMonthSwipe } from './useMonthSwipe'
@@ -391,7 +391,6 @@ export function CalendarPage() {
 
   return (
     <>
-      <BackLink href="/" />
       <h1 className="sr-only">{t('Calendar.Heading')}</h1>
 
       {/* As iOS's date picker: the month's name at the left, which turns the days into a choice of

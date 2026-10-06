@@ -7,7 +7,6 @@ import type { LocalRepository } from '../sync/localRepo'
 import { maxDate, mondayOf, today } from '../training/dates'
 import { Limits } from '../training/limits'
 import { DEFAULT_SETTINGS, SETTINGS_ID, type Exercise, type Workout } from '../training/model'
-import { BackLink } from '../ui/Layout'
 import { Chevron, Group } from '../ui/List'
 import { SearchField } from '../ui/SearchField'
 import { SectionHeader } from '../ui/SectionHeader'
@@ -120,7 +119,6 @@ export function StatsPage() {
 
   return (
     <>
-      <BackLink href="/" />
       <h1 className="large-title">{t('Stats.Heading')}</h1>
 
       {error !== undefined && (

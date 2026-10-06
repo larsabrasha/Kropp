@@ -3,6 +3,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -16,9 +17,10 @@ import { useSheetDrag } from './useSheetDrag'
 
 // The frame of every page, drawn as iOS 26 and 27 do: no bar across the top, only buttons of
 // liquid glass floating over the page, which scrolls under them and fades out at the top edge.
-// The page's own way back sits at the bar's left (BackLink), the app's buttons at its right.
-// Calendar and settings open as a sheet over the page (Sheet), with a bar of their own: a way back
-// at its left, the cross that closes it at its right.
+// The page's own way back sits at the bar's left (BackLink), its own buttons at its right, and on
+// a tab's first page the settings button after them. The tabs float at the bottom (TabBar).
+// Settings open as a sheet over the page (Sheet), with a bar of their own: a way back at its left,
+// the cross that closes it at its right.
 
 interface Slots {
   leading: HTMLElement | null
@@ -90,9 +92,6 @@ export function DoneButton({ onClick, testId }: { onClick: () => void; testId?: 
     </button>
   )
 }
-
-const ICON_IN_GROUP =
-  'flex size-11 items-center justify-center rounded-full text-gray-900 active:bg-black/10 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-500 dark:text-white dark:active:bg-white/15'
 
 /**
  * The page's title once its large title has scrolled up under the bar, as iOS shows it then: small
@@ -178,52 +177,57 @@ const Icon = ({ d, className = 'size-[1.375rem]' }: { d: string; className?: str
   </svg>
 )
 
-const CALENDAR =
-  'M4 7.5A2.5 2.5 0 0 1 6.5 5h11A2.5 2.5 0 0 1 20 7.5v10a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 17.5zM4 10h16M8.5 3v4M15.5 3v4'
-const CHART = 'M4 20h16M7 16.5v-4M12 16.5V7.5M17 16.5v-7'
-const GEAR =
-  'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z'
-
-/** The app's buttons, together in one capsule of glass at the right of the bar. */
-function Toolbar() {
+/**
+ * Settings, at the right of the bar on each tab's first page, behind a picture of the user, as
+ * Health, Fitness and the App Store have their account there. Without a photo, the picture is the
+ * one iOS gives a contact without one: a white figure on a grey disc.
+ */
+function SettingsButton() {
+  const id = useId()
   return (
-    <div className="glass flex shrink-0 items-center rounded-full" data-testid="toolbar">
-      <Link
-        href="/calendar"
-        aria-label={t('Calendar.Heading')}
-        title={t('Calendar.Heading')}
-        data-testid="calendar-link"
-        className={ICON_IN_GROUP}
-      >
-        <Icon d={CALENDAR} />
-      </Link>
-      <Link
-        href="/stats"
-        aria-label={t('Stats.Open')}
-        title={t('Stats.Open')}
-        data-testid="stats-link"
-        className={ICON_IN_GROUP}
-      >
-        <Icon d={CHART} />
-      </Link>
-      <Link
-        href="/settings"
-        aria-label={t('Settings.Heading')}
-        title={t('Settings.Heading')}
-        data-testid="settings-link"
-        className={ICON_IN_GROUP}
-      >
-        <Icon d={GEAR} />
-      </Link>
-    </div>
+    <Link
+      href="/settings"
+      aria-label={t('Settings.Heading')}
+      title={t('Settings.Heading')}
+      data-testid="settings-link"
+      className="flex size-11 shrink-0 items-center justify-center rounded-full shadow-[0_1px_3px_rgb(0_0_0/0.08),0_8px_28px_rgb(0_0_0/0.14)] transition-transform duration-200 active:scale-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
+    >
+      <svg className="size-11" viewBox="0 0 44 44" aria-hidden="true" data-testid="profile-picture">
+        <defs>
+          <linearGradient id={`${id}-disc`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#a8adb8" />
+            <stop offset="1" stopColor="#858a95" />
+          </linearGradient>
+          <clipPath id={`${id}-clip`}>
+            <circle cx="22" cy="22" r="22" />
+          </clipPath>
+        </defs>
+        <circle cx="22" cy="22" r="22" fill={`url(#${id}-disc)`} />
+        <g fill="#fff" clipPath={`url(#${id}-clip)`}>
+          <circle cx="22" cy="17" r="7.5" />
+          <ellipse cx="22" cy="40" rx="15" ry="12" />
+        </g>
+      </svg>
+    </Link>
   )
 }
 
 /**
- * The page and its bar. under is set while a sheet covers the page: it then dims where it is, as
- * iOS 26 and 27 leave the page under a sheet, and takes no input.
+ * The page, its bar and the tab bar. under is set while a sheet covers the page: it then dims where
+ * it is, as iOS 26 and 27 leave the page under a sheet, and takes no input. root is set on a tab's
+ * first page, which has the settings button.
  */
-export function Layout({ children, under = false }: { children: ReactNode; under?: boolean }) {
+export function Layout({
+  children,
+  under = false,
+  root = false,
+  tabBar,
+}: {
+  children: ReactNode
+  under?: boolean
+  root?: boolean
+  tabBar?: ReactNode
+}) {
   const [leading, setLeading] = useState<HTMLElement | null>(null)
   // The page's own buttons go at the right of the bar, before the app's (BarItem).
   const [pageTrailing, setPageTrailing] = useState<HTMLElement | null>(null)
@@ -240,14 +244,16 @@ export function Layout({ children, under = false }: { children: ReactNode; under
         leading={setLeading}
         trailing={
           <div className="flex shrink-0 items-center gap-2">
-            <div ref={setPageTrailing} className="flex items-center" />
-            <Toolbar />
+            <div ref={setPageTrailing} className="flex items-center gap-2" />
+            {root && <SettingsButton />}
           </div>
         }
       />
-      <main ref={main} className="mx-auto max-w-2xl px-5 pt-1 pb-[calc(2rem+env(safe-area-inset-bottom))]">
+      {/* Room at the bottom for the tab bar, which floats over the end of the page. */}
+      <main ref={main} className="mx-auto max-w-2xl px-5 pt-1 pb-[calc(6.5rem+env(safe-area-inset-bottom))]">
         <BarSlots.Provider value={slots}>{children}</BarSlots.Provider>
       </main>
+      {tabBar}
     </div>
   )
 }

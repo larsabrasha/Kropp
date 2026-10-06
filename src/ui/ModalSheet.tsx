@@ -122,7 +122,7 @@ export function ModalSheet({
   }, [dismissed, onClose, reduced])
 
   // A pull on this sheet is this sheet's alone, also when it is drawn inside another that can be
-  // pulled (a workout opened in the calendar's sheet).
+  // pulled (an exercise opened in the settings' sheet).
   useEffect(() => {
     const el = root.current
     if (!el) return

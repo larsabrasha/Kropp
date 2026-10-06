@@ -236,6 +236,7 @@ export const en = {
   'Stats.Total': 'Total',
   'Stats.Volume': 'Lifted',
   'Stats.Workouts': 'Workouts',
+  'Tabs.Label': 'Tabs',
   'Templates.Delete': 'Delete',
   'Templates.DeleteConfirm': 'Delete this template? Workouts planned from it stay.',
   'Templates.DeleteTemplate': 'Delete template',

@@ -64,15 +64,34 @@ it('raises settings as a sheet, pushes and pops inside it, and lowers it again',
   expect(started).toEqual(['sheet-open', 'sheet-push', 'sheet-pop', 'sheet-close'])
 })
 
-it('pushes a workout opened from the calendar inside the calendar sheet', async () => {
+it('pushes a workout opened from the calendar inside the calendar tab', async () => {
   const w = await seed(workout({ date: TODAY, exercises: [entry({ exerciseId: BENCH.id })] }))
   app.renderAt('/')
 
-  fireEvent.click($('[data-testid=calendar-link]'))
-  fireEvent.click($(`[role=dialog] a[href^="/workouts/${w.id}"]`))
+  fireEvent.click($('[data-testid=tab-calendar]'))
+  fireEvent.click($(`main a[href^="/workouts/${w.id}"]`))
 
-  expect(screen.getByRole('dialog').querySelector('[data-testid=details]')).not.toBeNull()
-  expect(started).toEqual(['sheet-open', 'sheet-push'])
+  expect(screen.queryByRole('dialog')).toBeNull()
+  expect($('[data-testid=details]')).toBeTruthy()
+  // A change of tab does not move; a page pushed inside one does.
+  expect(started).toEqual(['push'])
+})
+
+it('shows another tab as it was left, without a transition, scrolled as it was', async () => {
+  const scrolled: number[] = []
+  vi.spyOn(window, 'scrollTo').mockImplementation(((options: ScrollToOptions) => {
+    scrolled.push(options.top ?? 0)
+  }) as typeof window.scrollTo)
+  vi.spyOn(window, 'scrollY', 'get').mockReturnValue(420)
+  app.renderAt('/')
+
+  fireEvent.click($('[data-testid=tab-stats]'))
+  vi.spyOn(window, 'scrollY', 'get').mockReturnValue(0)
+  fireEvent.click($('[data-testid=tab-training]'))
+
+  expect(window.location.pathname).toBe('/')
+  expect(started).toEqual([])
+  expect(scrolled.at(-1)).toBe(420)
 })
 
 it('moves without a transition between pages of the same depth', async () => {

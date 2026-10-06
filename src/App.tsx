@@ -11,42 +11,56 @@ import { TemplatePage } from './templates/TemplatePage'
 import { TemplatesPage } from './templates/TemplatesPage'
 import { TrashPage } from './trash/TrashPage'
 import { Layout, Sheet, StackInfo } from './ui/Layout'
+import { TabBar } from './ui/TabBar'
+import type { Tab } from './ui/tabs'
 import { WorkoutPage } from './workout/WorkoutPage'
 
-// The pages as iOS stacks them. The workouts are the app's own stack: the list, and a workout
-// pushed onto it. Calendar and settings open as sheets over it, each a stack of its own: settings
-// with templates, exercises and the trash pushed inside, the calendar with the workouts opened
-// from it. depth orders the pages of one stack, so a change of page knows to push or pop: a
-// workout lies one above the list, or one above the calendar in its sheet.
+// The pages as iOS stacks them. Three tabs at the bottom, each a stack of its own: the workouts,
+// with a workout pushed onto the list; the calendar, with the workouts opened from it; and the
+// statistics, with an exercise's progress and the workouts opened from it. Settings open as a sheet
+// over whichever tab is shown, a stack of its own with templates, exercises and the trash pushed
+// inside. depth orders the pages of one stack, so a change of page knows to push or pop; a change
+// of tab neither pushes nor pops.
 
 interface Route {
   pattern: string
   page: (params: Record<string, string>) => ReactNode
   depth: number
-  sheet: boolean | ((query: URLSearchParams) => boolean)
+  /** The tab whose stack the page is in; none for the pages of the settings' sheet. */
+  tab?: Tab | ((query: URLSearchParams) => Tab)
 }
 
-// A workout opened from the calendar's sheet or the statistics' opens in that sheet.
-const fromCalendar = (query: URLSearchParams) => /^\/?(calendar|stats)(\?|\/|$)/.test(query.get('back') ?? '')
+/** A workout belongs to the tab it was opened from, which its way back names. */
+const tabOfWorkout = (query: URLSearchParams): Tab => {
+  const back = (query.get('back') ?? '').replace(/^\/+/, '')
+  return back.startsWith('calendar') ? 'calendar' : back.startsWith('stats') ? 'stats' : 'training'
+}
 
 const routes: Route[] = [
-  { pattern: '/', page: () => <HomePage />, depth: 0, sheet: false },
-  { pattern: '/workouts/:id', page: ({ id }) => <WorkoutPage key={id} id={id!} />, depth: 1, sheet: fromCalendar },
-  { pattern: '/calendar', page: () => <CalendarPage />, depth: 1, sheet: true },
-  { pattern: '/settings', page: () => <SettingsPage />, depth: 1, sheet: true },
-  { pattern: '/templates', page: () => <TemplatesPage />, depth: 2, sheet: true },
-  { pattern: '/templates/:id', page: ({ id }) => <TemplatePage key={id} id={id!} />, depth: 3, sheet: true },
-  { pattern: '/exercises', page: () => <ExercisesPage />, depth: 2, sheet: true },
-  { pattern: '/exercises/:id', page: ({ id }) => <ExercisePage key={id} id={id!} />, depth: 3, sheet: true },
-  { pattern: '/trash', page: () => <TrashPage />, depth: 2, sheet: true },
-  { pattern: '/stats', page: () => <StatsPage />, depth: 1, sheet: true },
-  { pattern: '/stats/exercises/:id', page: ({ id }) => <ExerciseStatsPage key={id} id={id!} />, depth: 2, sheet: true },
+  { pattern: '/', page: () => <HomePage />, depth: 0, tab: 'training' },
+  { pattern: '/workouts/:id', page: ({ id }) => <WorkoutPage key={id} id={id!} />, depth: 1, tab: tabOfWorkout },
+  { pattern: '/calendar', page: () => <CalendarPage />, depth: 0, tab: 'calendar' },
+  { pattern: '/stats', page: () => <StatsPage />, depth: 0, tab: 'stats' },
+  {
+    pattern: '/stats/exercises/:id',
+    page: ({ id }) => <ExerciseStatsPage key={id} id={id!} />,
+    depth: 1,
+    tab: 'stats',
+  },
+  { pattern: '/settings', page: () => <SettingsPage />, depth: 1 },
+  { pattern: '/templates', page: () => <TemplatesPage />, depth: 2 },
+  { pattern: '/templates/:id', page: ({ id }) => <TemplatePage key={id} id={id!} />, depth: 3 },
+  { pattern: '/exercises', page: () => <ExercisesPage />, depth: 2 },
+  { pattern: '/exercises/:id', page: ({ id }) => <ExercisePage key={id} id={id!} />, depth: 3 },
+  { pattern: '/trash', page: () => <TrashPage />, depth: 2 },
 ]
 
 interface Found {
   url: string
   page: ReactNode
   depth: number
+  /** Undefined for a page in the settings' sheet. */
+  tab?: Tab
   sheet: boolean
 }
 
@@ -56,19 +70,19 @@ function find(url: string): Found | undefined {
   for (const route of routes) {
     const params = match(route.pattern, path)
     if (!params) continue
-    const sheet = typeof route.sheet === 'function' ? route.sheet(query) : route.sheet
-    // In a sheet, a workout lies one above the page it was opened from.
-    const depth = sheet && route.pattern === '/workouts/:id' ? backDepth(query) + 1 : route.depth
-    return { url, page: route.page(params), depth, sheet }
+    const tab = typeof route.tab === 'function' ? route.tab(query) : route.tab
+    // A workout lies one above the page it was opened from.
+    const depth = route.pattern === '/workouts/:id' ? backDepth(query) + 1 : route.depth
+    return { url, page: route.page(params), depth, tab, sheet: tab === undefined }
   }
   return undefined
 }
 
-/** The depth of the page a workout in a sheet leads back to: the calendar's, or an exercise's statistics. */
+/** The depth of the page a workout leads back to: a tab's first page, or an exercise's statistics. */
 function backDepth(query: URLSearchParams): number {
   const back = `/${(query.get('back') ?? '').replace(/^\/+/, '')}`
   const [path = '/'] = back.split('?')
-  return routes.find((r) => r.pattern !== '/workouts/:id' && match(r.pattern, path))?.depth ?? 1
+  return routes.find((r) => r.pattern !== '/workouts/:id' && r.tab && match(r.pattern, path))?.depth ?? 0
 }
 
 const isSheetUrl = (href: string) => find(href)?.sheet === true
@@ -79,13 +93,15 @@ setTransitions((from, to): Transition | undefined => {
   if (!a || !b) return undefined
   if (!a.sheet && b.sheet) return 'sheet-open'
   if (a.sheet && !b.sheet) return 'sheet-close'
+  // Another tab is shown as it was, with no move.
+  if (!a.sheet && a.tab !== b.tab) return undefined
   if (b.depth === a.depth) return undefined
   if (b.depth > a.depth) return a.sheet ? 'sheet-push' : 'push'
   return a.sheet ? 'sheet-pop' : 'pop'
 })
 
-// The page below a sheet: the last page of the workouts' stack shown. Opened straight into a
-// sheet, the page it leads back to when that is one of the workouts' stack, else the list.
+// The page below a sheet: the last page of a tab shown. Opened straight into a sheet, the page it
+// leads back to when that is a tab's, else the list of workouts.
 function belowFor(sheet: Found, last: string | undefined): string {
   if (last !== undefined) return last
   const back = new URLSearchParams(sheet.url.split('?')[1] ?? '').get('back')
@@ -113,6 +129,9 @@ export function App() {
 
   const [last, setLast] = useState<string>()
   if (found && !found.sheet && found.url !== last) setLast(found.url)
+  // Where each tab was left, to show it as it was when it is chosen again.
+  const [tabs, setTabs] = useState<Partial<Record<Tab, string>>>({})
+  if (found?.tab && tabs[found.tab] !== found.url) setTabs({ ...tabs, [found.tab]: found.url })
 
   const sheet = found?.sheet ? found : undefined
   const closeHref = sheet ? belowFor(sheet, last) : '/'
@@ -123,7 +142,13 @@ export function App() {
   // closing a sheet never loses what it was showing.
   return (
     <>
-      <Layout under={sheet !== undefined}>{base && <FixedLocation url={base.url}>{base.page}</FixedLocation>}</Layout>
+      <Layout
+        under={sheet !== undefined}
+        root={base !== undefined && base.depth === 0}
+        tabBar={<TabBar current={base?.tab} last={tabs} />}
+      >
+        {base && <FixedLocation url={base.url}>{base.page}</FixedLocation>}
+      </Layout>
       {sheet && (
         <StackInfo value={stack}>
           <Sheet pageKey={path}>{sheet.page}</Sheet>
