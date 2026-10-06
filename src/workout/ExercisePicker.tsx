@@ -51,7 +51,7 @@ export function ExercisePicker({
       <SearchField
         ref={searchInput}
         value={query}
-        onChange={(e) => onQuery(e.target.value)}
+        onValueChange={onQuery}
         maxLength={Limits.search}
         placeholder={t('Picker.SearchPlaceholder')}
       />

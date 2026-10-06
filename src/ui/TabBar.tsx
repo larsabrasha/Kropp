@@ -4,7 +4,8 @@ import { navigate } from '../route'
 import { TAB_ROOTS, TABS, type Tab } from './tabs'
 
 // The app's tabs, as iOS 26 and 27 draw a tab bar: a capsule of glass floating over the bottom of
-// the page, an icon over a word for each tab, the chosen one in the tint on a lens of its own.
+// the page, an icon over a word for each tab, the chosen one in the tint on a lens of its own; on
+// an iPad or a computer, a sidebar.
 // Each tab is a stack of its own and keeps where it was: going to a tab shows its page as it was
 // left, scrolled as it was; a tap on the tab already chosen goes back to its first page, and on
 // that page scrolls to the top.
@@ -27,6 +28,12 @@ const LABELS = {
 
 const label = (tab: Tab) => t(LABELS[tab])
 
+/**
+ * The tabs: on a phone the floating tab bar, from an iPad's width (768px) a sidebar instead, as
+ * iPadOS 27 sets an app's sections: edge to edge down the left of the window again, no longer the
+ * floating glass panel of 26, with the app's name over a row for each tab, the chosen one in the
+ * tint on a capsule. Both go to a tab the same way.
+ */
 export function TabBar({ current, last }: { current: Tab | undefined; last: Partial<Record<Tab, string>> }) {
   const go = (tab: Tab) => (e: MouseEvent<HTMLAnchorElement>) => {
     if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
@@ -37,45 +44,81 @@ export function TabBar({ current, last }: { current: Tab | undefined; last: Part
     if (here !== root) navigate(root)
     else window.scrollTo({ top: 0, behavior: 'smooth' })
   }
+  const href = (tab: Tab) => (tab === current ? TAB_ROOTS[tab] : (last[tab] ?? TAB_ROOTS[tab]))
+  const icon = (tab: Tab, chosen: boolean) => (
+    <svg
+      className="size-6 shrink-0"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={chosen ? 2.2 : 1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d={ICONS[tab]} />
+    </svg>
+  )
 
   return (
-    <nav
-      aria-label={t('Tabs.Label')}
-      className="tab-bar pointer-events-none fixed inset-x-0 z-20 flex justify-center px-5"
-      data-testid="tab-bar"
-    >
-      <ul className="glass pointer-events-auto flex w-full max-w-sm items-center gap-1 rounded-full p-1">
-        {TABS.map((tab) => {
-          const chosen = tab === current
-          return (
-            <li key={tab} className="min-w-0 flex-1">
-              <a
-                href={chosen ? TAB_ROOTS[tab] : (last[tab] ?? TAB_ROOTS[tab])}
-                onClick={go(tab)}
-                aria-current={chosen ? 'page' : undefined}
-                data-testid={`tab-${tab}`}
-                className={`flex h-[3.375rem] flex-col items-center justify-center gap-0.5 rounded-full transition-colors duration-200 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-500 ${
-                  chosen ? 'bg-fill text-tint' : 'text-gray-900 active:bg-fill dark:text-white'
-                }`}
-              >
-                <svg
-                  className="size-6"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={chosen ? 2.2 : 1.8}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
+    <>
+      <nav
+        aria-label={t('Tabs.Label')}
+        className="tab-bar pointer-events-none fixed inset-x-0 z-20 flex justify-center px-5 md:hidden"
+        data-testid="tab-bar"
+      >
+        <ul className="glass pointer-events-auto flex w-full max-w-sm items-center gap-1 rounded-full p-1">
+          {TABS.map((tab) => {
+            const chosen = tab === current
+            return (
+              <li key={tab} className="min-w-0 flex-1">
+                <a
+                  href={href(tab)}
+                  onClick={go(tab)}
+                  aria-current={chosen ? 'page' : undefined}
+                  data-testid={`tab-${tab}`}
+                  className={`flex h-[3.375rem] flex-col items-center justify-center gap-0.5 rounded-full transition-colors duration-200 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-500 ${
+                    chosen ? 'bg-fill text-tint' : 'text-gray-900 active:bg-fill dark:text-white'
+                  }`}
                 >
-                  <path d={ICONS[tab]} />
-                </svg>
-                <span className="truncate text-[0.625rem] leading-3 font-semibold">{label(tab)}</span>
-              </a>
-            </li>
-          )
-        })}
-      </ul>
-    </nav>
+                  {icon(tab, chosen)}
+                  <span className="truncate text-[0.625rem] leading-3 font-semibold">{label(tab)}</span>
+                </a>
+              </li>
+            )
+          })}
+        </ul>
+      </nav>
+      <nav
+        aria-label={t('Tabs.Label')}
+        className="sidebar fixed inset-y-0 left-0 z-20 hidden flex-col border-r-[0.5px] border-separator bg-cell md:flex"
+        data-testid="sidebar"
+      >
+        <p className="px-3 pt-3 pb-3 text-[1.75rem] leading-tight font-bold" aria-hidden="true">
+          {t('App.Name')}
+        </p>
+        <ul className="flex flex-col gap-0.5">
+          {TABS.map((tab) => {
+            const chosen = tab === current
+            return (
+              <li key={tab}>
+                <a
+                  href={href(tab)}
+                  onClick={go(tab)}
+                  aria-current={chosen ? 'page' : undefined}
+                  data-testid={`sidebar-${tab}`}
+                  className={`flex h-11 items-center gap-3 rounded-full px-3 text-[1.0625rem] transition-colors duration-200 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-500 ${
+                    chosen ? 'bg-fill font-semibold text-tint' : 'text-gray-900 active:bg-fill dark:text-white'
+                  }`}
+                >
+                  {icon(tab, chosen)}
+                  <span className="truncate">{label(tab)}</span>
+                </a>
+              </li>
+            )
+          })}
+        </ul>
+      </nav>
+    </>
   )
 }

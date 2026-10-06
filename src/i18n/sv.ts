@@ -1,6 +1,7 @@
 import type { Messages } from './i18n'
 
 export const sv: Messages = {
+  'App.Name': 'Kropp',
   'Backup.Added': 'Läggs till',
   'Backup.DeleteAll': 'Radera all data',
   'Backup.DeleteAllAction': 'Radera allt',
@@ -77,6 +78,7 @@ export const sv: Messages = {
   'Common.And': 'och',
   'Common.Back': 'Tillbaka',
   'Common.Cancel': 'Avbryt',
+  'Common.Clear': 'Rensa',
   'Common.Close': 'Stäng',
   'Common.Delete': 'Radera',
   'Common.Done': 'Klar',

@@ -108,8 +108,13 @@ it('filters the exercises by name, and keeps the filter back from one', async ()
   const input = screen.getByTestId('stats-search')
   fireEvent.change(input, { target: { value: 'marklyft' } })
   expect(screen.getByTestId('stats-no-match').textContent).toBe('Ingen övning matchar.')
-  // The filter outlives the page: leave it empty for the tests after this one.
-  fireEvent.change(input, { target: { value: '' } })
+  // The clear button empties it and keeps the focus, as iOS's does. The filter outlives the page,
+  // so this also leaves it empty for the tests after this one.
+  fireEvent.click(screen.getByRole('button', { name: 'Rensa' }))
+  expect((input as HTMLInputElement).value).toBe('')
+  expect(document.activeElement).toBe(input)
+  expect(names()).toEqual(['Plankan', 'Bänkpress'])
+  expect(screen.queryByRole('button', { name: 'Rensa' })).toBeNull()
 })
 
 it('lists every exercise, the ones never logged after the rest, and hidden ones last', async () => {

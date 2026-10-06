@@ -171,7 +171,7 @@ export function ExerciseListPage() {
         <>
           <SearchField
             value={search}
-            onChange={(e) => changeSearch(e.target.value)}
+            onValueChange={changeSearch}
             placeholder={t('Exercises.Search')}
             maxLength={Limits.search}
             data-testid="stats-search"

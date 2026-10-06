@@ -1,5 +1,6 @@
 // English, the fallback. Every key here must also be in sv.ts; the type checker enforces it.
 export const en = {
+  'App.Name': 'Kropp',
   'Backup.Added': 'Added',
   'Backup.DeleteAll': 'Delete All Data',
   'Backup.DeleteAllAction': 'Delete Everything',
@@ -76,6 +77,7 @@ export const en = {
   'Common.And': 'and',
   'Common.Back': 'Back',
   'Common.Cancel': 'Cancel',
+  'Common.Clear': 'Clear',
   'Common.Close': 'Close',
   'Common.Delete': 'Delete',
   'Common.Done': 'Done',

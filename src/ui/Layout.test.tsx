@@ -94,3 +94,29 @@ it('leaves the home page title out of the bar when scrolled, but not a page furt
   await waitFor(() => expect(barTitle('sheet-navbar')).toBe('Profil'))
   expect(barTitle('app-navbar')).toBe('')
 })
+
+it('offers the same tabs in a sidebar for an iPad, going to them as the tab bar does', async () => {
+  createTestApp().renderAt('/')
+
+  // CSS shows one or the other by the width; both are in the page.
+  const sidebar = screen.getByTestId('sidebar')
+  expect(sidebar.className).toContain('md:flex')
+  expect(screen.getByTestId('tab-bar').className).toContain('md:hidden')
+  expect(
+    within(sidebar)
+      .getAllByRole('link')
+      .map((a) => [a.textContent, a.getAttribute('href')]),
+  ).toEqual([
+    ['Träning', '/'],
+    ['Kalender', '/calendar'],
+    ['Statistik', '/stats'],
+    ['Bibliotek', '/library'],
+  ])
+  expect(screen.getByTestId('sidebar-training').getAttribute('aria-current')).toBe('page')
+
+  fireEvent.click(screen.getByTestId('sidebar-stats'))
+
+  await waitFor(() => expect(window.location.pathname).toBe('/stats'))
+  expect(screen.getByTestId('sidebar-stats').getAttribute('aria-current')).toBe('page')
+  expect(screen.getByTestId('tab-stats').getAttribute('aria-current')).toBe('page')
+})

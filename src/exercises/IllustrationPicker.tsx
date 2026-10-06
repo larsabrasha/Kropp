@@ -182,7 +182,7 @@ export function IllustrationPicker({
         <SearchField
           value={query}
           maxLength={Limits.search}
-          onChange={(e) => setQuery(e.target.value)}
+          onValueChange={setQuery}
           placeholder={t('Illustration.Search')}
         />
         {/* What is shown, as a filter of iOS 26 says it: one capsule each for area and equipment. */}

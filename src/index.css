@@ -7,6 +7,27 @@
     font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, 'Helvetica Neue', sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    /* Safari on iOS greys whatever is tapped; every control here dims or darkens itself while
+       pressed (active:), as iOS's own do, so the grey would come on top of that. */
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* A number is changed by its stepper's − and +, or typed, as on iOS, which never draws the
+     arrows that browsers on a computer put in a number field. */
+  input[type='number'] {
+    appearance: textfield;
+    -moz-appearance: textfield;
+  }
+  input[type='number']::-webkit-inner-spin-button,
+  input[type='number']::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  /* SearchField draws iOS's clear button itself; browsers on a computer would add their own. */
+  input[type='search']::-webkit-search-cancel-button,
+  input[type='search']::-webkit-search-decoration {
+    -webkit-appearance: none;
   }
 
   /* iOS zooms into any focused field with text smaller than 16px. */
@@ -325,6 +346,19 @@ html:has(.modal-sheet) {
   }
 }
 
+/* From an iPad's width the sidebar (TabBar.tsx) runs edge to edge down the left, as iPadOS 27 draws
+   one, its rows clear of the safe areas, and the page and its bar move over to its right. */
+.sidebar {
+  width: calc(16rem + env(safe-area-inset-left));
+  padding: max(0.75rem, env(safe-area-inset-top)) 0.75rem max(0.75rem, env(safe-area-inset-bottom))
+    calc(0.75rem + env(safe-area-inset-left));
+}
+@media (min-width: 768px) {
+  .with-sidebar {
+    padding-left: calc(16rem + env(safe-area-inset-left));
+  }
+}
+
 /* The tab bar floats over the bottom of the page, as iOS 26 sets it: a little above the home
    indicator, never under it; on a phone without one, a little above the edge. */
 .tab-bar {
@@ -341,7 +375,8 @@ html:has(.modal-sheet) {
     --color-cell-pressed: #3a3a3c;
   }
 }
-.sheet-under {
+.sheet-under,
+html:has(.sheet-under) :is(.tab-bar, .sidebar) {
   /* Brightening as the sheet over it is pulled down (useSheetDrag sets --sheet-pull, 0 to 1). */
   filter: brightness(calc(var(--under-brightness) + (1 - var(--under-brightness)) * var(--sheet-pull, 0)));
   transition: filter var(--sheet-pull-ms, 0ms) ease-out;
@@ -376,19 +411,33 @@ html:has(.modal-sheet) {
 :root:is([data-transition='push'], [data-transition='pop']) .app-navbar {
   view-transition-name: navbar;
 }
-/* The tab bar stays where it is while a page of its tab slides in or out under it. */
+/* The tab bar, and the sidebar that takes its place on an iPad, stay where they are while a page of
+   their tab slides in or out beside or under them. */
 :root:is([data-transition='push'], [data-transition='pop']) .tab-bar {
   view-transition-name: tab-bar;
 }
-:root[data-transition]::view-transition-group(tab-bar) {
+:root:is([data-transition='push'], [data-transition='pop']) .sidebar {
+  view-transition-name: sidebar;
+}
+:root[data-transition]::view-transition-group(tab-bar),
+:root[data-transition]::view-transition-group(sidebar) {
   z-index: 2;
   animation: none;
 }
-:root[data-transition]::view-transition-old(tab-bar) {
+:root[data-transition]::view-transition-old(tab-bar),
+:root[data-transition]::view-transition-old(sidebar) {
   display: none;
 }
-:root[data-transition]::view-transition-new(tab-bar) {
+:root[data-transition]::view-transition-new(tab-bar),
+:root[data-transition]::view-transition-new(sidebar) {
   animation: none;
+}
+/* With the sidebar, a push moves only the column beside it, as iPadOS pushes in a split view: the
+   pages slide and dim within it, and nothing of them passes under the sidebar. */
+@media (min-width: 768px) {
+  :root:is([data-transition='push'], [data-transition='pop'])::view-transition-image-pair(root) {
+    clip-path: inset(0 0 0 calc(16rem + env(safe-area-inset-left)));
+  }
 }
 :root[data-transition^='sheet'] .sheet {
   view-transition-name: sheet;

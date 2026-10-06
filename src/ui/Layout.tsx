@@ -236,25 +236,36 @@ export function Layout({
   const main = useRef<HTMLElement>(null)
   const title = useInlineTitle('window', main, bar)
   return (
-    <div className={`min-h-dvh bg-ground text-gray-900 dark:text-white ${under ? 'sheet-under' : ''}`} inert={under}>
-      <NavBar
-        ref={bar}
-        title={title}
-        className="app-navbar sticky top-0 z-20 pt-[env(safe-area-inset-top)]"
-        leading={setLeading}
-        trailing={
-          <div className="flex shrink-0 items-center gap-2">
-            <div ref={setPageTrailing} className="flex items-center gap-2" />
-            {root && <SettingsButton />}
-          </div>
-        }
-      />
-      {/* Room at the bottom for the tab bar, which floats over the end of the page. */}
-      <main ref={main} className="mx-auto max-w-2xl px-5 pt-1 pb-[calc(6.5rem+env(safe-area-inset-bottom))]">
-        <BarSlots.Provider value={slots}>{children}</BarSlots.Provider>
-      </main>
-      {tabBar}
-    </div>
+    <>
+      <div
+        className={`min-h-dvh bg-ground text-gray-900 dark:text-white ${tabBar ? 'with-sidebar' : ''} ${under ? 'sheet-under' : ''}`}
+        inert={under}
+      >
+        <NavBar
+          ref={bar}
+          title={title}
+          className="app-navbar sticky top-0 z-20 pt-[env(safe-area-inset-top)]"
+          leading={setLeading}
+          trailing={
+            <div className="flex shrink-0 items-center gap-2">
+              <div ref={setPageTrailing} className="flex items-center gap-2" />
+              {root && <SettingsButton />}
+            </div>
+          }
+        />
+        {/* Room at the bottom for the tab bar, which floats over the end of the page; the sidebar that
+          takes its place on an iPad leaves the bottom free. */}
+        <main
+          ref={main}
+          className="mx-auto max-w-2xl px-5 pt-1 pb-[calc(6.5rem+env(safe-area-inset-bottom))] md:pb-[calc(2.5rem+env(safe-area-inset-bottom))]"
+        >
+          <BarSlots.Provider value={slots}>{children}</BarSlots.Provider>
+        </main>
+      </div>
+      {/* Outside the page, which a sheet dims with a filter: a filter would pin these fixed bars to
+          the page instead of the window, so they would scroll away. They dim on their own. */}
+      <div inert={under}>{tabBar}</div>
+    </>
   )
 }
 
