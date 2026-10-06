@@ -148,6 +148,7 @@ export function EntrySets({
           onClose={onClose}
           testId="set-editor"
           closeTestId="close-editor"
+          confirm
           fit
           portal={false}
         >

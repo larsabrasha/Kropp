@@ -303,6 +303,7 @@ export function ExerciseEntryCard({
           onClose={close}
           testId="entry-sheet"
           closeTestId="close-editor"
+          confirm
           fit
           portal={false}
         >

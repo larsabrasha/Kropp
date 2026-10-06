@@ -7,6 +7,7 @@ export const en = {
   'BodyArea.Legs': 'Legs',
   'BodyArea.Shoulders': 'Shoulders',
   'Calendar.AllInMonth': 'All workouts in {0} ({1})',
+  'Calendar.ChooseMonth': 'Choose month',
   'Calendar.Empty': 'No workouts in {0}.',
   'Calendar.Heading': 'Calendar',
   'Calendar.NextMonth': 'Next month',

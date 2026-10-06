@@ -52,6 +52,26 @@ export const GLASS_CIRCLE =
 export const GLASS_CAPSULE =
   'glass flex h-11 shrink-0 items-center rounded-full px-4 text-[1.0625rem] font-medium text-tint transition-transform duration-200 active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500'
 
+/** iOS 26's confirming button: round, in the app's colour, where the bar's other buttons are glass. */
+export const CONFIRM_CIRCLE =
+  'flex size-11 shrink-0 items-center justify-center rounded-full bg-accent-600 text-white shadow-[0_1px_3px_rgb(0_0_0/0.12),0_8px_28px_rgb(0_0_0/0.14)] transition-transform duration-200 active:scale-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500'
+
+/** The checkmark on CONFIRM_CIRCLE. */
+export const CheckSymbol = () => (
+  <svg
+    className="size-[1.375rem]"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <path d="M5 12.5l4.5 4.5L19 7.5" />
+  </svg>
+)
+
 /**
  * Done, as iOS 26 and 27 draw it in a bar: a round checkmark in the app's colour, where the bar's
  * other buttons are glass. Ends a mode, such as a list's edit mode.
@@ -64,20 +84,9 @@ export function DoneButton({ onClick, testId }: { onClick: () => void; testId?: 
       aria-label={t('Common.Done')}
       title={t('Common.Done')}
       data-testid={testId}
-      className="flex size-11 shrink-0 items-center justify-center rounded-full bg-accent-600 text-white shadow-[0_1px_3px_rgb(0_0_0/0.12),0_8px_28px_rgb(0_0_0/0.14)] transition-transform duration-200 active:scale-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
+      className={CONFIRM_CIRCLE}
     >
-      <svg
-        className="size-[1.375rem]"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2.2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden="true"
-      >
-        <path d="M5 12.5l4.5 4.5L19 7.5" />
-      </svg>
+      <CheckSymbol />
     </button>
   )
 }

@@ -359,6 +359,7 @@ export function WorkoutPage({ id }: { id: string }) {
               onClose={closeDetails}
               testId="details-sheet"
               closeTestId="close-details"
+              confirm
               fit
             >
               <ul className="ios-list overflow-hidden rounded-[1.625rem] bg-cell" data-testid="details-editor">

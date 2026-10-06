@@ -103,7 +103,8 @@ it('opens the fields when the target is tapped, and saves a change', async () =>
     'increase',
   ])
   change($$('[data-testid=target-editor] input')[2]!, '25')
-  expect(text($('[data-testid=close-editor]'))).toBe('Stäng')
+  // It saves as it changes, so it ends with Done, not a cross.
+  expect(text($('[data-testid=close-editor]'))).toBe('Klar')
   click($('[data-testid=close-editor]'))
 
   await waitFor(() => expect(text($('[data-testid=target]'))).toBe('3 × 8 @ 25 kg'))

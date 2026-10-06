@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { t } from '../i18n/i18n'
-import { GLASS_CIRCLE } from './Layout'
+import { CheckSymbol, CONFIRM_CIRCLE, GLASS_CIRCLE } from './Layout'
 import { useSheetDrag } from './useSheetDrag'
 
 // A sheet for a task inside a page, such as choosing an exercise to add: it rises over the page,
@@ -20,6 +20,7 @@ export function ModalSheet({
   fit = false,
   portal = true,
   dismissed = false,
+  confirm = false,
 }: {
   title: string
   onClose: () => void
@@ -38,6 +39,11 @@ export function ModalSheet({
   portal?: boolean
   /** Set when the task is done (a workout added): the sheet sinks away, then onClose runs. */
   dismissed?: boolean
+  /**
+   * The sheet changes something, saved as it is changed: it closes with Done, a checkmark in the
+   * app's colour, as iOS 26 ends an edit, rather than a cross, which reads as leaving it undone.
+   */
+  confirm?: boolean
 }) {
   const [closing, setClosing] = useState(false)
   const sheet = useRef<HTMLDivElement>(null)
@@ -108,22 +114,26 @@ export function ModalSheet({
             <button
               type="button"
               onClick={close}
-              title={t('Common.Close')}
+              title={confirm ? t('Common.Done') : t('Common.Close')}
               data-testid={closeTestId}
-              className={GLASS_CIRCLE}
+              className={confirm ? CONFIRM_CIRCLE : GLASS_CIRCLE}
             >
-              <svg
-                className="size-5"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-                aria-hidden="true"
-              >
-                <path d="M6.5 6.5l11 11M17.5 6.5l-11 11" />
-              </svg>
-              <span className="sr-only">{t('Common.Close')}</span>
+              {confirm ? (
+                <CheckSymbol />
+              ) : (
+                <svg
+                  className="size-5"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  aria-hidden="true"
+                >
+                  <path d="M6.5 6.5l11 11M17.5 6.5l-11 11" />
+                </svg>
+              )}
+              <span className="sr-only">{confirm ? t('Common.Done') : t('Common.Close')}</span>
             </button>
           </div>
         </header>

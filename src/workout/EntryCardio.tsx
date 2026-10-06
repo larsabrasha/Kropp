@@ -49,6 +49,7 @@ export function EntryCardio({
       onClose={onClose}
       testId="cardio-editor"
       closeTestId="close-editor"
+      confirm
       fit
       portal={false}
     >

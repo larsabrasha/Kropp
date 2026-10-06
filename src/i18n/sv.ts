@@ -8,6 +8,7 @@ export const sv: Messages = {
   'BodyArea.Legs': 'Ben',
   'BodyArea.Shoulders': 'Axlar',
   'Calendar.AllInMonth': 'Alla pass i {0} ({1} st)',
+  'Calendar.ChooseMonth': 'Välj månad',
   'Calendar.Empty': 'Inga pass i {0}.',
   'Calendar.Heading': 'Kalender',
   'Calendar.NextMonth': 'Nästa månad',

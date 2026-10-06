@@ -96,12 +96,25 @@ it('chooses a week that begins in the month before without leaving the month sho
   expect(here()).toBe('/calendar?month=2026-10&week=2026-09-28')
 })
 
-it('steps by month and by year', async () => {
+it('steps by month, and goes further by choosing a month and year', async () => {
   const app = createTestApp()
   await save(app, '2025-08-04', 'Ett år sedan')
   app.renderAt('/calendar')
+  // No steps by year beside the month, as iOS has none: its name opens a choice of month and year.
+  expect(screen.queryByTestId('previous-year')).toBeNull()
+  expect(screen.getByTestId('month-picker').getAttribute('aria-label')).toBe('september 2026, Välj månad')
 
+  fireEvent.click(screen.getByTestId('month-picker'))
+  expect(screen.queryByTestId('calendar')).toBeNull()
+  expect(screen.getByTestId('choice-year').textContent).toBe('2026')
+  const months = screen.getAllByTestId('choice-month')
+  expect(months.map((m) => m.textContent)).toHaveLength(12)
+  expect(months[8]!.getAttribute('aria-pressed')).toBe('true')
   fireEvent.click(screen.getByTestId('previous-year'))
+  expect(screen.getByTestId('choice-year').textContent).toBe('2025')
+  fireEvent.click(screen.getAllByTestId('choice-month')[8]!)
+
+  expect(screen.queryByTestId('month-choice')).toBeNull()
   expect(screen.getByTestId('month').textContent).toBe('september 2025')
   expect((await screen.findByTestId('calendar-empty')).textContent).toContain('Inga pass i september.')
 
@@ -125,7 +138,6 @@ it('stops at the first month the app accepts', () => {
   createTestApp().renderAt('/calendar?month=2000-01')
 
   expect(screen.getByTestId('previous-month').hasAttribute('disabled')).toBe(true)
-  expect(screen.getByTestId('previous-year').hasAttribute('disabled')).toBe(true)
   expect(screen.getByTestId('next-month').hasAttribute('disabled')).toBe(false)
 })
 

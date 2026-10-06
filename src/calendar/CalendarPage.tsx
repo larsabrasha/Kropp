@@ -117,6 +117,9 @@ export function CalendarPage() {
   const { month, selected } = fromQuery(query, day)
   // Read during the first render, so the page never shows without its data.
   const [data, setData] = useState(() => read(repository))
+  // The year whose months are offered in place of the days, as iOS's date picker turns its days
+  // into a choice of month and year when its title is tapped; undefined while the days show.
+  const [choosing, setChoosing] = useState<number>()
   const load = useCallback(() => setData(read(repository)), [repository])
   useAnyChange(load)
 
@@ -304,6 +307,77 @@ export function CalendarPage() {
     )
   }
 
+  /** The months of a year as a grid, the year above with a year back and forward. */
+  const monthChoice = (year: number) => {
+    const firstYear = Number(FIRST_MONTH.slice(0, 4))
+    const lastYear = Number(LAST_MONTH.slice(0, 4))
+    const yearStep = (delta: number, label: string, path: string, testId: string) => (
+      <button
+        type="button"
+        onClick={() => setChoosing(year + delta)}
+        disabled={delta < 0 ? year <= firstYear : year >= lastYear}
+        aria-label={label}
+        title={label}
+        data-testid={testId}
+        className="flex size-11 shrink-0 items-center justify-center rounded-full text-tint active:bg-fill focus-visible:outline-2 focus-visible:outline-blue-500 disabled:opacity-30"
+      >
+        <svg
+          className="size-5"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <path d={path} />
+        </svg>
+      </button>
+    )
+    return (
+      <div className="px-3 py-3" data-testid="month-choice">
+        <div className="flex items-center justify-between">
+          {yearStep(-1, t('Calendar.PreviousYear'), 'M15 18l-6-6 6-6', 'previous-year')}
+          <span className="text-[1.0625rem] font-semibold tabular-nums" data-testid="choice-year">
+            {year}
+          </span>
+          {yearStep(1, t('Calendar.NextYear'), 'M9 18l6-6-6-6', 'next-year')}
+        </div>
+        <div className="mt-2 grid grid-cols-3 gap-2">
+          {Array.from({ length: 12 }, (_, i) => {
+            const first: DateOnly = `${year}-${String(i + 1).padStart(2, '0')}-01`
+            const shown = first === month
+            const current = first === firstOfMonth(day)
+            const outside = first < FIRST_MONTH || first > LAST_MONTH
+            return (
+              <button
+                key={first}
+                type="button"
+                disabled={outside}
+                onClick={() => {
+                  setChoosing(undefined)
+                  show(first, undefined)
+                }}
+                aria-pressed={shown}
+                data-testid="choice-month"
+                className={`h-11 rounded-full text-[1.0625rem] focus-visible:outline-2 focus-visible:outline-blue-500 disabled:opacity-30 ${
+                  shown
+                    ? 'bg-accent-600 font-semibold text-white'
+                    : current
+                      ? 'font-semibold text-tint active:bg-fill'
+                      : 'active:bg-fill'
+                }`}
+              >
+                {formatDate(first, 'MMMM')}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+    )
+  }
+
   const monthName = formatDate(month, 'MMMM yyyy')
 
   return (
@@ -311,19 +385,42 @@ export function CalendarPage() {
       <BackLink href="/" />
       <h1 className="sr-only">{t('Calendar.Heading')}</h1>
 
-      {/* Year and month steppers around the month's name; "today" returns to the current month. */}
-      <div className="flex items-center gap-1" data-testid="calendar-nav">
-        {stepButton(-12, t('Calendar.PreviousYear'), 'M18 17l-5-5 5-5M11 17l-5-5 5-5', 'previous-year')}
-        {stepButton(-1, t('Calendar.PreviousMonth'), 'M15 18l-6-6 6-6', 'previous-month')}
-        <h2
-          className="min-w-0 flex-1 truncate text-center text-lg font-semibold first-letter:uppercase"
-          aria-live="polite"
-          data-testid="month"
-        >
-          {monthName}
+      {/* As iOS's date picker: the month's name at the left, which turns the days into a choice of
+          month and year for a longer way (monthChoice), a month back and forward at the right. Swiping
+          the month turns it too; "today" in the bar returns to this month. */}
+      <div className="flex items-center gap-1 pl-4" data-testid="calendar-nav">
+        <h2 className="flex min-w-0 flex-1" aria-live="polite">
+          <button
+            type="button"
+            onClick={() => (choosing === undefined ? setChoosing(Number(month.slice(0, 4))) : setChoosing(undefined))}
+            aria-expanded={choosing !== undefined}
+            aria-label={`${monthName}, ${t('Calendar.ChooseMonth')}`}
+            data-testid="month-picker"
+            className={`-ml-2 flex min-w-0 items-center gap-1 rounded-lg px-2 py-1 text-lg font-semibold active:opacity-60 focus-visible:outline-2 focus-visible:outline-blue-500 ${choosing !== undefined ? 'text-tint' : ''}`}
+          >
+            <span className="truncate first-letter:uppercase" data-testid="month">
+              {monthName}
+            </span>
+            <svg
+              className={`size-4 shrink-0 text-tint transition-transform duration-200 ${choosing !== undefined ? 'rotate-90' : ''}`}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M9 6l6 6-6 6" />
+            </svg>
+          </button>
         </h2>
-        {stepButton(1, t('Calendar.NextMonth'), 'M9 18l6-6-6-6', 'next-month')}
-        {stepButton(12, t('Calendar.NextYear'), 'M6 17l5-5-5-5M13 17l5-5-5-5', 'next-year')}
+        {choosing === undefined && (
+          <>
+            {stepButton(-1, t('Calendar.PreviousMonth'), 'M15 18l-6-6 6-6', 'previous-month')}
+            {stepButton(1, t('Calendar.NextMonth'), 'M9 18l6-6-6-6', 'next-month')}
+          </>
+        )}
       </div>
       {month !== firstOfMonth(day) && (
         // In the bar, as iOS's calendar has its Today: there it never moves the month below.
@@ -344,19 +441,23 @@ export function CalendarPage() {
       {/* Swiped sideways, the month turns (useMonthSwipe). The months before and after lie ready on
           either side, so a swipe always shows a month; the card clips them. */}
       <div className="mt-3 overflow-hidden rounded-[1.625rem] bg-cell">
-        <div {...swipe} className="relative touch-pan-y select-none">
-          {month > FIRST_MONTH && (
-            <div className="absolute top-0 right-full w-full px-3 py-2" inert aria-hidden="true">
-              {grid(addMonths(month, -1), false)}
-            </div>
-          )}
-          <div className="px-3 py-2">{grid(month, true)}</div>
-          {month < LAST_MONTH && (
-            <div className="absolute top-0 left-full w-full px-3 py-2" inert aria-hidden="true">
-              {grid(addMonths(month, 1), false)}
-            </div>
-          )}
-        </div>
+        {choosing !== undefined ? (
+          monthChoice(choosing)
+        ) : (
+          <div {...swipe} className="relative touch-pan-y select-none">
+            {month > FIRST_MONTH && (
+              <div className="absolute top-0 right-full w-full px-3 py-2" inert aria-hidden="true">
+                {grid(addMonths(month, -1), false)}
+              </div>
+            )}
+            <div className="px-3 py-2">{grid(month, true)}</div>
+            {month < LAST_MONTH && (
+              <div className="absolute top-0 left-full w-full px-3 py-2" inert aria-hidden="true">
+                {grid(addMonths(month, 1), false)}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <section className="mt-5">
