@@ -338,13 +338,13 @@ export function CalendarPage() {
       <div className="mt-3 overflow-hidden rounded-[1.625rem] bg-cell">
         <div {...swipe} className="relative touch-pan-y select-none">
           {month > FIRST_MONTH && (
-            <div className="absolute top-0 right-full w-full p-2" inert aria-hidden="true">
+            <div className="absolute top-0 right-full w-full px-3 py-2" inert aria-hidden="true">
               {grid(addMonths(month, -1), false)}
             </div>
           )}
-          <div className="p-2">{grid(month, true)}</div>
+          <div className="px-3 py-2">{grid(month, true)}</div>
           {month < LAST_MONTH && (
-            <div className="absolute top-0 left-full w-full p-2" inert aria-hidden="true">
+            <div className="absolute top-0 left-full w-full px-3 py-2" inert aria-hidden="true">
               {grid(addMonths(month, 1), false)}
             </div>
           )}
