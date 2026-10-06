@@ -4,6 +4,8 @@ import { ExercisePage } from './exercises/ExercisePage'
 import { HomePage } from './home/HomePage'
 import { FixedLocation, match, navigate, setTransitions, useLocation, type Transition } from './route'
 import { SettingsPage } from './settings/SettingsPage'
+import { ExerciseListPage } from './library/ExerciseListPage'
+import { LibraryPage } from './library/LibraryPage'
 import { ExerciseStatsPage } from './stats/ExerciseStatsPage'
 import { StatsPage } from './stats/StatsPage'
 import { TemplatePage } from './templates/TemplatePage'
@@ -14,42 +16,51 @@ import { TabBar } from './ui/TabBar'
 import type { Tab } from './ui/tabs'
 import { WorkoutPage } from './workout/WorkoutPage'
 
-// The pages as iOS stacks them. Three tabs at the bottom, each a stack of its own: the workouts,
+// The pages as iOS stacks them. Four tabs at the bottom, each a stack of its own: the workouts,
 // with a workout pushed onto the list; the calendar, with the workouts opened from it and the
-// recently deleted; and the statistics, with an exercise's progress and the workouts opened from
-// it. The profile, the templates and an exercise's details open as sheets over whichever tab is
-// shown: tasks to finish and close, as iOS presents them. depth orders the pages of one stack, so a change of page knows to push or pop; a change
-// of tab neither pushes nor pops.
+// recently deleted; the statistics, with an exercise's progress and the workouts opened from it;
+// and the library, with the templates and the exercises, each exercise's progress the same page as
+// in the statistics. The profile and an exercise's details open as sheets over whichever tab is
+// shown: tasks to finish and close, as iOS presents them. depth orders the pages of one stack, so
+// a change of page knows to push or pop; a change of tab neither pushes nor pops.
 
 interface Route {
   pattern: string
   page: (params: Record<string, string>) => ReactNode
-  depth: number
+  depth: number | ((query: URLSearchParams) => number)
   /** The tab whose stack the page is in; none for the pages of the settings' sheet. */
   tab?: Tab | ((query: URLSearchParams) => Tab)
 }
 
-/** A workout belongs to the tab it was opened from, which its way back names. */
-const tabOfWorkout = (query: URLSearchParams): Tab => {
-  const back = (query.get('back') ?? '').replace(/^\/+/, '')
-  return back.startsWith('calendar') ? 'calendar' : back.startsWith('stats') ? 'stats' : 'training'
-}
+/** A workout belongs to the tab of the page it was opened from, which its way back names. */
+const tabOfWorkout = (query: URLSearchParams): Tab => backPage(query)?.tab ?? 'training'
+
+/** An exercise's progress is in the library when opened from its list there, else in the statistics. */
+const fromLibrary = (query: URLSearchParams) => query.get('from') === 'library'
 
 const routes: Route[] = [
   { pattern: '/', page: () => <HomePage />, depth: 0, tab: 'training' },
-  { pattern: '/workouts/:id', page: ({ id }) => <WorkoutPage key={id} id={id!} />, depth: 1, tab: tabOfWorkout },
+  {
+    pattern: '/workouts/:id',
+    page: ({ id }) => <WorkoutPage key={id} id={id!} />,
+    // One above the page it was opened from.
+    depth: (query) => (backPage(query)?.depth ?? 0) + 1,
+    tab: tabOfWorkout,
+  },
   { pattern: '/calendar', page: () => <CalendarPage />, depth: 0, tab: 'calendar' },
+  { pattern: '/trash', page: () => <TrashPage />, depth: 1, tab: 'calendar' },
   { pattern: '/stats', page: () => <StatsPage />, depth: 0, tab: 'stats' },
   {
     pattern: '/stats/exercises/:id',
     page: ({ id }) => <ExerciseStatsPage key={id} id={id!} />,
-    depth: 1,
-    tab: 'stats',
+    depth: (query) => (fromLibrary(query) ? 2 : 1),
+    tab: (query) => (fromLibrary(query) ? 'library' : 'stats'),
   },
-  { pattern: '/trash', page: () => <TrashPage />, depth: 1, tab: 'calendar' },
+  { pattern: '/library', page: () => <LibraryPage />, depth: 0, tab: 'library' },
+  { pattern: '/templates', page: () => <TemplatesPage />, depth: 1, tab: 'library' },
+  { pattern: '/templates/:id', page: ({ id }) => <TemplatePage key={id} id={id!} />, depth: 2, tab: 'library' },
+  { pattern: '/exercises', page: () => <ExerciseListPage />, depth: 1, tab: 'library' },
   { pattern: '/settings', page: () => <SettingsPage />, depth: 1 },
-  { pattern: '/templates', page: () => <TemplatesPage />, depth: 1 },
-  { pattern: '/templates/:id', page: ({ id }) => <TemplatePage key={id} id={id!} />, depth: 2 },
   { pattern: '/exercises/:id', page: ({ id }) => <ExercisePage key={id} id={id!} />, depth: 3 },
 ]
 
@@ -69,18 +80,16 @@ function find(url: string): Found | undefined {
     const params = match(route.pattern, path)
     if (!params) continue
     const tab = typeof route.tab === 'function' ? route.tab(query) : route.tab
-    // A workout lies one above the page it was opened from.
-    const depth = route.pattern === '/workouts/:id' ? backDepth(query) + 1 : route.depth
+    const depth = typeof route.depth === 'function' ? route.depth(query) : route.depth
     return { url, page: route.page(params), depth, tab, sheet: tab === undefined }
   }
   return undefined
 }
 
-/** The depth of the page a workout leads back to: a tab's first page, or an exercise's statistics. */
-function backDepth(query: URLSearchParams): number {
+/** The page a workout leads back to, from its way back; never another workout. */
+function backPage(query: URLSearchParams): Found | undefined {
   const back = `/${(query.get('back') ?? '').replace(/^\/+/, '')}`
-  const [path = '/'] = back.split('?')
-  return routes.find((r) => r.pattern !== '/workouts/:id' && r.tab && match(r.pattern, path))?.depth ?? 0
+  return back.startsWith('/workouts/') ? undefined : find(back)
 }
 
 const isSheetUrl = (href: string) => find(href)?.sheet === true

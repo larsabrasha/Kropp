@@ -121,9 +121,12 @@ export function ExercisePicker({
 export function NewExerciseForm({
   initialName,
   onCreate,
+  action = t('Picker.Create'),
 }: {
   initialName: string
   onCreate: (request: NewExercise) => void
+  /** The button's word: "Skapa och lägg till" in a workout, "Skapa" in the library. */
+  action?: string
 }) {
   const [name, setName] = useState(initialName)
   const [kind, setKind] = useState<ExerciseKind>('Strength')
@@ -183,7 +186,7 @@ export function NewExerciseForm({
         data-testid="create-exercise"
         className={`w-full ${button('filled', 'large')}`}
       >
-        {t('Picker.Create')}
+        {action}
       </button>
     </div>
   )

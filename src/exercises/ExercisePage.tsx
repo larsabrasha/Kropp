@@ -1,11 +1,12 @@
 import { useCallback, useState } from 'react'
 import { t } from '../i18n/i18n'
 import { nameOf, slugFor } from '../illustrations/illustrations'
-import { useLocation } from '../route'
+import { navigate, useLocation } from '../route'
 import { useRemoteChange, useRepository } from '../services'
 import type { LocalRepository } from '../sync/localRepo'
 import { categoriesOf } from '../training/categories'
 import { Limits } from '../training/limits'
+import { isInUse } from '../training/usage'
 import {
   DEFAULT_WEIGHT_STEP_KG,
   EXERCISE_KINDS,
@@ -15,6 +16,7 @@ import {
 } from '../training/model'
 import { invariant, num, parseDecimal } from '../training/text'
 import { CategoryChips } from '../ui/CategoryChips'
+import { ActionSheet } from '../ui/ActionSheet'
 import { ModalSheet } from '../ui/ModalSheet'
 import { BackLink } from '../ui/Layout'
 import { FreeRow, SelectRow, SwitchRow, TextRow } from '../ui/Form'
@@ -40,14 +42,17 @@ function safeBack(back: string | null): string | undefined {
 }
 
 /** The exercise, and the number of workouts that use it, from the repository's memory. */
-function read(repository: LocalRepository, id: string): { exercise?: Exercise; usedIn: number; error?: string } {
+function read(
+  repository: LocalRepository,
+  id: string,
+): { exercise?: Exercise; usedIn: number; inUse: boolean; error?: string } {
   try {
     const exercise = repository.peek('exercise', id)
     const usedIn = repository.peekAll('workout').filter((w) => w.exercises.some((e) => e.exerciseId === id)).length
-    return { exercise, usedIn }
+    return { exercise, usedIn, inUse: isInUse(repository, id) }
   } catch (e) {
     console.error(`Could not read exercise ${id}`, e)
-    return { usedIn: 0, error: t('Home.LoadFailed') }
+    return { usedIn: 0, inUse: true, error: t('Home.LoadFailed') }
   }
 }
 
@@ -57,7 +62,8 @@ export function ExercisePage({ id }: { id: string }) {
   return (
     <>
       <BackLink href={back ?? '/'} label={t('Common.Back')} testId="back" />
-      <ExerciseDetails id={id} />
+      {/* Deleted, the sheet closes onto the exercises, as the page below has nothing left to show. */}
+      <ExerciseDetails id={id} onDeleted={() => navigate('/exercises')} />
     </>
   )
 }
@@ -67,7 +73,16 @@ export function ExercisePage({ id }: { id: string }) {
  * inside the sheet of an exercise's card, where the sheet's bar has its name instead of a large
  * title (heading false).
  */
-export function ExerciseDetails({ id: routeId, heading = true }: { id: string; heading?: boolean }) {
+export function ExerciseDetails({
+  id: routeId,
+  heading = true,
+  onDeleted,
+}: {
+  id: string
+  heading?: boolean
+  /** Offers to delete an exercise nothing refers to, and is called once it is gone. */
+  onDeleted?: () => void
+}) {
   const id = routeId.toLowerCase()
   const repository = useRepository()
 
@@ -75,6 +90,8 @@ export function ExerciseDetails({ id: routeId, heading = true }: { id: string; h
   const [initial] = useState(() => read(repository, id))
   const [exercise, setExercise] = useState<Exercise | undefined>(initial.exercise)
   const [usedIn, setUsedIn] = useState(initial.usedIn)
+  const [inUse, setInUse] = useState(initial.inUse)
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [choosingIllustration, setChoosingIllustration] = useState(false)
   const [error, setError] = useState<string | null>(initial.error ?? null)
   // Bumped to put the stored name back in the field after a name that was refused.
@@ -85,6 +102,7 @@ export function ExerciseDetails({ id: routeId, heading = true }: { id: string; h
     if (found.error !== undefined) return setError(found.error)
     setExercise(found.exercise)
     setUsedIn(found.usedIn)
+    setInUse(found.inUse)
   }, [repository, id])
 
   useRemoteChange(load)
@@ -125,6 +143,17 @@ export function ExerciseDetails({ id: routeId, heading = true }: { id: string; h
     const step = parseDecimal(value)
     if (exercise && step !== undefined && (WEIGHT_STEPS as readonly number[]).includes(step))
       void save({ ...exercise, weightStepKg: step === DEFAULT_WEIGHT_STEP_KG ? undefined : step })
+  }
+
+  const remove = async () => {
+    setConfirmingDelete(false)
+    try {
+      await repository.delete('exercise', id)
+      onDeleted?.()
+    } catch (e) {
+      console.error(`Could not delete exercise ${id}`, e)
+      setError(t('Home.SaveFailed'))
+    }
   }
 
   const closeChoice = useCallback(() => setChoosingIllustration(false), [])
@@ -248,6 +277,31 @@ export function ExerciseDetails({ id: routeId, heading = true }: { id: string; h
               testId="archived"
             />
           </Group>
+
+          {/* Deleting, last and red, for an exercise nothing refers to; one in use is hidden above. */}
+          {onDeleted && !inUse && (
+            <Group className="mt-section">
+              <li>
+                <button
+                  type="button"
+                  onClick={() => setConfirmingDelete(true)}
+                  data-testid="delete-exercise"
+                  className={`${ROW} w-full text-[1.0625rem] text-red-600 dark:text-red-500`}
+                >
+                  {t('Exercises.Delete')}
+                </button>
+              </li>
+            </Group>
+          )}
+          {confirmingDelete && (
+            <ActionSheet
+              message={t('Exercises.DeleteConfirm')}
+              action={t('Common.Delete')}
+              onAction={() => void remove()}
+              onCancel={() => setConfirmingDelete(false)}
+              actionTestId="confirm-delete"
+            />
+          )}
 
           <div className="mt-section" data-testid="illustration">
             <Group header={t('Exercises.Picture')}>

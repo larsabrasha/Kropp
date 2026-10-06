@@ -151,6 +151,8 @@
   & > * + *::before {
     content: '';
     position: absolute;
+    /* Over a row's own ground, such as one that slides aside to show its actions. */
+    z-index: 1;
     top: 0;
     right: 0;
     left: var(--separator-inset, 1rem);

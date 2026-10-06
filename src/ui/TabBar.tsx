@@ -14,10 +14,18 @@ const ICONS: Record<Tab, string> = {
   calendar:
     'M4 7.5A2.5 2.5 0 0 1 6.5 5h11A2.5 2.5 0 0 1 20 7.5v10a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 17.5zM4 10h16M8.5 3v4M15.5 3v4',
   stats: 'M4 20h16M7 16.5v-4M12 16.5V7.5M17 16.5v-7',
+  // Books on a shelf, as the libraries of Music and Books draw theirs.
+  library: 'M4.5 5v14M9 5v14M13.5 6.5l4.2 12.6M3 20h18',
 }
 
-const label = (tab: Tab) =>
-  tab === 'training' ? t('Home.Title') : tab === 'calendar' ? t('Calendar.Heading') : t('Stats.Heading')
+const LABELS = {
+  training: 'Home.Title',
+  calendar: 'Calendar.Heading',
+  stats: 'Stats.Heading',
+  library: 'Library.Heading',
+} as const
+
+const label = (tab: Tab) => t(LABELS[tab])
 
 export function TabBar({ current, last }: { current: Tab | undefined; last: Partial<Record<Tab, string>> }) {
   const go = (tab: Tab) => (e: MouseEvent<HTMLAnchorElement>) => {

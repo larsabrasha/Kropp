@@ -490,9 +490,11 @@ it('opens the templates from planning, closing the planning sheet on the way', a
   expect(edit.getAttribute('aria-label')).toBe('Ändra mallar')
   fireEvent.click(edit)
 
+  // In the library, where the templates live.
   expect(window.location.pathname).toBe('/templates')
   expect(screen.queryByTestId('planning-sheet')).toBeNull()
-  expect(screen.getByRole('dialog').querySelector('h1')!.textContent).toBe('Mallar')
+  expect(document.querySelector('main h1')!.textContent).toBe('Mallar')
+  expect(screen.getByTestId('tab-library').getAttribute('aria-current')).toBe('page')
 })
 
 it('offers to create a template where there are none to plan from', () => {

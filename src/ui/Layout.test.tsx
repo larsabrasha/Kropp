@@ -14,6 +14,7 @@ it('names the home page for what it holds, with the tabs below and settings in t
     ['Träning', '/'],
     ['Kalender', '/calendar'],
     ['Statistik', '/stats'],
+    ['Bibliotek', '/library'],
   ])
   expect(screen.getByTestId('tab-training').getAttribute('aria-current')).toBe('page')
   // Settings behind a picture of the user, as Health has the account; named for what it opens.
@@ -87,9 +88,9 @@ it('sends an unknown path home', async () => {
 it('leaves the home page title out of the bar when scrolled, but not a page further in', async () => {
   // happy-dom lays nothing out, so every h1 counts as scrolled under the bar.
   const barTitle = (bar: string) => document.querySelector(`.${bar} span.truncate`)!.textContent
-  createTestApp().renderAt('/templates')
+  createTestApp().renderAt('/settings')
 
   expect(screen.getByTestId('title').textContent).toBe('Träning')
-  await waitFor(() => expect(barTitle('sheet-navbar')).toBe('Mallar'))
+  await waitFor(() => expect(barTitle('sheet-navbar')).toBe('Profil'))
   expect(barTitle('app-navbar')).toBe('')
 })

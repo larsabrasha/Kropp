@@ -147,9 +147,6 @@ it('changes period in place, with a bar a month for a year', async () => {
   expect(window.location.search).toBe('?period=1Y')
   expect(within(screen.getByTestId('workouts-chart')).getAllByTestId('bar')).toHaveLength(12)
   expect(within(screen.getByTestId('workouts-chart')).queryByTestId('goal-line')).toBeNull()
-  expect(within(screen.getByTestId('stats-exercises')).getAllByRole('link')[0]!.getAttribute('href')).toBe(
-    `/stats/exercises/${PLANK.id}?period=1Y`,
-  )
 })
 
 it("follows an exercise's heaviest set over time, and its volume when chosen", async () => {
@@ -197,63 +194,6 @@ it('says so when an exercise was never logged, or is not there', async () => {
 
   app.renderAt(`/stats/exercises/${newId()}`)
   await waitFor(() => expect(screen.getByTestId('not-found')).toBeTruthy())
-})
-
-it('filters the exercises by name, and keeps the filter back from one', async () => {
-  const app = createTestApp()
-  await seed(app)
-  app.renderAt('/stats')
-
-  const names = () =>
-    within(screen.getByTestId('stats-exercises'))
-      .getAllByRole('link')
-      .map((a) => a.querySelector('.font-semibold')!.textContent)
-  expect(names()).toEqual(['Plankan', 'Bänkpress'])
-
-  fireEvent.change(screen.getByTestId('stats-search'), { target: { value: 'BÄNK' } })
-  expect(names()).toEqual(['Bänkpress'])
-
-  fireEvent.click(within(screen.getByTestId('stats-exercises')).getByRole('link'))
-  await waitFor(() => expect(window.location.pathname).toBe(`/stats/exercises/${BENCH.id}`))
-  fireEvent.click(screen.getByTestId('back'))
-  await waitFor(() => expect(window.location.pathname).toBe('/stats'))
-  expect(names()).toEqual(['Bänkpress'])
-
-  const input = screen.getByTestId('stats-search')
-  fireEvent.change(input, { target: { value: 'marklyft' } })
-  expect(screen.getByTestId('stats-no-match').textContent).toBe('Ingen övning matchar.')
-  // The filter outlives the page: leave it empty for the tests after this one.
-  fireEvent.change(input, { target: { value: '' } })
-})
-
-it('lists every exercise, the ones never logged after the rest, and hidden ones last', async () => {
-  const app = createTestApp()
-  await seed(app)
-  const squat = exercise('Benböj', 'Strength', ['Legs'])
-  const old = { ...exercise('Armhävningar', 'Bodyweight', ['Chest']), isArchived: true }
-  for (const e of [squat, old]) await app.repository.save('exercise', e.id, e)
-  app.renderAt('/stats')
-
-  const rows = within(screen.getByTestId('stats-exercises')).getAllByRole('link')
-  expect(rows.map((a) => a.querySelector('.font-semibold')!.textContent)).toEqual([
-    'Plankan',
-    'Bänkpress',
-    'Benböj',
-    'Armhävningar',
-  ])
-  expect(rows[2]!.textContent).toContain('Vikter · Inte loggad än')
-  expect(rows[3]!.textContent).toContain('Dold')
-})
-
-it('lists the exercises before anything is logged, so each can be found', async () => {
-  const app = createTestApp()
-  await app.repository.save('exercise', BENCH.id, BENCH)
-  app.renderAt('/stats')
-
-  expect(screen.getByTestId('stats-empty')).toBeTruthy()
-  expect(within(screen.getByTestId('stats-exercises')).getByRole('link').getAttribute('href')).toBe(
-    `/stats/exercises/${BENCH.id}`,
-  )
 })
 
 it("opens an exercise's details in a sheet over its progress, which closes back to it", async () => {

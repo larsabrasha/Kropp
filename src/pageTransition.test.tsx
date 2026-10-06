@@ -63,18 +63,19 @@ it('raises the profile as a sheet and lowers it again', async () => {
   expect(started).toEqual(['sheet-open', 'sheet-close'])
 })
 
-it('raises the templates from planning, pushes and pops a template inside, and lowers them again', async () => {
+it('shows the templates in the library from planning, and pushes and pops a template there', async () => {
   const template = { id: newId(), name: 'Ben', exercises: [] }
   await app.repository.save('template', template.id, template)
   app.renderAt('/')
 
+  // Another tab: no move. Inside it, a template pushes and pops.
   fireEvent.click($('[data-testid=edit-templates]'))
-  fireEvent.click($(`[role=dialog] a[href="/templates/${template.id}"]`))
-  fireEvent.click(within(screen.getByRole('dialog')).getByTitle('Mallar'))
-  fireEvent.click(within(screen.getByRole('dialog')).getByTitle('Stäng'))
+  fireEvent.click($(`main a[href="/templates/${template.id}"]`))
+  fireEvent.click(screen.getByTitle('Mallar'))
+  fireEvent.click(screen.getByTitle('Bibliotek'))
 
-  expect(window.location.pathname).toBe('/')
-  expect(started).toEqual(['sheet-open', 'sheet-push', 'sheet-pop', 'sheet-close'])
+  expect(window.location.pathname).toBe('/library')
+  expect(started).toEqual(['push', 'pop', 'pop'])
 })
 
 it('pushes a workout opened from the calendar inside the calendar tab', async () => {

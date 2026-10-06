@@ -132,23 +132,39 @@ it('changes the picture here', async () => {
   await waitFor(async () => expect((await reload(bench.id)).illustration).toBe('pec-deck'))
 })
 
-it('groups the pictures by body area, what the exercise trains first, and filters by one', async () => {
+it('opens the pictures on what the exercise trains, and filters by area and equipment together', async () => {
   const legs = { ...exercise('Benpress', 'Strength'), categories: ['Legs' as const] }
   await app.repository.save('exercise', legs.id, legs)
   renderExercise(legs.id)
 
   fireEvent.click(await screen.findByTestId('change-illustration'))
   const picker = screen.getByTestId('illustration-picker')
-  const groups = () => [...picker.querySelectorAll('section[data-group]')].map((g) => g.getAttribute('data-group'))
-  expect(groups()).toEqual(['Legs', 'Chest', 'Back', 'Core', 'Arms', 'Shoulders', 'Cardio', 'Other'])
-  // Each picture once: in its own group only.
-  const slugs = [...picker.querySelectorAll('[data-slug]')].map((b) => b.getAttribute('data-slug'))
-  expect(new Set(slugs).size).toBe(slugs.length)
+  const shown = () => [...picker.querySelectorAll('[data-slug]')].map((b) => b.getAttribute('data-slug'))
+  const choose = (filter: string, text: string) => {
+    fireEvent.click(screen.getByTestId(filter))
+    fireEvent.click(within(screen.getByTestId(`${filter}-menu`)).getByText(text))
+  }
 
-  fireEvent.click(within(screen.getByTestId('picture-filter')).getByText('Bröst'))
-  expect(groups()).toEqual(['Chest'])
-  expect(picker.querySelector('[data-slug=pec-deck]')).not.toBeNull()
-  expect(picker.querySelector('[data-slug=squat]')).toBeNull()
+  // One grid, no groups, and each filter a capsule saying what is shown: legs, chosen at the start.
+  expect(picker.querySelectorAll('section')).toHaveLength(0)
+  expect(screen.getByTestId('area-filter').textContent).toBe('Ben')
+  expect(screen.getByTestId('equipment-filter').textContent).toBe('All utrustning')
+  expect(shown()).toContain('squat')
+  expect(shown()).not.toContain('pec-deck')
+
+  // Both at once: legs on a machine. The menu marks what is chosen.
+  choose('equipment-filter', 'Maskin')
+  expect(screen.getByTestId('equipment-filter').textContent).toBe('Maskin')
+  expect(shown()).toContain('leg-press')
+  expect(shown()).not.toContain('squat')
+  fireEvent.click(screen.getByTestId('equipment-filter'))
+  expect(
+    within(screen.getByTestId('equipment-filter-menu')).getByRole('menuitemradio', { checked: true }).textContent,
+  ).toBe('Maskin')
+  fireEvent.click(within(screen.getByTestId('equipment-filter-menu')).getByText('All utrustning'))
+
+  choose('area-filter', 'Alla områden')
+  expect(shown()).toHaveLength(302)
 })
 
 it.each([

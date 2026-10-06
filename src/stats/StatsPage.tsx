@@ -1,18 +1,16 @@
 import { useCallback, useState } from 'react'
-import { compareText, formatDate, lower, t } from '../i18n/i18n'
-import { slugFor } from '../illustrations/illustrations'
-import { Link, navigate, useLocation } from '../route'
+import { formatDate, t } from '../i18n/i18n'
+import { navigate, useLocation } from '../route'
 import { useAnyChange, useRepository } from '../services'
 import type { LocalRepository } from '../sync/localRepo'
 import { maxDate, mondayOf, today } from '../training/dates'
-import { Limits } from '../training/limits'
 import { DEFAULT_SETTINGS, SETTINGS_ID, type Exercise, type Workout } from '../training/model'
-import { Chevron, Group } from '../ui/List'
-import { SearchField } from '../ui/SearchField'
+import { Group } from '../ui/List'
 import { SectionHeader } from '../ui/SectionHeader'
 import { Segmented } from '../ui/Segmented'
-import { CARD, PICTURE_ROW } from '../ui/styles'
+import { CARD } from '../ui/styles'
 import { BarChart, HorizontalBars } from './Charts'
+import { ExerciseLink } from '../library/ExerciseListPage'
 import { axisLabel, formatOne, formatWhole, goalLabel, metricText, periodOptions, rangeText, spanTitle } from './format'
 import {
   bucketsOf,
@@ -21,7 +19,6 @@ import {
   isPeriod,
   latestRecords,
   logged,
-  occasionsOf,
   perBucket,
   rangeOf,
   setsPerArea,
@@ -29,7 +26,6 @@ import {
   workoutVolume,
   type Period,
 } from './stats'
-import { Picture } from '../ui/Picture'
 
 // The statistics of all training, as iOS's Health and Fitness sum up theirs: a period to choose at
 // the top, the totals of it as tiles, then charts of workouts and kilograms per week or month,
@@ -57,10 +53,6 @@ function read(repository: LocalRepository): Data {
 
 const RECORDS = 5
 
-// The search in the exercise list, kept while the app runs: back from an exercise, the list is
-// still filtered as it was left, as iOS keeps a search on the page below.
-let rememberedSearch = ''
-
 export function StatsPage() {
   const repository = useRepository()
   const { query } = useLocation()
@@ -68,11 +60,6 @@ export function StatsPage() {
   const period: Period = isPeriod(asked) ? asked : DEFAULT_PERIOD
   // Read during the first render, so the page never shows without its data.
   const [data, setData] = useState(() => read(repository))
-  const [search, setSearch] = useState(rememberedSearch)
-  const changeSearch = (value: string) => {
-    rememberedSearch = value
-    setSearch(value)
-  }
   const load = useCallback(() => setData(read(repository)), [repository])
   useAnyChange(load)
 
@@ -107,77 +94,7 @@ export function StatsPage() {
   const streak = goalStreak(workouts, day, goal)
   const records = latestRecords(workouts, exercises).slice(0, RECORDS)
 
-  // Every exercise, as this is where each one has its page: the ones logged by the latest done,
-  // then the rest by name, hidden ones last.
-  const done = exercises
-    .map((exercise) => ({ exercise, occasions: occasionsOf(workouts, exercise.id) }))
-    .sort(
-      (a, b) =>
-        Number(a.exercise.isArchived) - Number(b.exercise.isArchived) ||
-        Number(a.occasions.length === 0) - Number(b.occasions.length === 0) ||
-        (b.occasions.at(-1)?.date ?? '').localeCompare(a.occasions.at(-1)?.date ?? '') ||
-        compareText(a.exercise.name, b.exercise.name),
-    )
-  const wanted = lower(search.trim())
-  const shown = done.filter(({ exercise }) => lower(exercise.name).includes(wanted))
-
   const periodQuery = period === DEFAULT_PERIOD ? '' : `?period=${period}`
-
-  const exerciseList = (
-    <section className="mt-section">
-      <SectionHeader>{t('Stats.Exercises')}</SectionHeader>
-      {done.length > 1 && (
-        <SearchField
-          value={search}
-          onChange={(e) => changeSearch(e.target.value)}
-          placeholder={t('Exercises.Search')}
-          maxLength={Limits.search}
-          data-testid="stats-search"
-          className="mb-3"
-        />
-      )}
-      {shown.length === 0 ? (
-        <div
-          className="flex flex-col items-center gap-3 px-6 py-10 text-center text-[1.0625rem] text-label-2"
-          data-testid="stats-no-match"
-        >
-          <svg
-            className="size-12"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            aria-hidden="true"
-          >
-            <circle cx="11" cy="11" r="7" />
-            <path d="M20 20l-4-4" />
-          </svg>
-          <p>{t('Exercises.NoMatches')}</p>
-        </div>
-      ) : (
-        <Group separatorInset="3.75rem" testId="stats-exercises">
-          {shown.map(({ exercise, occasions }) => (
-            <li key={exercise.id}>
-              <ExerciseLink
-                exercise={exercise}
-                href={`/stats/exercises/${exercise.id}${periodQuery}`}
-                detail={[
-                  occasions.length === 0
-                    ? `${t(`Exercise.Kind.${exercise.kind}`)} · ${t('Stats.NotLogged')}`
-                    : occasions.length === 1
-                      ? t('Stats.ExerciseMetaOne', formatDate(occasions[0]!.date, 'd MMM yyyy'))
-                      : t('Stats.ExerciseMeta', occasions.length, formatDate(occasions.at(-1)!.date, 'd MMM yyyy')),
-                  ...(exercise.isArchived ? [t('Exercises.Hidden')] : []),
-                ].join(' · ')}
-                dimmed={exercise.isArchived}
-              />
-            </li>
-          ))}
-        </Group>
-      )}
-    </section>
-  )
 
   return (
     <>
@@ -198,7 +115,8 @@ export function StatsPage() {
           <p className="text-[1.375rem] font-bold text-gray-900 dark:text-white">{t('Stats.Empty')}</p>
           <p className="text-[0.9375rem]">{t('Stats.EmptyHelp')}</p>
         </div>
-      ) : (
+      ) : null}
+      {workouts.length === 0 ? null : (
         <>
           <Segmented
             options={periodOptions()}
@@ -303,8 +221,6 @@ export function StatsPage() {
           )}
         </>
       )}
-
-      {done.length > 0 && exerciseList}
     </>
   )
 }
@@ -320,38 +236,6 @@ function Tile({ label, value, unit, testId }: { label: string; value: string; un
         {unit !== undefined && <span className="ml-1 text-[0.9375rem] font-semibold text-label-2">{unit}</span>}
       </p>
     </li>
-  )
-}
-
-function ExerciseLink({
-  exercise,
-  href,
-  detail,
-  trailing,
-  dimmed = false,
-}: {
-  exercise: Exercise
-  href: string
-  detail: string
-  trailing?: string
-  /** A hidden exercise, kept for its history. */
-  dimmed?: boolean
-}) {
-  const slug = slugFor(exercise)
-  return (
-    <Link href={href} className={`${PICTURE_ROW} ${dimmed ? 'opacity-60' : ''}`}>
-      <Picture slug={slug} size="list" lazy />
-      <span className="min-w-0 flex-1">
-        <span className="block truncate text-[1.0625rem] font-semibold">{exercise.name}</span>
-        <span className="block truncate text-[0.9375rem] text-label-2">{detail}</span>
-      </span>
-      {trailing !== undefined && (
-        <span className="shrink-0 text-[1.0625rem] font-semibold tabular-nums" data-testid="record-value">
-          {trailing}
-        </span>
-      )}
-      <Chevron />
-    </Link>
   )
 }
 

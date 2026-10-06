@@ -54,13 +54,15 @@ export function ExerciseStatsPage({ id: routeId }: { id: string }) {
 
   const askedPeriod = query.get('period')
   const period: Period = isPeriod(askedPeriod) ? askedPeriod : DEFAULT_PERIOD
-  const back = period === DEFAULT_PERIOD ? '/stats' : `/stats?period=${period}`
+  // The same page in the library and in the statistics: back to the one it was opened in.
+  const fromLibrary = query.get('from') === 'library'
+  const back = fromLibrary ? '/exercises' : `/stats${period === DEFAULT_PERIOD ? '' : `?period=${period}`}`
   const { exercise, workouts, error } = data
 
   if (!exercise)
     return (
       <>
-        <BackLink href={back} label={t('Stats.Heading')} testId="back" />
+        <BackLink href={back} label={fromLibrary ? t('Library.Exercises') : t('Stats.Heading')} testId="back" />
         <div
           className="flex flex-col items-center gap-3 px-6 py-14 text-center text-[1.0625rem] text-label-2"
           data-testid="not-found"
@@ -79,6 +81,7 @@ export function ExerciseStatsPage({ id: routeId }: { id: string }) {
     const p = next.period ?? period
     const m = next.metric ?? metric
     const params = new URLSearchParams()
+    if (fromLibrary) params.set('from', 'library')
     if (p !== DEFAULT_PERIOD) params.set('period', p)
     if (m !== metrics[0]) params.set('metric', m)
     const search = params.toString()
@@ -102,11 +105,11 @@ export function ExerciseStatsPage({ id: routeId }: { id: string }) {
   const unit = METRIC_UNITS[metric]
   const kind = exercise.kind
   const history = [...occasions].reverse()
-  const backHere = `stats/exercises/${id}`
+  const backHere = `stats/exercises/${id}${fromLibrary ? '?from=library' : ''}`
 
   return (
     <>
-      <BackLink href={back} label={t('Stats.Heading')} testId="back" />
+      <BackLink href={back} label={fromLibrary ? t('Library.Exercises') : t('Stats.Heading')} testId="back" />
       {/* What the exercise is, its name, kind and picture, changed in a sheet over its progress, as
           Health has a measurement's details behind the page that charts it. */}
       <BarItem side="trailing">

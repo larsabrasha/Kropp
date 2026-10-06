@@ -26,9 +26,10 @@ it('is named the profile, and holds planning and sync alone', async () => {
 
   expect(within(screen.getByRole('dialog')).getByRole('heading', { level: 1 }).textContent).toBe('Profil')
   // Templates, exercises and the recently deleted live where they are used.
-  expect(screen.queryByTestId('templates-link')).toBeNull()
-  expect(screen.queryByTestId('exercises-link')).toBeNull()
-  expect(screen.queryByTestId('trash-link')).toBeNull()
+  const sheet = screen.getByRole('dialog')
+  expect(within(sheet).queryByTestId('templates-link')).toBeNull()
+  expect(within(sheet).queryByTestId('exercises-link')).toBeNull()
+  expect(within(sheet).queryByTestId('trash-link')).toBeNull()
 })
 
 it('has seven a week as the most', async () => {

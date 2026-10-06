@@ -8,7 +8,10 @@ import { newId, type Exercise, type WorkoutTemplate } from '../training/model'
 import { BackLink, BarItem, GLASS_CIRCLE } from '../ui/Layout'
 import { Chevron, Group } from '../ui/List'
 import { PICTURE_ROW } from '../ui/styles'
+import { ActionSheet } from '../ui/ActionSheet'
 import { Picture } from '../ui/Picture'
+import { SwipeActions } from '../ui/SwipeActions'
+import { TrashSymbol } from '../ui/symbols'
 
 /** The templates by name and the exercises, from the repository's memory. */
 function read(repository: LocalRepository) {
@@ -31,6 +34,8 @@ export function TemplatesPage() {
   const [exercises, setExercises] = useState<ReadonlyMap<string, Exercise>>(initial.exercises)
   const [error, setError] = useState<string | undefined>(initial.error)
   const [creating, setCreating] = useState(false)
+  // The template a swipe asked to delete, until the user confirms.
+  const [deleting, setDeleting] = useState<WorkoutTemplate>()
   const creatingNow = useRef(false)
 
   const load = useCallback(() => {
@@ -60,9 +65,20 @@ export function TemplatesPage() {
     }
   }
 
+  async function remove(template: WorkoutTemplate) {
+    setDeleting(undefined)
+    try {
+      await repository.delete('template', template.id)
+      setTemplates((all) => all.filter((x) => x.id !== template.id))
+    } catch (e) {
+      console.error('Could not delete template', e)
+      setError(t('Home.SaveFailed'))
+    }
+  }
+
   return (
     <>
-      <BackLink href="/" />
+      <BackLink href="/library" label={t('Library.Heading')} />
       <h1 className="large-title">{t('Templates.Heading')}</h1>
 
       {/* Adding, as iOS places it: a plus on glass at the right of the bar. */}
@@ -126,27 +142,50 @@ export function TemplatesPage() {
         <Group className="mt-5" testId="templates" separatorInset="4.5rem" footer={t('Templates.Help')}>
           {templates.map((template) => (
             <li key={template.id}>
-              <Link href={`/templates/${template.id}`} className={PICTURE_ROW}>
-                <Picture
-                  size="plan"
-                  slug={iconFor(
-                    { id: template.id, date: '0001-01-01', status: 'Planned', exercises: template.exercises },
-                    exercises,
-                  )}
-                />
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[1.0625rem] font-semibold">{template.name}</span>
-                  <span className="block truncate text-[0.9375rem] text-label-2">
-                    {template.exercises
-                      .map((e) => exercises.get(e.exerciseId)?.name ?? t('Exercise.Unknown'))
-                      .join(', ')}
+              {/* Swiped, it offers to delete, as ⋯ does inside the template. */}
+              <SwipeActions
+                actions={[
+                  {
+                    label: t('Common.Delete'),
+                    icon: <TrashSymbol />,
+                    destructive: true,
+                    onAction: () => setDeleting(template),
+                    testId: 'swipe-delete',
+                  },
+                ]}
+              >
+                <Link href={`/templates/${template.id}`} className={PICTURE_ROW}>
+                  <Picture
+                    size="plan"
+                    slug={iconFor(
+                      { id: template.id, date: '0001-01-01', status: 'Planned', exercises: template.exercises },
+                      exercises,
+                    )}
+                  />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[1.0625rem] font-semibold">{template.name}</span>
+                    <span className="block truncate text-[0.9375rem] text-label-2">
+                      {template.exercises
+                        .map((e) => exercises.get(e.exerciseId)?.name ?? t('Exercise.Unknown'))
+                        .join(', ')}
+                    </span>
                   </span>
-                </span>
-                <Chevron />
-              </Link>
+                  <Chevron />
+                </Link>
+              </SwipeActions>
             </li>
           ))}
         </Group>
+      )}
+
+      {deleting && (
+        <ActionSheet
+          message={t('Templates.DeleteConfirm')}
+          action={t('Templates.Delete')}
+          onAction={() => void remove(deleting)}
+          onCancel={() => setDeleting(undefined)}
+          actionTestId="confirm-delete"
+        />
       )}
     </>
   )
