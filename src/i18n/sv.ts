@@ -1,10 +1,11 @@
 import type { Messages } from './i18n'
 
 export const sv: Messages = {
+  'Backup.ChooseEach': 'Välj för varje',
   'Backup.Conflicts': 'Krockar',
   'Backup.DeletedHere': 'Raderad här',
   'Backup.Exercises': 'Övningar',
-  'Backup.Export': 'Exportera data',
+  'Backup.Export': 'Exportera all data',
   'Backup.ExportAction': 'Exportera',
   'Backup.ExportFailed': 'Exporten gick inte. Försök igen.',
   'Backup.ExportTitle': 'Exportera',
@@ -13,10 +14,12 @@ export const sv: Messages = {
   'Backup.Exporting': 'Exporterar…',
   'Backup.File': 'Filen',
   'Backup.FileName': 'Sparas som {0}.',
+  'Backup.FromFile': '{0} av {1} från filen',
   'Backup.Heading': 'Data',
-  'Backup.Help': 'En fil med alla pass, övningar och mallar på enheten. Båda visar först vad de innehåller.',
+  'Backup.Help':
+    'Spara allt i en fil, som backup eller för att flytta till en annan enhet. Du ser vad som ändras innan något importeras.',
   'Backup.Here': 'Här',
-  'Backup.Import': 'Importera data',
+  'Backup.Import': 'Importera från fil',
   'Backup.ImportCount': 'Importera {0}',
   'Backup.ImportTitle': 'Importera',
   'Backup.Imported': 'Importerade {0}.',
@@ -30,7 +33,7 @@ export const sv: Messages = {
   'Backup.NewerVersion': 'Filen kommer från en nyare version av appen. Uppdatera appen och försök igen.',
   'Backup.Newest': 'Nyaste',
   'Backup.NotABackup': 'Filen är ingen export från den här appen.',
-  'Backup.NothingToImport': 'Allt finns redan här',
+  'Backup.NothingToImport': 'Inget att importera',
   'Backup.OlderVersion': 'Gjord i en äldre version av appen och läst som en sådan.',
   'Backup.PendingIncluded': '{0} ändringar som inte är synkade än kommer med.',
   'Backup.ReadFailed': 'Filen gick inte att läsa.',

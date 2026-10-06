@@ -121,7 +121,7 @@ describe('export and import', () => {
     expect((await app.store.getPending()).map((r) => r.id)).toEqual([workout.id])
   })
 
-  it("lists each conflict, keeps the newer copy, and takes the file's where chosen", async () => {
+  it("keeps the newer copy of a conflict, and lists each on a page of its own to choose the file's", async () => {
     const file = await exported()
     const app = createTestApp()
     vi.setSystemTime(new Date('2026-09-24T10:00:00Z'))
@@ -129,12 +129,23 @@ describe('export and import', () => {
     app.renderAt('/settings')
 
     choose(file)
-    const conflict = await screen.findByTestId('conflict')
-    expect(conflict.textContent).toContain('21 sep. 2026')
-    expect(conflict.textContent).toContain('Nyare här')
+    // Only the summary on the first page, however many conflicts.
+    const showConflicts = await screen.findByTestId('show-conflicts')
+    expect(screen.queryByTestId('conflict')).toBeNull()
+    expect(showConflicts.textContent).toContain('0 av 1 från filen')
     expect(screen.getByTestId<HTMLButtonElement>('confirm-import').disabled).toBe(true)
 
+    fireEvent.click(showConflicts)
+    const list = await screen.findByTestId('conflicts')
+    expect(within(list).getByRole('heading').textContent).toBe('Pass')
+    const conflict = within(list).getByTestId('conflict')
+    expect(conflict.textContent).toContain('21 sep. 2026')
+    expect(conflict.textContent).toContain('Nyare här')
     fireEvent.click(within(conflict).getByRole('radio', { name: 'Filen' }))
+
+    // Back on the first page, the choice holds.
+    fireEvent.click(screen.getByTestId('sheet-back'))
+    expect((await screen.findByTestId('show-conflicts')).textContent).toContain('1 av 1 från filen')
     expect(screen.getByTestId('confirm-import').textContent).toBe('Importera 1')
     fireEvent.click(screen.getByTestId('confirm-import'))
 
@@ -152,7 +163,9 @@ describe('export and import', () => {
     const all = await screen.findByTestId('choose-all')
     fireEvent.click(within(all).getByRole('radio', { name: 'Filen' }))
 
-    const conflict = screen.getByTestId('conflict')
+    expect(screen.getByTestId('show-conflicts').textContent).toContain('1 av 1 från filen')
+    fireEvent.click(screen.getByTestId('show-conflicts'))
+    const conflict = await screen.findByTestId('conflict')
     expect(within(conflict).getByRole('radio', { name: 'Filen' }).getAttribute('aria-checked')).toBe('true')
   })
 
