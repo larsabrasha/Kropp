@@ -129,7 +129,7 @@ export function ExerciseList({
   }
 
   return (
-    <section className="flex flex-col gap-2">
+    <section className="flex flex-col gap-5">
       {owner.exercises.length === 0 && !picking && (
         <div
           className="flex flex-col items-center gap-3 px-6 py-14 text-center text-[1.0625rem] text-label-2"
@@ -150,7 +150,7 @@ export function ExerciseList({
         </div>
       )}
 
-      <div ref={entryList} className="flex flex-col gap-2" data-testid="entry-list">
+      <div ref={entryList} className="flex flex-col gap-5" data-testid="entry-list">
         {owner.exercises.map((entry, index) => {
           const last = forTemplate ? undefined : lastTimeOn(history, owner, entry.exerciseId)
           return (

@@ -4,7 +4,22 @@ import { useCommit } from './useCommit'
 
 // The two halves of iOS's stepper: one grey capsule, split by a hairline.
 const BUTTON =
-  'flex h-11 w-14 shrink-0 items-center justify-center text-2xl font-medium text-gray-900 active:bg-black/10 disabled:opacity-30 dark:text-white dark:active:bg-white/15'
+  'flex h-11 w-14 shrink-0 items-center justify-center text-gray-900 active:bg-black/10 disabled:opacity-30 dark:text-white dark:active:bg-white/15'
+
+/** − and + as drawn symbols, so they sit in the middle of their halves; a font's glyphs do not. */
+const Sign = ({ d }: { d: string }) => (
+  <svg
+    className="size-5"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.6"
+    strokeLinecap="round"
+    aria-hidden="true"
+  >
+    <path d={d} />
+  </svg>
+)
 
 /**
  * A number with large − and + buttons, for adjusting reps and weight with a thumb. The label sits
@@ -84,7 +99,7 @@ export function Stepper({
             data-testid="decrease"
             className={BUTTON}
           >
-            −
+            <Sign d="M6 12h12" />
           </button>
           <span className="h-5 w-px bg-separator" aria-hidden="true" />
           <button
@@ -96,7 +111,7 @@ export function Stepper({
             data-testid="increase"
             className={BUTTON}
           >
-            +
+            <Sign d="M6 12h12M12 6v12" />
           </button>
         </div>
       </div>

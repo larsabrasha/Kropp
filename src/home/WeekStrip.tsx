@@ -8,6 +8,7 @@ import { shortWorkoutName, type ExerciseMap } from '../training/categories'
 import { statusOf } from '../training/editing'
 import type { DateOnly, Workout } from '../training/model'
 import { Chevron } from '../ui/List'
+import { SECTION_ACTION, SectionHeader } from '../ui/SectionHeader'
 
 // A week at a glance, as iOS's Fitness shows a week of rings: Monday to Sunday, a filled green dot
 // with a check for a day with a workout done, a green ring for one planned, grey for the rest, and
@@ -134,26 +135,28 @@ export function WeekStrip({
   const { summary } = marks(monday)
 
   return (
-    <section className="mt-6" data-testid="week-strip">
-      <div className="flex items-baseline justify-between gap-3 px-4 pb-2">
-        <h2 className="text-[1.0625rem] font-semibold text-label-2" data-testid="week-heading">
-          {heading}
-          <span className="ml-2 font-normal">
-            {isThisWeek ? t('Home.Week', weekNumber(monday)) : weekRange(monday)}
-          </span>
-        </h2>
-        {/* Away from this week, the way back to it, as the calendar has its Today. */}
-        {!isThisWeek && (
-          <button
-            type="button"
-            onClick={() => setMonday(thisMonday)}
-            data-testid="this-week"
-            className="-my-2 -mr-2 shrink-0 px-2 py-2 text-[1.0625rem] text-tint active:opacity-60"
-          >
-            {t('Next.Today')}
-          </button>
-        )}
-      </div>
+    <section className="mt-section" data-testid="week-strip">
+      <SectionHeader
+        testId="week-heading"
+        action={
+          // Away from this week, the way back to it, as the calendar has its Today.
+          isThisWeek ? undefined : (
+            <button
+              type="button"
+              onClick={() => setMonday(thisMonday)}
+              data-testid="this-week"
+              className={SECTION_ACTION}
+            >
+              {t('Next.Today')}
+            </button>
+          )
+        }
+      >
+        {heading}
+        <span className="ml-2 text-[1.0625rem] font-normal text-label-2">
+          {isThisWeek ? t('Home.Week', weekNumber(monday)) : weekRange(monday)}
+        </span>
+      </SectionHeader>
       <div className="overflow-hidden rounded-[1.625rem] bg-cell">
         <div {...swipe} className="relative touch-pan-y select-none">
           {can(-1) && (

@@ -103,7 +103,7 @@ export function PlanList({
       </ul>
 
       {!noTemplates && (
-        <h3 className="mt-5 px-4 pb-2 text-[1.0625rem] font-semibold text-label-2">{t('Next.FromTemplate')}</h3>
+        <h3 className="mt-section px-4 pb-2 text-[1.0625rem] font-semibold text-label-2">{t('Next.FromTemplate')}</h3>
       )}
       <ul
         className={`${GROUP} ${noTemplates ? 'mt-3' : ''}`}
@@ -191,7 +191,7 @@ export function PlanList({
         disabled={planning !== undefined}
         aria-busy={planning !== undefined}
         data-testid="confirm-plan"
-        className={`${button('filled', 'large')} mt-5 w-full`}
+        className={`${button('filled', 'large')} mt-section w-full`}
       >
         {planning !== undefined && (
           <svg className="size-5 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">

@@ -18,6 +18,7 @@ import {
 } from '../training/model'
 import { planFrom, suggestDate, suggestDateAfter, suggestTemplate, upcoming as upcomingOf } from '../training/planning'
 import { Group } from '../ui/List'
+import { SECTION_ACTION, SectionHeader } from '../ui/SectionHeader'
 import { ModalSheet } from '../ui/ModalSheet'
 import { dayText, relativeDay } from './dayText'
 import { NextWorkoutCard } from './NextWorkoutCard'
@@ -185,9 +186,7 @@ export function HomePage() {
           far away it is: "I dag", "I morgon", "Om 3 dagar". */}
       {upcoming !== undefined && (
         <section data-testid="next" aria-label={t('Next.Heading')}>
-          <h2 className="px-4 pb-2 text-[1.0625rem] font-semibold text-label-2" data-testid="upcoming-when">
-            {relativeDay(upcoming.date, day)}
-          </h2>
+          <SectionHeader testId="upcoming-when">{relativeDay(upcoming.date, day)}</SectionHeader>
           <NextWorkoutCard workout={upcoming} exercises={exercises} history={workouts} day={day} />
         </section>
       )}
@@ -197,8 +196,9 @@ export function HomePage() {
       {workouts.length > 0 && <WeekStrip workouts={workouts} exercises={exercises} day={day} />}
 
       {plannedLater.length > 0 && (
-        <section className="mt-6">
-          <Group separatorInset="4.25rem" header={t('Home.Planned')}>
+        <section className="mt-section">
+          <SectionHeader>{t('Home.Planned')}</SectionHeader>
+          <Group separatorInset="4.25rem">
             {plannedLater.map((workout) => (
               <li key={workout.id} data-testid="planned-row">
                 <WorkoutRow workout={workout} exercises={exercises} today={day} />
@@ -208,7 +208,7 @@ export function HomePage() {
         </section>
       )}
 
-      <section className="mt-6">
+      <section className="mt-section">
         {workouts.length === 0 && (
           <div
             className="flex flex-col items-center gap-3 px-6 py-14 text-center text-[1.0625rem] text-label-2"
@@ -231,16 +231,15 @@ export function HomePage() {
         {/* The latest few, as iOS's Fitness lists its latest workouts; all of them in the calendar. */}
         {recent.length > 0 && (
           <>
-            <div className="flex items-baseline justify-between px-4 pb-2">
-              <h2 className="text-[1.0625rem] font-semibold text-label-2">{t('Home.Recent')}</h2>
-              <Link
-                href="/calendar"
-                data-testid="show-all"
-                className="-my-2 -mr-2 px-2 py-2 text-[1.0625rem] text-tint active:opacity-60"
-              >
-                {t('Home.ShowAll')}
-              </Link>
-            </div>
+            <SectionHeader
+              action={
+                <Link href="/calendar" data-testid="show-all" className={SECTION_ACTION}>
+                  {t('Home.ShowAll')}
+                </Link>
+              }
+            >
+              {t('Home.Recent')}
+            </SectionHeader>
             <ul
               className="ios-list overflow-hidden rounded-[1.625rem] bg-cell"
               style={{ '--separator-inset': '4.25rem' } as React.CSSProperties}

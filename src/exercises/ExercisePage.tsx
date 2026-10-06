@@ -177,7 +177,7 @@ export function ExercisePage({ id: routeId }: { id: string }) {
             />
           </Group>
 
-          <Group className="mt-6" footer={t('Exercises.KindHelp')}>
+          <Group className="mt-section" footer={t('Exercises.KindHelp')}>
             <SelectRow
               label={t('Exercises.Kind')}
               value={exercise.kind}
@@ -214,7 +214,7 @@ export function ExercisePage({ id: routeId }: { id: string }) {
             )}
           </Group>
 
-          <Group className="mt-6" header={t('Entry.Categories')}>
+          <Group className="mt-section" header={t('Entry.Categories')}>
             <FreeRow>
               <CategoryChips
                 selected={categoriesOf(exercise)}
@@ -223,7 +223,7 @@ export function ExercisePage({ id: routeId }: { id: string }) {
             </FreeRow>
           </Group>
 
-          <Group className="mt-6">
+          <Group className="mt-section">
             <SwitchRow
               label={t('Exercises.Archived')}
               checked={exercise.isArchived}

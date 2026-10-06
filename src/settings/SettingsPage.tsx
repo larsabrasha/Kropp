@@ -91,11 +91,11 @@ export function SettingsPage() {
           </p>
         )}
 
-        <Group className="mt-6" header={t('Settings.Sync')}>
+        <Group className="mt-section" header={t('Settings.Sync')}>
           <SyncRow />
         </Group>
 
-        <Group className="mt-6">
+        <Group className="mt-section">
           <CardLink href="/templates" testId="templates-link" heading="Templates.Heading" help="Templates.Help" />
           <CardLink href="/exercises" testId="exercises-link" heading="Exercises.Heading" help="Exercises.Help" />
           <CardLink href="/trash" testId="trash-link" heading="Trash.Heading" help="Trash.Help" />

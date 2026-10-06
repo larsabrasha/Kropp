@@ -169,6 +169,9 @@
   /* iOS's system colours for grouped lists (UIColor.systemGroupedBackground and friends), light
      here and dark below; the utilities (bg-ground, bg-cell, text-label-2…) read these variables. */
   --color-ground: #f2f2f7;
+  /* Between the sections of a grouped list, as iOS 26 spaces them: 35pt, measured in Settings on
+     an iPhone 17 Pro. gap-section, mt-section… */
+  --spacing-section: 2.1875rem;
   --color-cell: #ffffff;
   --color-cell-pressed: #e5e5ea;
   --color-separator: rgb(60 60 67 / 0.12);

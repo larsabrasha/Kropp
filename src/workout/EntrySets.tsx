@@ -151,7 +151,7 @@ export function EntrySets({
           fit
           portal={false}
         >
-          <div className="flex flex-col gap-5">
+          <div className="flex flex-col gap-section">
             <ul className={GROUP}>
               <li>
                 {kind === 'Timed' ? (

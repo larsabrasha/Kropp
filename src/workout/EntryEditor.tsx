@@ -43,7 +43,7 @@ export function EntryEditor({
 }) {
   const [confirmingRemove, setConfirmingRemove] = useState(false)
   return (
-    <div className="flex flex-col gap-6" data-testid="editor">
+    <div className="flex flex-col gap-section" data-testid="editor">
       <ul className={GROUP} data-testid="target-editor">
         {kind === 'Cardio' ? (
           <>
