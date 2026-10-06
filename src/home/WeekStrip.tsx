@@ -1,6 +1,3 @@
-import { useState } from 'react'
-import { useMonthSwipe } from '../calendar/useMonthSwipe'
-import { weekRange } from '../calendar/weekRange'
 import { formatDate, t } from '../i18n/i18n'
 import { Link } from '../route'
 import { addDays, mondayOf, weekNumber } from '../training/dates'
@@ -8,14 +5,13 @@ import { shortWorkoutName, type ExerciseMap } from '../training/categories'
 import { statusOf } from '../training/editing'
 import type { DateOnly, Workout } from '../training/model'
 import { Chevron } from '../ui/List'
-import { SECTION_ACTION, SectionHeader } from '../ui/SectionHeader'
+import { SectionHeader } from '../ui/SectionHeader'
 
 // A week at a glance, as iOS's Fitness shows a week of rings: Monday to Sunday, a filled green dot
 // with a check for a day with a workout done, a green ring for one planned, grey for the rest, and
-// what the day's workout trains in a word under it, and the count below. It opens on this week; swiped sideways it turns to the weeks before and
-// after, as the calendar turns its months (useMonthSwipe), as far as there are workouts. A tap opens
-// the calendar with the week shown chosen. Weeks start on Monday and are numbered by ISO 8601, as Swedish
-// calendars number them.
+// what the day's workout trains in a word under it, and the count below. Always this week; other
+// weeks are in the calendar, which a tap opens with this week chosen. Weeks start on Monday and are
+// numbered by ISO 8601, as Swedish calendars number them.
 
 type Mark = 'done' | 'planned' | 'none'
 
@@ -28,19 +24,7 @@ export function WeekStrip({
   exercises: ExerciseMap
   day: DateOnly
 }) {
-  const thisMonday = mondayOf(day)
-  const [monday, setMonday] = useState(thisMonday)
-
-  // As far back as the first workout, and forward to the last one planned.
-  const dates = workouts.map((w) => w.date)
-  const first = dates.length > 0 ? mondayOf(dates.reduce((a, b) => (a < b ? a : b))) : thisMonday
-  const lastWorkout = dates.length > 0 ? mondayOf(dates.reduce((a, b) => (a > b ? a : b))) : thisMonday
-  const last = lastWorkout > thisMonday ? lastWorkout : thisMonday
-  const can = (direction: 1 | -1) => (direction < 0 ? monday > first : monday < last)
-  const swipe = useMonthSwipe(
-    (direction) => setMonday((m) => addDays(m, 7 * direction)),
-    (direction) => can(direction),
-  )
+  const monday = mondayOf(day)
 
   const marks = (week: DateOnly) => {
     const days = Array.from({ length: 7 }, (_, i) => addDays(week, i))
@@ -71,7 +55,7 @@ export function WeekStrip({
     return { days, markOf, nameOf, summary }
   }
 
-  const strip = (week: DateOnly, live: boolean) => {
+  const strip = (week: DateOnly) => {
     const { days, markOf, nameOf, summary } = marks(week)
     return (
       <>
@@ -80,7 +64,7 @@ export function WeekStrip({
             const mark = markOf(date)
             const name = nameOf(date)
             return (
-              <li key={date} className="flex min-w-0 flex-col items-center gap-1.5" data-mark={live ? mark : undefined}>
+              <li key={date} className="flex min-w-0 flex-col items-center gap-1.5" data-mark={mark}>
                 <span
                   className={`text-[0.8125rem] ${date === day ? 'font-bold text-gray-900 dark:text-white' : 'text-label-2'}`}
                 >
@@ -112,7 +96,7 @@ export function WeekStrip({
                 {/* The type in a word, under its day; a line kept for every day, so the dots stay in a row. */}
                 <span
                   className="-mt-0.5 h-4 w-full truncate text-[0.6875rem] leading-4 text-label-2"
-                  data-testid={live && name !== undefined ? 'day-name' : undefined}
+                  data-testid={name !== undefined ? 'day-name' : undefined}
                 >
                   {name}
                 </span>
@@ -121,7 +105,7 @@ export function WeekStrip({
           })}
         </ol>
         <span className="mt-2.5 flex items-center justify-between gap-2 px-1">
-          <span className="text-[0.9375rem] text-label-2" data-testid={live ? 'week-summary' : undefined}>
+          <span className="text-[0.9375rem] text-label-2" data-testid="week-summary">
             {summary}
           </span>
           <Chevron />
@@ -130,54 +114,24 @@ export function WeekStrip({
     )
   }
 
-  const isThisWeek = monday === thisMonday
-  const heading = isThisWeek ? t('Home.ThisWeek') : t('Home.Week', weekNumber(monday))
+  const heading = t('Home.ThisWeek')
   const { summary } = marks(monday)
 
   return (
     <section className="mt-section" data-testid="week-strip">
-      <SectionHeader
-        testId="week-heading"
-        action={
-          // Away from this week, the way back to it, as the calendar has its Today.
-          isThisWeek ? undefined : (
-            <button
-              type="button"
-              onClick={() => setMonday(thisMonday)}
-              data-testid="this-week"
-              className={SECTION_ACTION}
-            >
-              {t('Next.Today')}
-            </button>
-          )
-        }
-      >
+      <SectionHeader testId="week-heading">
         {heading}
-        <span className="ml-2 text-[1.0625rem] font-normal text-label-2">
-          {isThisWeek ? t('Home.Week', weekNumber(monday)) : weekRange(monday)}
-        </span>
+        <span className="ml-2 text-[1.0625rem] font-normal text-label-2">{t('Home.Week', weekNumber(monday))}</span>
       </SectionHeader>
       <div className="overflow-hidden rounded-[1.625rem] bg-cell">
-        <div {...swipe} className="relative touch-pan-y select-none">
-          {can(-1) && (
-            <div className="absolute top-0 right-full w-full px-3 py-3" inert aria-hidden="true">
-              {strip(addDays(monday, -7), false)}
-            </div>
-          )}
-          <Link
-            href={`/calendar?week=${monday}`}
-            aria-label={`${heading}: ${summary}. ${t('Calendar.Heading')}`}
-            data-testid="week-link"
-            className="block px-3 py-3 active:bg-cell-pressed focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-500"
-          >
-            {strip(monday, true)}
-          </Link>
-          {can(1) && (
-            <div className="absolute top-0 left-full w-full px-3 py-3" inert aria-hidden="true">
-              {strip(addDays(monday, 7), false)}
-            </div>
-          )}
-        </div>
+        <Link
+          href={`/calendar?week=${monday}`}
+          aria-label={`${heading}: ${summary}. ${t('Calendar.Heading')}`}
+          data-testid="week-link"
+          className="block px-3 py-3 active:bg-cell-pressed focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-500"
+        >
+          {strip(monday)}
+        </Link>
       </div>
     </section>
   )

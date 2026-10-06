@@ -429,37 +429,17 @@ it('names each day by what its workout trains', async () => {
   expect(names).toEqual(['Bröst', '', '', '', 'Ben', '', ''])
 })
 
-it('turns to earlier weeks on a swipe, numbered as Swedish weeks, and back to this week', async () => {
+it('shows this week only, and opens the calendar on it', async () => {
   const app = createTestApp()
   const done = (date: string) => workout(date, { exercises: [entry(newId(), { sets: [{ reps: 8 }] })] })
-  for (const w of [done('2026-09-16'), done('2026-09-18'), done('2026-09-21')])
-    await app.repository.save('workout', w.id, w)
+  for (const w of [done('2026-09-16'), done('2026-09-21')]) await app.repository.save('workout', w.id, w)
   app.renderAt('/')
-  const heading = () => screen.getByTestId('week-heading').textContent
-  expect(heading()).toBe('Den här veckanVecka 39')
-  // Nothing after this week: no swipe forward.
-  const swipe = (from: number, to: number) => {
-    const link = screen.getByTestId('week-link').parentElement!
-    fireEvent.pointerDown(link, { pointerId: 1, clientX: from, clientY: 100 })
-    fireEvent.pointerMove(link, { pointerId: 1, clientX: (from + to) / 2, clientY: 100 })
-    fireEvent.pointerMove(link, { pointerId: 1, clientX: to, clientY: 100 })
-    fireEvent.pointerUp(link, { pointerId: 1, clientX: to, clientY: 100 })
-  }
 
-  swipe(60, 300)
-
-  await waitFor(() => expect(heading()).toBe('Vecka 3814–20 sep.'))
-  expect(screen.getByTestId('week-summary').textContent).toBe('2 gjorda')
-  expect(screen.getByTestId('week-link').getAttribute('href')).toBe('/calendar?week=2026-09-14')
-  // The first week with workouts is as far back as it goes.
-  await new Promise((r) => setTimeout(r, 400))
-  swipe(60, 300)
-  await new Promise((r) => setTimeout(r, 400))
-  expect(heading()).toBe('Vecka 3814–20 sep.')
-
-  fireEvent.click(screen.getByTestId('this-week'))
-  expect(heading()).toBe('Den här veckanVecka 39')
-  expect(screen.queryByTestId('this-week')).toBeNull()
+  expect(screen.getByTestId('week-heading').textContent).toBe('Den här veckanVecka 39')
+  expect(screen.getByTestId('week-summary').textContent).toBe('1 gjort')
+  expect(screen.getByTestId('week-link').getAttribute('href')).toBe('/calendar?week=2026-09-21')
+  // No other week beside it to turn to.
+  expect(screen.getByTestId('week-strip').querySelectorAll('[inert]')).toHaveLength(0)
 })
 
 it('opens the planning sheet and keeps it open after a workout was planned on the page', async () => {
