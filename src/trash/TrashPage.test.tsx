@@ -22,10 +22,22 @@ async function trash(note: string): Promise<Workout> {
 
 const advanceDays = (days: number) => vi.setSystemTime(Date.now() + days * DAY_MS)
 
-it('says so when the trash is empty', async () => {
+it('says so when nothing was deleted lately', async () => {
   app.renderAt('/trash')
 
-  expect((await screen.findByTestId('trash-empty')).textContent).toContain('Papperskorgen är tom')
+  expect((await screen.findByTestId('trash-empty')).textContent).toContain('Inga nyligen raderade pass')
+})
+
+it('is reached from the end of the calendar, and leads back to it', async () => {
+  app.renderAt('/calendar')
+
+  fireEvent.click(screen.getByTestId('trash-link'))
+
+  expect(window.location.pathname).toBe('/trash')
+  expect(screen.queryByRole('dialog')).toBeNull()
+  expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Nyligen raderade')
+  expect(screen.getByTestId('tab-calendar').getAttribute('aria-current')).toBe('page')
+  expect(screen.getByTitle('Kalender').getAttribute('href')).toBe('/calendar')
 })
 
 it('shows when a trashed workout goes, and can restore it', async () => {

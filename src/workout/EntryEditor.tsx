@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { t } from '../i18n/i18n'
 import { MAX_SETS } from '../training/editing'
 import { Limits } from '../training/limits'
 import type { ExerciseKind, WorkoutExercise } from '../training/model'
+import { Chevron } from '../ui/List'
 import { Stepper } from '../ui/Stepper'
 import { ActionSheet } from '../ui/ActionSheet'
 import { TextRow } from '../ui/Form'
@@ -10,8 +11,9 @@ import { GROUP, ROW } from '../ui/styles'
 import { toInt } from './toInt'
 
 /**
- * One place to change this exercise in this workout: the plan first, as it is what changes most,
- * then the notes, skipping and removing. Drawn for a sheet (ModalSheet, which closes it): grouped
+ * One place for this exercise in this workout, opened by a tap anywhere on its row: its picture,
+ * the plan, as it is what changes most, then the notes, the way to the exercise itself (name,
+ * picture, categories, which hold in every workout), skipping and removing. Drawn for a sheet (ModalSheet, which closes it): grouped
  * lists as an iOS form, the label at the left, the value and its − and + at the right.
  */
 export function EntryEditor({
@@ -26,6 +28,8 @@ export function EntryEditor({
   onChange,
   onChangeCardioPlan,
   onRemove,
+  picture,
+  onOpenExercise,
 }: {
   entry: WorkoutExercise
   /** The entry with cardio's plan as it is shown and edited (see ExerciseEntryCard). */
@@ -40,10 +44,15 @@ export function EntryEditor({
   onChange: (entry: WorkoutExercise) => void
   onChangeCardioPlan: (entry: WorkoutExercise) => void
   onRemove: () => void
+  /** The exercise's picture, large, first in the sheet. */
+  picture?: ReactNode
+  /** Pushes the exercise itself, what holds in every workout; none for an exercise not found. */
+  onOpenExercise?: () => void
 }) {
   const [confirmingRemove, setConfirmingRemove] = useState(false)
   return (
     <div className="flex flex-col gap-section" data-testid="editor">
+      {picture}
       <ul className={GROUP} data-testid="target-editor">
         {kind === 'Cardio' ? (
           <>
@@ -142,6 +151,21 @@ export function EntryEditor({
           />
         )}
       </ul>
+      {onOpenExercise !== undefined && (
+        <ul className={GROUP}>
+          <li>
+            <button
+              type="button"
+              onClick={onOpenExercise}
+              className={`${ROW} w-full text-left text-[1.0625rem]`}
+              data-testid="edit-exercise"
+            >
+              <span className="min-w-0 flex-1">{t('Entry.EditExercise')}</span>
+              <Chevron />
+            </button>
+          </li>
+        </ul>
+      )}
       <ul className={GROUP}>
         {skipLabel !== undefined && (
           <li>

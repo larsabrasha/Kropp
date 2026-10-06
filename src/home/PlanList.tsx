@@ -2,6 +2,7 @@ import { t } from '../i18n/i18n'
 import { iconFor, type ExerciseMap } from '../training/categories'
 import { Limits } from '../training/limits'
 import { EMPTY_ID, type DateOnly, type Workout, type WorkoutTemplate } from '../training/model'
+import { Link } from '../route'
 import { PlanIcon } from '../ui/PlanIcon'
 import { useState } from 'react'
 import { button, PICTURE_ROW } from '../ui/styles'
@@ -35,6 +36,7 @@ export function PlanList({
   onDate,
   planning,
   onPlan,
+  onEditTemplates,
   error,
 }: {
   /** The list's header, when it stands on a page rather than in a sheet with a title of its own. */
@@ -52,6 +54,8 @@ export function PlanList({
   /** The template being planned now, while it saves; the button shows that it is busy. */
   planning: string | undefined
   onPlan: (template: WorkoutTemplate) => void
+  /** Called as the templates open, for the sheet the list is in to close. */
+  onEditTemplates?: () => void
   error: string | undefined
 }) {
   const commitDate = useCommit<HTMLInputElement>((value) => onDate(value))
@@ -102,8 +106,20 @@ export function PlanList({
         </li>
       </ul>
 
+      {/* The templates are changed where they are chosen from, as Health has Ändra by its favourites. */}
       {!noTemplates && (
-        <h3 className="mt-section px-4 pb-2 text-[1.0625rem] font-semibold text-label-2">{t('Next.FromTemplate')}</h3>
+        <div className="mt-section flex items-baseline justify-between gap-3 px-4 pb-2">
+          <h3 className="min-w-0 text-[1.0625rem] font-semibold text-label-2">{t('Next.FromTemplate')}</h3>
+          <Link
+            href="/templates"
+            onClick={onEditTemplates}
+            aria-label={t('Next.EditTemplates')}
+            data-testid="edit-templates"
+            className="-my-2 -mr-2 shrink-0 px-2 py-2 text-[1.0625rem] text-tint active:opacity-60 focus-visible:outline-2 focus-visible:outline-blue-500"
+          >
+            {t('Entry.Edit')}
+          </Link>
+        </div>
       )}
       <ul
         className={`${GROUP} ${noTemplates ? 'mt-3' : ''}`}
@@ -180,7 +196,10 @@ export function PlanList({
       </ul>
       {noTemplates && (
         <p className="px-4 pt-1.5 text-[0.8125rem] text-label-2" data-testid="no-templates">
-          {t('Next.NoTemplates')}
+          {t('Next.NoTemplates')}{' '}
+          <Link href="/templates" onClick={onEditTemplates} data-testid="create-template" className="text-tint">
+            {t('Next.CreateTemplate')}
+          </Link>
         </p>
       )}
 

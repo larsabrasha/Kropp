@@ -22,7 +22,7 @@ import {
 // What a card shows besides its sets: the picture, last time, settings and comments, and how quiet
 // the cards not yet reached stay.
 
-it('shows the picture small and large and links to the exercise', async () => {
+it('shows the picture small on the row and large in the sheet the row opens, with the way to the exercise', async () => {
   const w = await seed(
     workout({ date: '2026-09-23', exercises: [entry({ exerciseId: BENCH.id, targetSets: 3, targetReps: 8 })] }),
   )
@@ -32,13 +32,26 @@ it('shows the picture small and large and links to the exercise', async () => {
   const image = picture('machine-chest-press')
   expect($('img', thumbnail).getAttribute('src')).toBe(image)
 
-  click(thumbnail)
-  expect($('[data-testid=illustration-large] img').getAttribute('src')).toBe(image)
+  // Only part of the row: a tap anywhere on it opens the one sheet.
+  expect(thumbnail.tagName).toBe('SPAN')
+  click($('[data-testid=edit]'))
+  expect($('[data-testid=entry-sheet] [data-testid=illustration-large] img').getAttribute('src')).toBe(image)
   expect($$('[data-testid=illustration-picker]')).toEqual([])
-  expect($('[data-testid=illustration]').textContent).not.toContain('Bryl Lim')
-  expect($('[data-testid=illustration] [data-testid=edit-exercise]').getAttribute('href')).toBe(
-    `/exercises/${BENCH.id}?back=workouts%2F${w.id}`,
-  )
+  expect($('[data-testid=entry-sheet]').textContent).not.toContain('Bryl Lim')
+  // The exercise itself is pushed inside the same sheet, never a sheet over it.
+  click($('[data-testid=entry-sheet] [data-testid=edit-exercise]'))
+  expect($$('[role=dialog]')).toHaveLength(1)
+  expect(text($('[data-testid=entry-sheet] h2'))).toBe(BENCH.name)
+  expect($('[data-testid=entry-sheet] [data-testid=usage]')).toBeTruthy()
+  expect($$('[data-testid=entry-sheet] [data-testid=target-editor]')).toEqual([])
+  expect(window.location.pathname).toBe(`/workouts/${w.id}`)
+
+  // Renamed there, the card has the new name at once; the way back is the sheet's own.
+  const name = $<HTMLInputElement>('[data-testid=entry-sheet] input[type=text]')
+  change(name, 'Bröstpress')
+  await waitFor(() => expect(text($('[data-testid=exercise-entry] h3'))).toBe('Bröstpress'))
+  click($('[data-testid=sheet-back]'))
+  expect($('[data-testid=entry-sheet] [data-testid=target-editor]')).toBeTruthy()
 })
 
 it('changes only the occasion on the card and links to the exercise for the rest', async () => {
@@ -52,7 +65,7 @@ it('changes only the occasion on the card and links to the exercise for the rest
 
   click(await waitForElement('[data-testid=edit]'))
   expect($$('[data-testid=editor] [data-testid=category-chips]')).toEqual([])
-  expect($$('[data-testid=editor] [data-testid=edit-exercise]')).toEqual([])
+  expect(text($('[data-testid=editor] [data-testid=edit-exercise]'))).toBe('Ändra övningen')
 
   click($('[data-testid=edit]'))
   expect($$('[data-testid=weight-step]')).toEqual([])

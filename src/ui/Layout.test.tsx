@@ -18,7 +18,7 @@ it('names the home page for what it holds, with the tabs below and settings in t
   expect(screen.getByTestId('tab-training').getAttribute('aria-current')).toBe('page')
   // Settings behind a picture of the user, as Health has the account; named for what it opens.
   const settings = screen.getByTestId('settings-link')
-  expect(settings.getAttribute('aria-label')).toBe('Inställningar')
+  expect(settings.getAttribute('aria-label')).toBe('Profil')
   expect(within(settings).getByTestId('profile-picture')).toBeTruthy()
   // Sync keeps out of the way, in the settings.
   expect(screen.queryByTestId('sync-status')).toBeNull()
@@ -64,7 +64,7 @@ it('opens settings as a sheet over the page below, which takes no input meanwhil
   const sheet = screen.getByRole('dialog')
   expect(within(sheet).getByTestId('sync-status').textContent).toBe('Inte synkad än')
   expect(within(sheet).getByTestId('sync-now').textContent).toBe('Synka nu')
-  expect(within(sheet).getByRole('heading', { level: 1 }).textContent).toBe('Inställningar')
+  expect(within(sheet).getByRole('heading', { level: 1 }).textContent).toBe('Profil')
   // Below it the list, as it was, inert.
   expect(screen.getByTestId('title').closest('[inert]')).not.toBeNull()
   // Its way out is a cross that leads back to the page below.
@@ -87,9 +87,9 @@ it('sends an unknown path home', async () => {
 it('leaves the home page title out of the bar when scrolled, but not a page further in', async () => {
   // happy-dom lays nothing out, so every h1 counts as scrolled under the bar.
   const barTitle = (bar: string) => document.querySelector(`.${bar} span.truncate`)!.textContent
-  createTestApp().renderAt('/exercises')
+  createTestApp().renderAt('/templates')
 
   expect(screen.getByTestId('title').textContent).toBe('Träning')
-  await waitFor(() => expect(barTitle('sheet-navbar')).toBe('Övningar'))
+  await waitFor(() => expect(barTitle('sheet-navbar')).toBe('Mallar'))
   expect(barTitle('app-navbar')).toBe('')
 })

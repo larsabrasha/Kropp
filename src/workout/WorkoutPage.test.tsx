@@ -184,9 +184,18 @@ it('creates a new exercise from the picker and adds it', async () => {
 
   click(await waitForElement('[data-testid=add-exercise]'))
   fireEvent.input($('[data-testid=exercise-picker] input[type=search]'), { target: { value: 'Plankan' } })
-  change($('[data-testid=exercise-picker] select'), 'Timed')
+  // Never a form in the list: a row for a new one, last, named as searched for.
+  expect($$('[data-testid=exercise-picker] select')).toEqual([])
+  expect(text($('[data-testid=new-exercise]'))).toBe('Ny övning ”Plankan”')
+  click($('[data-testid=new-exercise]'))
+
+  // The form is pushed inside the same sheet, the name filled in, with the way back to the search.
+  expect($$('[role=dialog]')).toHaveLength(1)
+  expect(text($('[data-testid=exercise-sheet] h2'))).toBe('Ny övning')
+  expect($<HTMLInputElement>('[data-testid=new-exercise-name]').value).toBe('Plankan')
+  change($('[data-testid=new-exercise-kind]'), 'Timed')
   expect($('[data-testid=create-exercise]').hasAttribute('disabled')).toBe(true)
-  click($('[data-testid=exercise-picker] [data-area=Core]'))
+  click($('[data-testid=new-exercise-form] [data-area=Core]'))
   click($('[data-testid=create-exercise]'))
 
   await waitFor(() => expect($('[data-testid=exercise-entry] h3').textContent).toBe('Plankan'))
@@ -207,7 +216,9 @@ it('picks an existing exercise', async () => {
 
   click(await waitForElement('[data-testid=add-exercise]'))
   fireEvent.input($('[data-testid=exercise-picker] input[type=search]'), { target: { value: 'bröst' } })
-  expect($$('[data-testid=exercise-picker] li')).toHaveLength(1)
+  // The one match, and the row for a new one after it.
+  expect($$('[data-testid=exercise-picker] li:has([data-testid=picker-thumbnail])')).toHaveLength(1)
+  expect($$('[data-testid=exercise-picker] li')).toHaveLength(2)
   expect($('[data-testid=exercise-picker] li [data-testid=picker-thumbnail]').getAttribute('src')).toBe(
     picture('machine-chest-press'),
   )
@@ -430,4 +441,17 @@ it('keeps an unlocked workout unlocked when a sync reloads it', async () => {
   await act(() => app.engine.sync())
 
   expect($('[data-testid=workout-body]').hasAttribute('disabled')).toBe(false)
+})
+
+it('goes back from a new exercise to the search as it was left', async () => {
+  const w = await seed(workout({ date: '2026-09-23' }))
+  open(w.id)
+
+  click(await waitForElement('[data-testid=add-exercise]'))
+  fireEvent.input($('[data-testid=exercise-picker] input[type=search]'), { target: { value: 'Rodd' } })
+  click($('[data-testid=new-exercise]'))
+  click($('[data-testid=sheet-back]'))
+
+  expect($<HTMLInputElement>('[data-testid=exercise-picker] input[type=search]').value).toBe('Rodd')
+  expect(text($('[data-testid=exercise-sheet] h2'))).toBe('Lägg till övning')
 })

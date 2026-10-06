@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react'
 import { t } from '../i18n/i18n'
 import { navigate } from '../route'
-import { useRemoteChange, useRepository } from '../services'
+import { useLocalChange, useRemoteChange, useRepository } from '../services'
 import type { LocalRepository } from '../sync/localRepo'
 import { Limits } from '../training/limits'
 import type { Exercise, Workout, WorkoutTemplate } from '../training/model'
@@ -87,6 +87,8 @@ export function TemplatePage({ id }: { id: string }) {
   }, [repository, id])
 
   useRemoteChange(load)
+  // An exercise changed in a card's sheet: its name and picture follow on the cards at once.
+  useLocalChange(() => setExercises(new Map(repository.peekAll('exercise').map((e) => [e.id, e]))))
 
   async function save(next: WorkoutTemplate) {
     const previous = template

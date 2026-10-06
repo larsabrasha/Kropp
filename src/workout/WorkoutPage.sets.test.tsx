@@ -292,7 +292,7 @@ it('corrects a done set in a sheet titled for it, its fields rows of a form', as
   expect($('[data-testid=set-done]').getAttribute('data-open')).toBe('true')
 })
 
-it('shows the picture in a sheet over the card, which stays as it was', async () => {
+it('opens the exercise in a sheet over the card, which stays as it was', async () => {
   const w = await seed(
     workout({
       date: '2026-09-23',
@@ -302,9 +302,9 @@ it('shows the picture in a sheet over the card, which stays as it was', async ()
   open(w.id)
   await waitForElement('[data-testid=comment]')
 
-  click($('[data-testid=thumbnail]'))
+  click($('[data-testid=edit]'))
 
-  const sheet = $('[data-testid=illustration]')
+  const sheet = $('[data-testid=entry-sheet]')
   expect(sheet.getAttribute('role')).toBe('dialog')
   expect(sheet.getAttribute('aria-label')).toBe(BENCH.name)
   // Never in place: the card keeps its sets and its comment under the sheet.

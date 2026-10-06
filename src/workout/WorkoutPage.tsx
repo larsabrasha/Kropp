@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { formatDate, t } from '../i18n/i18n'
 import { picture, prefetch, slugFor } from '../illustrations/illustrations'
 import { navigate, useLocation } from '../route'
-import { useRemoteChange, useRepository } from '../services'
+import { useLocalChange, useRemoteChange, useRepository } from '../services'
 import type { LocalRepository } from '../sync/localRepo'
 import { iconFor, workoutName, type ExerciseMap } from '../training/categories'
 import { isDateOnly, today } from '../training/dates'
@@ -132,6 +132,13 @@ export function WorkoutPage({ id }: { id: string }) {
   }, [repository, id])
 
   useRemoteChange(load)
+  // An exercise changed in a card's sheet: its name and picture follow on the cards at once. Only
+  // the exercises: the workout itself is this page's own, and saved from here.
+  useLocalChange(() => {
+    const next = new Map(repository.peekAll('exercise').map((e) => [e.id, e]))
+    exercisesNow.current = next
+    setExercises(next)
+  })
 
   useEffect(() => {
     if (scrolledFor.current === id) return

@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { CalendarPage } from './calendar/CalendarPage'
 import { ExercisePage } from './exercises/ExercisePage'
-import { ExercisesPage } from './exercises/ExercisesPage'
 import { HomePage } from './home/HomePage'
 import { FixedLocation, match, navigate, setTransitions, useLocation, type Transition } from './route'
 import { SettingsPage } from './settings/SettingsPage'
@@ -16,10 +15,10 @@ import type { Tab } from './ui/tabs'
 import { WorkoutPage } from './workout/WorkoutPage'
 
 // The pages as iOS stacks them. Three tabs at the bottom, each a stack of its own: the workouts,
-// with a workout pushed onto the list; the calendar, with the workouts opened from it; and the
-// statistics, with an exercise's progress and the workouts opened from it. Settings open as a sheet
-// over whichever tab is shown, a stack of its own with templates, exercises and the trash pushed
-// inside. depth orders the pages of one stack, so a change of page knows to push or pop; a change
+// with a workout pushed onto the list; the calendar, with the workouts opened from it and the
+// recently deleted; and the statistics, with an exercise's progress and the workouts opened from
+// it. The profile, the templates and an exercise's details open as sheets over whichever tab is
+// shown: tasks to finish and close, as iOS presents them. depth orders the pages of one stack, so a change of page knows to push or pop; a change
 // of tab neither pushes nor pops.
 
 interface Route {
@@ -47,12 +46,11 @@ const routes: Route[] = [
     depth: 1,
     tab: 'stats',
   },
+  { pattern: '/trash', page: () => <TrashPage />, depth: 1, tab: 'calendar' },
   { pattern: '/settings', page: () => <SettingsPage />, depth: 1 },
-  { pattern: '/templates', page: () => <TemplatesPage />, depth: 2 },
-  { pattern: '/templates/:id', page: ({ id }) => <TemplatePage key={id} id={id!} />, depth: 3 },
-  { pattern: '/exercises', page: () => <ExercisesPage />, depth: 2 },
+  { pattern: '/templates', page: () => <TemplatesPage />, depth: 1 },
+  { pattern: '/templates/:id', page: ({ id }) => <TemplatePage key={id} id={id!} />, depth: 2 },
   { pattern: '/exercises/:id', page: ({ id }) => <ExercisePage key={id} id={id!} />, depth: 3 },
-  { pattern: '/trash', page: () => <TrashPage />, depth: 2 },
 ]
 
 interface Found {

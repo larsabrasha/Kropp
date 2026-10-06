@@ -1,6 +1,5 @@
 import { useState } from 'react'
-import { t, type MessageKey } from '../i18n/i18n'
-import { Link } from '../route'
+import { t } from '../i18n/i18n'
 import { useRepository } from '../services'
 import type { LocalRepository } from '../sync/localRepo'
 import {
@@ -12,10 +11,9 @@ import {
   type UserSettings,
 } from '../training/model'
 import { BackLink } from '../ui/Layout'
-import { Chevron, Group } from '../ui/List'
+import { Group } from '../ui/List'
 import { Stepper } from '../ui/Stepper'
 import { SyncRow } from '../ui/SyncRow'
-import { ROW } from '../ui/styles'
 
 /** The settings, from the repository's memory, or the defaults and a message when they could not be read. */
 function read(repository: LocalRepository): { settings: UserSettings; error: string | null } {
@@ -94,37 +92,7 @@ export function SettingsPage() {
         <Group className="mt-section" header={t('Settings.Sync')}>
           <SyncRow />
         </Group>
-
-        <Group className="mt-section">
-          <CardLink href="/templates" testId="templates-link" heading="Templates.Heading" help="Templates.Help" />
-          <CardLink href="/exercises" testId="exercises-link" heading="Exercises.Heading" help="Exercises.Help" />
-          <CardLink href="/trash" testId="trash-link" heading="Trash.Heading" help="Trash.Help" />
-        </Group>
       </>
     </>
-  )
-}
-
-function CardLink({
-  href,
-  testId,
-  heading,
-  help,
-}: {
-  href: string
-  testId: string
-  heading: MessageKey
-  help: MessageKey
-}) {
-  return (
-    <li>
-      <Link href={href} className={ROW} data-testid={testId}>
-        <span className="min-w-0 flex-1">
-          <span className="block text-[1.0625rem]">{t(heading)}</span>
-          <span className="block text-[0.9375rem] text-label-2">{t(help)}</span>
-        </span>
-        <Chevron />
-      </Link>
-    </li>
   )
 }

@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { fireEvent, screen, waitFor } from '@testing-library/react'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { expect, it } from 'vitest'
 import { AggregateTypes } from '../sync/protocol'
 import { SETTINGS_ID } from '../training/model'
@@ -21,22 +21,14 @@ it('starts sessions a week at three and saves them when changed', async () => {
   expect(pending.map((r) => r.type)).toEqual([AggregateTypes.settings])
 })
 
-it('reaches templates from settings', async () => {
+it('is named the profile, and holds planning and sync alone', async () => {
   createTestApp().renderAt('/settings')
 
-  expect((await screen.findByTestId('templates-link')).getAttribute('href')).toBe('/templates')
-})
-
-it('reaches exercises from settings', async () => {
-  createTestApp().renderAt('/settings')
-
-  expect((await screen.findByTestId('exercises-link')).getAttribute('href')).toBe('/exercises')
-})
-
-it('reaches the trash from settings', async () => {
-  createTestApp().renderAt('/settings')
-
-  expect((await screen.findByTestId('trash-link')).getAttribute('href')).toBe('/trash')
+  expect(within(screen.getByRole('dialog')).getByRole('heading', { level: 1 }).textContent).toBe('Profil')
+  // Templates, exercises and the recently deleted live where they are used.
+  expect(screen.queryByTestId('templates-link')).toBeNull()
+  expect(screen.queryByTestId('exercises-link')).toBeNull()
+  expect(screen.queryByTestId('trash-link')).toBeNull()
 })
 
 it('has seven a week as the most', async () => {

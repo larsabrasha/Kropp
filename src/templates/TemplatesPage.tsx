@@ -62,7 +62,7 @@ export function TemplatesPage() {
 
   return (
     <>
-      <BackLink href="/settings" label={t('Settings.Heading')} />
+      <BackLink href="/" />
       <h1 className="large-title">{t('Templates.Heading')}</h1>
 
       {/* Adding, as iOS places it: a plus on glass at the right of the bar. */}

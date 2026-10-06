@@ -4,6 +4,8 @@ import { picture, slugFor } from '../illustrations/illustrations'
 import { Limits } from '../training/limits'
 import { EXERCISE_KINDS, type BodyArea, type Exercise, type ExerciseKind } from '../training/model'
 import { CategoryChips } from '../ui/CategoryChips'
+import { FreeRow, SelectRow } from '../ui/Form'
+import { Group } from '../ui/List'
 import { SearchField } from '../ui/SearchField'
 import { button, PICTURE_ROW, THUMB } from '../ui/styles'
 
@@ -13,21 +15,27 @@ export interface NewExercise {
   categories: BodyArea[]
 }
 
-/** Search the register to add an exercise, or create one by the name searched for. */
+/**
+ * Search the register to add an exercise, drawn for a sheet (ModalSheet): a search field as
+ * iOS's, the exercises as rows of a grouped list, and last a row for a new one, which pushes its
+ * form inside the sheet (NewExerciseForm) rather than growing one in the list. query lives with
+ * the sheet, so the search is still there on the way back from the form.
+ */
 export function ExercisePicker({
   exercises,
+  query,
+  onQuery,
   onPick,
-  onCreate,
+  onNew,
 }: {
   exercises: readonly Exercise[]
+  query: string
+  onQuery: (query: string) => void
   onPick: (exercise: Exercise) => void
-  onCreate: (request: NewExercise) => void
+  /** Opens the form for a new exercise, named as searched for unless that name exists. */
+  onNew: (name: string) => void
 }) {
-  const [query, setQuery] = useState('')
-  const [newKind, setNewKind] = useState<ExerciseKind>('Strength')
-  const [newCategories, setNewCategories] = useState<BodyArea[]>([])
   const searchInput = useRef<HTMLInputElement>(null)
-
   useEffect(() => searchInput.current?.focus(), [])
 
   const wanted = lower(query.trim())
@@ -35,20 +43,14 @@ export function ExercisePicker({
     .filter((e) => !e.isArchived && lower(e.name).includes(wanted))
     .sort((a, b) => compareText(a.name, b.name))
   const exactMatch = exercises.some((e) => lower(e.name.trim()) === wanted)
-  const blank = query.trim() === ''
+  const newName = wanted === '' || exactMatch ? '' : query.trim()
 
-  const create = () => {
-    if (newCategories.length > 0) onCreate({ name: query.trim(), kind: newKind, categories: newCategories })
-  }
-
-  // Drawn for a sheet (ModalSheet): a search field as iOS's, the exercises as rows of a grouped
-  // list, and creating one by the name searched for in a card of its own below.
   return (
     <div data-testid="exercise-picker">
       <SearchField
         ref={searchInput}
         value={query}
-        onChange={(e) => setQuery(e.target.value)}
+        onChange={(e) => onQuery(e.target.value)}
         maxLength={Limits.search}
         placeholder={t('Picker.SearchPlaceholder')}
       />
@@ -83,39 +85,115 @@ export function ExercisePicker({
         </ul>
       )}
 
-      {matches.length === 0 && blank && (
-        <p className="px-4 py-10 text-center text-[0.9375rem] text-label-2">{t('Picker.NoExercises')}</p>
+      {matches.length === 0 && (
+        <p className="px-4 pt-6 pb-2 text-center text-[0.9375rem] text-label-2" data-testid="picker-empty">
+          {wanted === '' ? t('Picker.NoExercises') : t('Exercises.NoMatches')}
+        </p>
       )}
 
-      {!blank && !exactMatch && (
-        <div className="mt-4 flex flex-col gap-3 rounded-[1.625rem] bg-cell p-4">
-          <p className="pl-inset text-[0.8125rem] text-label-2">{t('Picker.Categories')}</p>
-          <CategoryChips selected={newCategories} onChange={setNewCategories} />
-          <label className="flex flex-col gap-1 text-[0.8125rem] text-label-2">
-            <span className="pl-inset">{t('Picker.Kind')}</span>
-            <select
-              value={newKind}
-              onChange={(e) => setNewKind(e.target.value as ExerciseKind)}
-              className="rounded-xl bg-fill px-3 py-2.5 text-base text-gray-900 dark:text-white"
-            >
-              {EXERCISE_KINDS.map((kind) => (
-                <option key={kind} value={kind}>
-                  {t(`Exercise.Kind.${kind}`)}
-                </option>
-              ))}
-            </select>
-          </label>
+      {/* A new exercise, last, as iOS adds to its own lists: in the tint, with a plus. */}
+      <ul className="ios-list mt-4 overflow-hidden rounded-[1.625rem] bg-cell">
+        <li>
           <button
             type="button"
-            onClick={create}
-            data-testid="create-exercise"
-            disabled={newCategories.length === 0}
-            className={`mt-1 w-full ${button('filled', 'large')}`}
+            onClick={() => onNew(newName)}
+            data-testid="new-exercise"
+            className={`${PICTURE_ROW} w-full text-left text-[1.0625rem] text-tint`}
           >
-            {t('Picker.Create', query.trim())}
+            <span className="flex size-9 shrink-0 items-center justify-center" aria-hidden="true">
+              <svg
+                className="size-6"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              >
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+            </span>
+            <span className="min-w-0 flex-1 truncate">
+              {newName === '' ? t('Picker.New') : t('Picker.NewNamed', newName)}
+            </span>
           </button>
-        </div>
-      )}
+        </li>
+      </ul>
+    </div>
+  )
+}
+
+/**
+ * A new exercise, pushed inside the picker's sheet: its name, kind and what it trains, as rows of
+ * an iOS form, and the one action large and blue under them, as planning ends. It needs a name and
+ * at least one area, which the button waits for.
+ */
+export function NewExerciseForm({
+  initialName,
+  onCreate,
+}: {
+  initialName: string
+  onCreate: (request: NewExercise) => void
+}) {
+  const [name, setName] = useState(initialName)
+  const [kind, setKind] = useState<ExerciseKind>('Strength')
+  const [categories, setCategories] = useState<BodyArea[]>([])
+  const nameInput = useRef<HTMLInputElement>(null)
+  useEffect(() => {
+    if (initialName === '') nameInput.current?.focus()
+  }, [initialName])
+
+  const ready = name.trim() !== '' && categories.length > 0
+  const create = () => {
+    if (ready) onCreate({ name: name.trim(), kind, categories })
+  }
+
+  return (
+    <div className="flex flex-col gap-section" data-testid="new-exercise-form">
+      <Group>
+        <li>
+          <label className="flex min-h-[3.25rem] items-center gap-4 px-4">
+            <span className="shrink-0 text-[1.0625rem]">{t('Exercises.Name')}</span>
+            <input
+              ref={nameInput}
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              maxLength={Limits.name}
+              placeholder={t('Picker.NamePlaceholder')}
+              data-testid="new-exercise-name"
+              className="min-w-0 flex-1 bg-transparent py-2.5 text-right text-[1.0625rem] outline-none placeholder:text-label-3"
+            />
+          </label>
+        </li>
+        <SelectRow
+          label={t('Picker.Kind')}
+          value={kind}
+          onChange={(e) => setKind(e.target.value as ExerciseKind)}
+          data-testid="new-exercise-kind"
+        >
+          {EXERCISE_KINDS.map((k) => (
+            <option key={k} value={k}>
+              {t(`Exercise.Kind.${k}`)}
+            </option>
+          ))}
+        </SelectRow>
+      </Group>
+
+      <Group header={t('Picker.Categories')}>
+        <FreeRow>
+          <CategoryChips selected={categories} onChange={setCategories} />
+        </FreeRow>
+      </Group>
+
+      <button
+        type="button"
+        onClick={create}
+        disabled={!ready}
+        data-testid="create-exercise"
+        className={`w-full ${button('filled', 'large')}`}
+      >
+        {t('Picker.Create')}
+      </button>
     </div>
   )
 }

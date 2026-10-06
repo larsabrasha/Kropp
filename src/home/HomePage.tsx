@@ -171,6 +171,7 @@ export function HomePage() {
       onDate={changeDate}
       planning={planning}
       onPlan={(template) => void plan(template)}
+      onEditTemplates={() => setPlanningOpen(false)}
       error={error}
     />
   )
@@ -195,12 +196,13 @@ export function HomePage() {
 
       {upcoming === undefined && planList(t('Next.PlanNext'))}
 
+      {workouts.length > 0 && <WeekStrip workouts={workouts} exercises={exercises} day={day} />}
+
       {/* The workouts planned after the next, and with a workout already planned, a row to add
-          another, last in the list as iOS adds to its own lists (Health's "Lägg till data"): what
-          is ahead together, under the card. With nothing more planned, the row stands right
-          under the card. The week and what was done come after. */}
+          another, last in the list as iOS adds to its own lists (Health's "Lägg till data"). In
+          the order of time: what is next, this week, what is planned later, what was done. */}
       {(plannedLater.length > 0 || upcoming !== undefined) && (
-        <section className={plannedLater.length > 0 ? 'mt-section' : 'mt-3'}>
+        <section className="mt-section">
           {plannedLater.length > 0 && <SectionHeader>{t('Home.Planned')}</SectionHeader>}
           <Group separatorInset="4.25rem">
             {plannedLater.map((workout) => (
@@ -241,8 +243,6 @@ export function HomePage() {
           </Group>
         </section>
       )}
-
-      {workouts.length > 0 && <WeekStrip workouts={workouts} exercises={exercises} day={day} />}
 
       <section className="mt-section">
         {workouts.length === 0 && (

@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react'
-import { formatDate, lower, t } from '../i18n/i18n'
+import { compareText, formatDate, lower, t } from '../i18n/i18n'
 import { picture, slugFor } from '../illustrations/illustrations'
 import { Link, navigate, useLocation } from '../route'
 import { useAnyChange, useRepository } from '../services'
@@ -106,16 +106,77 @@ export function StatsPage() {
   const streak = goalStreak(workouts, day, goal)
   const records = latestRecords(workouts, exercises).slice(0, RECORDS)
 
-  // Every exercise logged, the latest done first.
+  // Every exercise, as this is where each one has its page: the ones logged by the latest done,
+  // then the rest by name, hidden ones last.
   const done = exercises
     .map((exercise) => ({ exercise, occasions: occasionsOf(workouts, exercise.id) }))
-    .filter((x) => x.occasions.length > 0)
-    .sort((a, b) => b.occasions.at(-1)!.date.localeCompare(a.occasions.at(-1)!.date))
-
+    .sort(
+      (a, b) =>
+        Number(a.exercise.isArchived) - Number(b.exercise.isArchived) ||
+        Number(a.occasions.length === 0) - Number(b.occasions.length === 0) ||
+        (b.occasions.at(-1)?.date ?? '').localeCompare(a.occasions.at(-1)?.date ?? '') ||
+        compareText(a.exercise.name, b.exercise.name),
+    )
   const wanted = lower(search.trim())
   const shown = done.filter(({ exercise }) => lower(exercise.name).includes(wanted))
 
   const periodQuery = period === DEFAULT_PERIOD ? '' : `?period=${period}`
+
+  const exerciseList = (
+    <section className="mt-section">
+      <SectionHeader>{t('Stats.Exercises')}</SectionHeader>
+      {done.length > 1 && (
+        <SearchField
+          value={search}
+          onChange={(e) => changeSearch(e.target.value)}
+          placeholder={t('Exercises.Search')}
+          maxLength={Limits.search}
+          data-testid="stats-search"
+          className="mb-3"
+        />
+      )}
+      {shown.length === 0 ? (
+        <div
+          className="flex flex-col items-center gap-3 px-6 py-10 text-center text-[1.0625rem] text-label-2"
+          data-testid="stats-no-match"
+        >
+          <svg
+            className="size-12"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            aria-hidden="true"
+          >
+            <circle cx="11" cy="11" r="7" />
+            <path d="M20 20l-4-4" />
+          </svg>
+          <p>{t('Exercises.NoMatches')}</p>
+        </div>
+      ) : (
+        <Group separatorInset="3.75rem" testId="stats-exercises">
+          {shown.map(({ exercise, occasions }) => (
+            <li key={exercise.id}>
+              <ExerciseLink
+                exercise={exercise}
+                href={`/stats/exercises/${exercise.id}${periodQuery}`}
+                detail={[
+                  occasions.length === 0
+                    ? `${t(`Exercise.Kind.${exercise.kind}`)} · ${t('Stats.NotLogged')}`
+                    : occasions.length === 1
+                      ? t('Stats.ExerciseMetaOne', formatDate(occasions[0]!.date, 'd MMM yyyy'))
+                      : t('Stats.ExerciseMeta', occasions.length, formatDate(occasions.at(-1)!.date, 'd MMM yyyy')),
+                  ...(exercise.isArchived ? [t('Exercises.Hidden')] : []),
+                ].join(' · ')}
+                dimmed={exercise.isArchived}
+              />
+            </li>
+          ))}
+        </Group>
+      )}
+    </section>
+  )
 
   return (
     <>
@@ -239,58 +300,10 @@ export function StatsPage() {
               </Group>
             </section>
           )}
-
-          <section className="mt-section">
-            <SectionHeader>{t('Stats.Exercises')}</SectionHeader>
-            {done.length > 1 && (
-              <SearchField
-                value={search}
-                onChange={(e) => changeSearch(e.target.value)}
-                placeholder={t('Exercises.Search')}
-                maxLength={Limits.search}
-                data-testid="stats-search"
-                className="mb-3"
-              />
-            )}
-            {shown.length === 0 ? (
-              <div
-                className="flex flex-col items-center gap-3 px-6 py-10 text-center text-[1.0625rem] text-label-2"
-                data-testid="stats-no-match"
-              >
-                <svg
-                  className="size-12"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  aria-hidden="true"
-                >
-                  <circle cx="11" cy="11" r="7" />
-                  <path d="M20 20l-4-4" />
-                </svg>
-                <p>{t('Exercises.NoMatches')}</p>
-              </div>
-            ) : (
-              <Group separatorInset="3.75rem" testId="stats-exercises">
-                {shown.map(({ exercise, occasions }) => (
-                  <li key={exercise.id}>
-                    <ExerciseLink
-                      exercise={exercise}
-                      href={`/stats/exercises/${exercise.id}${periodQuery}`}
-                      detail={
-                        occasions.length === 1
-                          ? t('Stats.ExerciseMetaOne', formatDate(occasions[0]!.date, 'd MMM yyyy'))
-                          : t('Stats.ExerciseMeta', occasions.length, formatDate(occasions.at(-1)!.date, 'd MMM yyyy'))
-                      }
-                    />
-                  </li>
-                ))}
-              </Group>
-            )}
-          </section>
         </>
       )}
+
+      {done.length > 0 && exerciseList}
     </>
   )
 }
@@ -314,15 +327,18 @@ function ExerciseLink({
   href,
   detail,
   trailing,
+  dimmed = false,
 }: {
   exercise: Exercise
   href: string
   detail: string
   trailing?: string
+  /** A hidden exercise, kept for its history. */
+  dimmed?: boolean
 }) {
   const slug = slugFor(exercise)
   return (
-    <Link href={href} className={PICTURE_ROW}>
+    <Link href={href} className={`${PICTURE_ROW} ${dimmed ? 'opacity-60' : ''}`}>
       <span className={`size-9 ${THUMB}`} aria-hidden="true">
         {slug !== undefined && (
           <img src={picture(slug)} alt="" loading="lazy" className="illustration size-full object-contain p-0.5" />

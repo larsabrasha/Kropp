@@ -52,6 +52,16 @@ export function useRemoteChange(listener: () => void) {
   useEffect(() => repository.onRemoteChange(() => latest.current()), [repository])
 }
 
+/** Calls listener after every local save, with the repository's memory already updated. */
+export function useLocalChange(listener: () => void) {
+  const { repository } = useServices()
+  const latest = useRef(listener)
+  useEffect(() => {
+    latest.current = listener
+  })
+  useEffect(() => repository.onChange(() => latest.current()), [repository])
+}
+
 /** Calls listener after every local save, as well as after a sync stored data. */
 export function useAnyChange(listener: () => void) {
   const { repository } = useServices()

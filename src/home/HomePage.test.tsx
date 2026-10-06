@@ -475,3 +475,29 @@ it('opens the planning sheet and keeps it open after a workout was planned on th
   await new Promise((r) => setTimeout(r, 400))
   expect(screen.getByTestId('planning-sheet').getAttribute('aria-label')).toBe('Lägg till ett träningspass')
 })
+
+it('opens the templates from planning, closing the planning sheet on the way', async () => {
+  const app = createTestApp()
+  const t1 = template('Ben')
+  await app.repository.save('template', t1.id, t1)
+  const planned = workout('2026-09-24')
+  await app.repository.save('workout', planned.id, planned)
+  app.renderAt('/')
+
+  fireEvent.click(screen.getByTestId('open-planning'))
+  const edit = within(screen.getByTestId('planning-sheet')).getByTestId('edit-templates')
+  expect(edit.textContent).toBe('Ändra')
+  expect(edit.getAttribute('aria-label')).toBe('Ändra mallar')
+  fireEvent.click(edit)
+
+  expect(window.location.pathname).toBe('/templates')
+  expect(screen.queryByTestId('planning-sheet')).toBeNull()
+  expect(screen.getByRole('dialog').querySelector('h1')!.textContent).toBe('Mallar')
+})
+
+it('offers to create a template where there are none to plan from', () => {
+  createTestApp().renderAt('/')
+
+  expect(screen.getByTestId('no-templates').textContent).toBe('Inga mallar än. Skapa en mall')
+  expect(screen.getByTestId('create-template').getAttribute('href')).toBe('/templates')
+})

@@ -6,7 +6,7 @@ import type { LocalRepository } from '../sync/localRepo'
 import { daysBetween, today } from '../training/dates'
 import type { Exercise, Workout } from '../training/model'
 import { result } from '../training/text'
-import { BackLink } from '../ui/Layout'
+import { BackLink, BarItem, GLASS_CAPSULE } from '../ui/Layout'
 import { Chevron, Group } from '../ui/List'
 import { Segmented } from '../ui/Segmented'
 import { CARD, ROW } from '../ui/styles'
@@ -107,6 +107,18 @@ export function ExerciseStatsPage({ id: routeId }: { id: string }) {
   return (
     <>
       <BackLink href={back} label={t('Stats.Heading')} testId="back" />
+      {/* What the exercise is, its name, kind and picture, changed in a sheet over its progress, as
+          Health has a measurement's details behind the page that charts it. */}
+      <BarItem side="trailing">
+        <Link
+          href={`/exercises/${id}`}
+          aria-label={t('Entry.EditExercise')}
+          data-testid="edit-exercise"
+          className={GLASS_CAPSULE}
+        >
+          {t('Entry.Edit')}
+        </Link>
+      </BarItem>
       <h1 className="large-title">{exercise.name}</h1>
       <p className="text-[0.9375rem] text-label-2" data-testid="exercise-meta">
         {t(`Exercise.Kind.${kind}`)}

@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { t } from '../i18n/i18n'
 import { nameOf, picture, slugFor } from '../illustrations/illustrations'
-import { Link, useLocation } from '../route'
 import {
   cardioTargetKm,
   cardioTargetMinutes,
@@ -21,10 +20,9 @@ import {
 import { target } from '../training/text'
 import { ActionSheet } from '../ui/ActionSheet'
 import { ModalSheet } from '../ui/ModalSheet'
-import { Chevron } from '../ui/List'
-import { button } from '../ui/styles'
 import { EntryCardio } from './EntryCardio'
 import { EntryContextLines } from './EntryContextLines'
+import { ExerciseDetails } from '../exercises/ExercisePage'
 import { EntryEditor } from './EntryEditor'
 import { EntrySets } from './EntrySets'
 
@@ -33,7 +31,7 @@ import { EntrySets } from './EntrySets'
 // the name's row, the picture from the thumbnail, a done set's fields from the set. At the gym, with
 // a plan that was right, the set buttons are all that gets touched — so they stay large and first.
 
-type Panel = 'None' | 'Edit' | 'Set' | 'Illustration' | 'CardioResult'
+type Panel = 'None' | 'Edit' | 'Set' | 'CardioResult'
 
 export function ExerciseEntryCard({
   entry,
@@ -69,14 +67,13 @@ export function ExerciseEntryCard({
   onChange: (entry: WorkoutExercise) => void
   onRemove: () => void
 }) {
-  const { path } = useLocation()
   const [openPanel, setOpenPanel] = useState<Panel>('None')
   const [setIndex, setSetIndex] = useState(0)
   const [confirmingRemove, setConfirmingRemove] = useState(false)
+  // The exercise itself, pushed inside the card's sheet from its row "Ändra övningen".
+  const [showingExercise, setShowingExercise] = useState(false)
 
   const slug = slugFor(exercise)
-  // The exercise's own page, with the way back to this workout or template.
-  const exerciseHref = `/exercises/${exercise?.id}?back=${encodeURIComponent(path.replace(/^\//, ''))}`
   const weightStep = exercise?.weightStepKg ?? DEFAULT_WEIGHT_STEP_KG
   const panel: Panel = active && !editing ? openPanel : 'None'
   const kind: ExerciseKind = exercise?.kind ?? 'Strength'
@@ -133,7 +130,10 @@ export function ExerciseEntryCard({
     if (!isOpen) onActivate()
   }
 
-  const close = () => setOpenPanel('None')
+  const close = () => {
+    setOpenPanel('None')
+    setShowingExercise(false)
+  }
   const change = (next: WorkoutExercise) => onChange(next)
 
   /**
@@ -194,8 +194,8 @@ export function ExerciseEntryCard({
       data-testid="exercise-entry"
       data-current={current ? 'true' : 'false'}
     >
-      {/* The name with the plan in grey under it, the whole row opening the editor, as an iOS row
-          that leads further in. In edit mode the row only reorders and removes: a red minus at its
+      {/* The picture and the name with the plan in grey under it, the whole row opening the
+          exercise's sheet, as an iOS row leads to one place. In edit mode the row only reorders and removes: a red minus at its
           left, the handle at its right, as iOS edits a list. */}
       <div className="relative flex items-center gap-3">
         {editing && (
@@ -213,15 +213,10 @@ export function ExerciseEntryCard({
             </svg>
           </button>
         )}
-        <button
-          type="button"
-          onClick={() => toggle('Illustration')}
-          disabled={editing}
-          aria-haspopup="dialog"
-          aria-label={t('Illustration.Show', exercise?.name ?? '')}
-          title={t('Illustration.Show', exercise?.name ?? '')}
+        <span
+          aria-hidden="true"
           data-testid="thumbnail"
-          className={`relative z-10 size-10 shrink-0 overflow-hidden rounded-lg ${slug === undefined ? 'bg-fill text-label-2' : 'bg-gray-100 dark:bg-gray-800'}`}
+          className={`size-10 shrink-0 overflow-hidden rounded-lg ${slug === undefined ? 'bg-fill text-label-2' : 'bg-gray-100 dark:bg-gray-800'}`}
         >
           {slug !== undefined ? (
             <img src={picture(slug)} alt="" className="illustration size-full object-contain p-0.5" />
@@ -239,7 +234,7 @@ export function ExerciseEntryCard({
               <path d="M4 16l4-4 4 4 3-3 5 5" />
             </svg>
           )}
-        </button>
+        </span>
         <div className="min-w-0 flex-1">
           <h3
             className={`font-semibold ${current && !editing ? 'break-words' : 'truncate'} ${whollySkipped ? 'text-label-2' : ''}`}
@@ -266,8 +261,22 @@ export function ExerciseEntryCard({
           </span>
         ) : (
           <>
-            <Chevron />
-            {/* Over the whole row, under the picture's own button. */}
+            {/* Not a chevron, which on iOS leads to the next page of a stack: the row opens a sheet, and
+                ⓘ is iOS's mark for an item's details (Reminders, Phone). */}
+            <svg
+              className="size-[1.375rem] shrink-0 text-tint"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              aria-hidden="true"
+              data-testid="details-mark"
+            >
+              <circle cx="12" cy="12" r="9" />
+              <path d="M12 11v5.5M12 7.6v.1" strokeWidth="2" />
+            </svg>
+            {/* Over the whole row. */}
             <button
               type="button"
               onClick={() => toggle('Edit')}
@@ -301,6 +310,15 @@ export function ExerciseEntryCard({
           confirm
           fit
           portal={false}
+          pushed={
+            showingExercise && exercise
+              ? {
+                  title: exercise.name,
+                  content: <ExerciseDetails id={exercise.id} heading={false} />,
+                  onBack: () => setShowingExercise(false),
+                }
+              : undefined
+          }
         >
           <EntryEditor
             entry={entry}
@@ -314,37 +332,18 @@ export function ExerciseEntryCard({
             onChange={change}
             onChangeCardioPlan={changeCardioPlan}
             onRemove={onRemove}
+            onOpenExercise={exercise ? () => setShowingExercise(true) : undefined}
+            picture={
+              slug !== undefined ? (
+                <div
+                  className="mx-auto aspect-square w-full max-w-40 rounded-[1.625rem] bg-cell p-2"
+                  data-testid="illustration-large"
+                >
+                  <img src={picture(slug)} alt={nameOf(slug)} className="illustration size-full object-contain" />
+                </div>
+              ) : undefined
+            }
           />
-        </ModalSheet>
-      )}
-
-      {/* The picture large, in a sheet over the card, as everything opened from a card is. Only to
-          look at here; the picture belongs to the exercise and is changed on its page. */}
-      {panel === 'Illustration' && (
-        <ModalSheet
-          title={exercise?.name ?? t('Exercise.Unknown')}
-          onClose={close}
-          testId="illustration"
-          fit
-          portal={false}
-        >
-          <div className="flex flex-col gap-section">
-            {slug !== undefined ? (
-              <div
-                className="mx-auto aspect-square w-full max-w-64 rounded-[1.625rem] bg-cell p-3"
-                data-testid="illustration-large"
-              >
-                <img src={picture(slug)} alt={nameOf(slug)} className="illustration size-full object-contain" />
-              </div>
-            ) : (
-              <p className="py-2 text-center text-[1.0625rem] text-label-2">{t('Illustration.None')}</p>
-            )}
-            {exercise && (
-              <Link href={exerciseHref} className={`${button('tinted', 'large')} w-full`} data-testid="edit-exercise">
-                {t('Entry.EditExercise')}
-              </Link>
-            )}
-          </div>
         </ModalSheet>
       )}
 

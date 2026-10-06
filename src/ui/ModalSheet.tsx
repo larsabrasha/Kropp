@@ -5,7 +5,9 @@ import { CheckSymbol, CONFIRM_CIRCLE, GLASS_CIRCLE } from './Layout'
 import { useSheetDrag } from './useSheetDrag'
 
 // A sheet for a task inside a page, such as choosing an exercise to add: it rises over the page,
-// which dims, and has a grabber, a title and a cross at the right. Pulled down, a tap outside it,
+// which dims, and has a grabber, a title and a cross at the right. A row in it may lead further in
+// (pushed): that page slides in from the right inside the same sheet, with a way back at the left
+// of its bar, as iOS pushes inside a sheet rather than stacking one sheet on another. Pulled down, a tap outside it,
 // the cross or Escape closes it, and it sinks away before onClose runs. Unlike the calendar's and
 // the settings' sheets (Layout's Sheet) it has no URL of its own: it belongs to the page under it.
 
@@ -48,6 +50,7 @@ export function ModalSheet({
   dismissed = false,
   confirm = false,
   anchor,
+  pushed,
 }: {
   title: string
   onClose: () => void
@@ -76,8 +79,15 @@ export function ModalSheet({
    * then a popover beside it. On a phone it is a sheet either way.
    */
   anchor?: HTMLElement | null
+  /** A page pushed inside the sheet over children, with its own title; onBack leaves it. */
+  pushed?: { title: string; content: ReactNode; onBack: () => void }
 }) {
   const [closing, setClosing] = useState(false)
+  // Which way the content last moved, to slide it in from that side: in from the right when a
+  // page is pushed, back from the left when it is left. Nothing moves on the first render.
+  const isPushed = pushed !== undefined
+  const [moved, setMoved] = useState<{ pushed: boolean; way?: 'push' | 'pop' }>({ pushed: isPushed })
+  if (moved.pushed !== isPushed) setMoved({ pushed: isPushed, way: isPushed ? 'push' : 'pop' })
   const sheet = useRef<HTMLDivElement>(null)
   const bar = useRef<HTMLElement>(null)
   const page = useRef<HTMLDivElement>(null)
@@ -180,8 +190,34 @@ export function ModalSheet({
             aria-hidden="true"
           />
           <div className="mx-auto flex h-14 max-w-2xl items-center gap-3 px-4">
-            <span className="size-11 shrink-0" aria-hidden="true" />
-            <h2 className="min-w-0 flex-1 truncate text-center text-[1.0625rem] font-semibold">{title}</h2>
+            {pushed ? (
+              <button
+                type="button"
+                onClick={pushed.onBack}
+                title={title}
+                data-testid="sheet-back"
+                className={GLASS_CIRCLE}
+              >
+                <svg
+                  className="size-6"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M15 5l-7 7 7 7" />
+                </svg>
+                <span className="sr-only">{title}</span>
+              </button>
+            ) : (
+              <span className="size-11 shrink-0" aria-hidden="true" />
+            )}
+            <h2 className="min-w-0 flex-1 truncate text-center text-[1.0625rem] font-semibold">
+              {pushed ? pushed.title : title}
+            </h2>
             <button
               type="button"
               onClick={close}
@@ -210,9 +246,16 @@ export function ModalSheet({
         </header>
         <div ref={page} className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
           <div
-            className={`mx-auto max-w-2xl pt-2 ${place ? 'px-4 pb-4' : fit ? 'px-5 pb-5' : 'px-5 pb-[calc(2rem+env(safe-area-inset-bottom))]'}`}
+            key={isPushed ? 'pushed' : 'first'}
+            className={`mx-auto max-w-2xl pt-2 ${place ? 'px-4 pb-4' : fit ? 'px-5 pb-5' : 'px-5 pb-[calc(2rem+env(safe-area-inset-bottom))]'} ${
+              moved.way === 'push'
+                ? 'motion-safe:animate-[page-in-over_350ms_cubic-bezier(0.32,0.72,0,1)]'
+                : moved.way === 'pop'
+                  ? 'motion-safe:animate-[page-from-under_350ms_cubic-bezier(0.32,0.72,0,1)]'
+                  : ''
+            }`}
           >
-            {children}
+            {pushed ? pushed.content : children}
           </div>
         </div>
       </div>

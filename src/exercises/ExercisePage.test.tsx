@@ -37,31 +37,6 @@ const reload = async (id: string) => (await app.repository.get('exercise', id))!
 
 const textInputs = () => document.querySelectorAll<HTMLInputElement>('[role=dialog] input[type=text]')
 
-it('says where exercises come from when there are none', async () => {
-  app.renderAt('/exercises')
-
-  await screen.findByTestId('exercises-empty')
-})
-
-it('lists by name with hidden ones last, and can be searched', async () => {
-  await seed()
-  app.renderAt('/exercises')
-
-  await waitFor(() =>
-    expect([...screen.getByTestId('exercises').querySelectorAll('a .font-semibold')].map((n) => n.textContent)).toEqual(
-      ['Bröst maskin', 'Gång i maskin', 'Armhävningar'],
-    ),
-  )
-  const links = screen.getByTestId('exercises').querySelectorAll('a')
-  expect(links[0]!.getAttribute('href')).toBe(`/exercises/${bench.id}`)
-  expect(links[2]!.textContent).toContain('Dold')
-
-  fireEvent.change(screen.getByTestId('exercise-search'), { target: { value: 'gång' } })
-  expect(screen.getByTestId('exercises').querySelectorAll('a')).toHaveLength(1)
-  fireEvent.change(screen.getByTestId('exercise-search'), { target: { value: 'xyz' } })
-  screen.getByTestId('exercises-no-match')
-})
-
 it('shows not found for an unknown exercise', async () => {
   renderExercise(newId())
 
@@ -158,11 +133,12 @@ it('changes the picture here', async () => {
 })
 
 it.each([
-  [undefined, '/exercises'],
+  // Opened on its own, from an exercise's statistics: a cross that closes it to the page below.
+  [undefined, '/'],
   ['workouts/0b3c5e0e-4f7a-4d0c-9d6a-2f1b8e3c7a11', '/workouts/0b3c5e0e-4f7a-4d0c-9d6a-2f1b8e3c7a11'],
   ['/workouts/0b3c5e0e-4f7a-4d0c-9d6a-2f1b8e3c7a11', '/workouts/0b3c5e0e-4f7a-4d0c-9d6a-2f1b8e3c7a11'],
-  ['https://example.com/', '/exercises'],
-  ['//example.com', '/exercises'],
+  ['https://example.com/', '/'],
+  ['//example.com', '/'],
 ])('goes back to where the user came from, but only inside the app (%s)', async (back, expected) => {
   await seed()
 

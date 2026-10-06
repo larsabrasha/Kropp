@@ -50,10 +50,25 @@ function read(repository: LocalRepository, id: string): { exercise?: Exercise; u
   }
 }
 
-export function ExercisePage({ id: routeId }: { id: string }) {
+/** The exercise as a page of its own, in a sheet over the page it was opened from. */
+export function ExercisePage({ id }: { id: string }) {
+  const back = safeBack(useLocation().query.get('back'))
+  return (
+    <>
+      <BackLink href={back ?? '/'} label={t('Common.Back')} testId="back" />
+      <ExerciseDetails id={id} />
+    </>
+  )
+}
+
+/**
+ * What belongs to the exercise, saved as it changes: on its own page (ExercisePage), and pushed
+ * inside the sheet of an exercise's card, where the sheet's bar has its name instead of a large
+ * title (heading false).
+ */
+export function ExerciseDetails({ id: routeId, heading = true }: { id: string; heading?: boolean }) {
   const id = routeId.toLowerCase()
   const repository = useRepository()
-  const back = safeBack(useLocation().query.get('back'))
 
   // Read during the first render, so the page never shows without its data.
   const [initial] = useState(() => read(repository, id))
@@ -121,8 +136,6 @@ export function ExercisePage({ id: routeId }: { id: string }) {
 
   return (
     <>
-      <BackLink href={back ?? '/exercises'} label={back ? t('Common.Back') : t('Exercises.Heading')} testId="back" />
-
       {!exercise ? (
         <div
           className="flex flex-col items-center gap-3 px-6 py-14 text-center text-[1.0625rem] text-label-2"
@@ -144,8 +157,8 @@ export function ExercisePage({ id: routeId }: { id: string }) {
         </div>
       ) : (
         <>
-          <h1 className="large-title">{exercise.name}</h1>
-          <p className="text-[0.9375rem] text-label-2" data-testid="usage">
+          {heading && <h1 className="large-title">{exercise.name}</h1>}
+          <p className={`text-[0.9375rem] text-label-2 ${heading ? '' : 'px-4'}`} data-testid="usage">
             {t(`Exercise.Kind.${exercise.kind}`)} ·{' '}
             {usedIn === 0
               ? t('Exercises.UsedInNone')
@@ -224,7 +237,9 @@ export function ExercisePage({ id: routeId }: { id: string }) {
             </FreeRow>
           </Group>
 
-          <Group className="mt-section">
+          {/* A short label on the row and what it means under it, as iOS explains a switch in its
+              group's footer. */}
+          <Group className="mt-section" footer={t('Exercises.ArchivedHelp')}>
             <SwitchRow
               label={t('Exercises.Archived')}
               checked={exercise.isArchived}

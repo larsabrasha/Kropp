@@ -15,7 +15,7 @@ import {
 } from '../training/editing'
 import { newId, type Exercise, type Workout } from '../training/model'
 import { ExerciseEntryCard } from './ExerciseEntryCard'
-import { ExercisePicker, type NewExercise } from './ExercisePicker'
+import { ExercisePicker, NewExerciseForm, type NewExercise } from './ExercisePicker'
 
 // The exercises of a workout or a template: the cards, drag and drop, and adding from the
 // register. Shared by the workout page and the template page, which only differ in what they
@@ -50,7 +50,15 @@ export function ExerciseList({
 }) {
   const [activeEntry, setActiveEntry] = useState<number>()
   const [picking, setPicking] = useState(false)
-  const stopPicking = useCallback(() => setPicking(false), [])
+  // The picker's search, kept while a new exercise's form is pushed over it.
+  const [query, setQuery] = useState('')
+  // The name a new exercise's form starts from, while the form is pushed inside the sheet.
+  const [newName, setNewName] = useState<string>()
+  const stopPicking = useCallback(() => {
+    setPicking(false)
+    setQuery('')
+    setNewName(undefined)
+  }, [])
   const entryList = useRef<HTMLDivElement>(null)
 
   const currentEntry = forTemplate ? undefined : currentEntryOf(owner)
@@ -111,7 +119,7 @@ export function ExerciseList({
   }
 
   const add = (exercise: Exercise) => {
-    setPicking(false)
+    stopPicking()
     return onChange(addExercise(owner, exercise, lastTime(history, owner, exercise.id)))
   }
 
@@ -182,11 +190,26 @@ export function ExerciseList({
       </button>
       {/* Choosing the exercise is a task of its own, in a sheet over the workout. */}
       {picking && (
-        <ModalSheet title={t('Workout.AddExercise')} onClose={stopPicking} testId="exercise-sheet">
+        <ModalSheet
+          title={t('Workout.AddExercise')}
+          onClose={stopPicking}
+          testId="exercise-sheet"
+          pushed={
+            newName !== undefined
+              ? {
+                  title: t('Picker.New'),
+                  content: <NewExerciseForm initialName={newName} onCreate={(request) => void create(request)} />,
+                  onBack: () => setNewName(undefined),
+                }
+              : undefined
+          }
+        >
           <ExercisePicker
             exercises={[...exercises.values()]}
+            query={query}
+            onQuery={setQuery}
             onPick={(exercise) => void add(exercise)}
-            onCreate={(request) => void create(request)}
+            onNew={setNewName}
           />
         </ModalSheet>
       )}

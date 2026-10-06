@@ -225,3 +225,46 @@ it('filters the exercises by name, and keeps the filter back from one', async ()
   // The filter outlives the page: leave it empty for the tests after this one.
   fireEvent.change(input, { target: { value: '' } })
 })
+
+it('lists every exercise, the ones never logged after the rest, and hidden ones last', async () => {
+  const app = createTestApp()
+  await seed(app)
+  const squat = exercise('Benböj', 'Strength', ['Legs'])
+  const old = { ...exercise('Armhävningar', 'Bodyweight', ['Chest']), isArchived: true }
+  for (const e of [squat, old]) await app.repository.save('exercise', e.id, e)
+  app.renderAt('/stats')
+
+  const rows = within(screen.getByTestId('stats-exercises')).getAllByRole('link')
+  expect(rows.map((a) => a.querySelector('.font-semibold')!.textContent)).toEqual([
+    'Plankan',
+    'Bänkpress',
+    'Benböj',
+    'Armhävningar',
+  ])
+  expect(rows[2]!.textContent).toContain('Vikter · Inte loggad än')
+  expect(rows[3]!.textContent).toContain('Dold')
+})
+
+it('lists the exercises before anything is logged, so each can be found', async () => {
+  const app = createTestApp()
+  await app.repository.save('exercise', BENCH.id, BENCH)
+  app.renderAt('/stats')
+
+  expect(screen.getByTestId('stats-empty')).toBeTruthy()
+  expect(within(screen.getByTestId('stats-exercises')).getByRole('link').getAttribute('href')).toBe(
+    `/stats/exercises/${BENCH.id}`,
+  )
+})
+
+it("opens an exercise's details in a sheet over its progress, which closes back to it", async () => {
+  const app = createTestApp()
+  await seed(app)
+  app.renderAt(`/stats/exercises/${BENCH.id}`)
+
+  fireEvent.click(screen.getByTestId('edit-exercise'))
+
+  expect(window.location.pathname).toBe(`/exercises/${BENCH.id}`)
+  const sheet = screen.getByRole('dialog')
+  expect(within(sheet).getByRole('heading', { level: 1 }).textContent).toBe('Bänkpress')
+  expect(within(sheet).getByTitle('Stäng').getAttribute('href')).toBe(`/stats/exercises/${BENCH.id}`)
+})

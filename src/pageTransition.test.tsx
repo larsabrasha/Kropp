@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { act, fireEvent, screen, within } from '@testing-library/react'
 import { beforeEach, expect, it, vi } from 'vitest'
+import { newId } from './training/model'
 import { $, app, BENCH, entry, seed, workout } from './test/workoutPage'
 import { TODAY } from './test/render'
 
@@ -52,12 +53,24 @@ it('pops when the browser goes back from a workout', async () => {
   expect(screen.queryByTestId('details')).toBeNull()
 })
 
-it('raises settings as a sheet, pushes and pops inside it, and lowers it again', async () => {
+it('raises the profile as a sheet and lowers it again', async () => {
   app.renderAt('/')
 
   fireEvent.click($('[data-testid=settings-link]'))
-  fireEvent.click($('[data-testid=templates-link]'))
-  fireEvent.click(within(screen.getByRole('dialog')).getByTitle('Inställningar'))
+  fireEvent.click(within(screen.getByRole('dialog')).getByTitle('Stäng'))
+
+  expect(window.location.pathname).toBe('/')
+  expect(started).toEqual(['sheet-open', 'sheet-close'])
+})
+
+it('raises the templates from planning, pushes and pops a template inside, and lowers them again', async () => {
+  const template = { id: newId(), name: 'Ben', exercises: [] }
+  await app.repository.save('template', template.id, template)
+  app.renderAt('/')
+
+  fireEvent.click($('[data-testid=edit-templates]'))
+  fireEvent.click($(`[role=dialog] a[href="/templates/${template.id}"]`))
+  fireEvent.click(within(screen.getByRole('dialog')).getByTitle('Mallar'))
   fireEvent.click(within(screen.getByRole('dialog')).getByTitle('Stäng'))
 
   expect(window.location.pathname).toBe('/')

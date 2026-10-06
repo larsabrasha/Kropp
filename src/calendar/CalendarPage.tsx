@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react'
 import { WorkoutRow } from '../home/WorkoutRow'
 import { formatDate, shortestDayNames, t } from '../i18n/i18n'
-import { navigate, useLocation } from '../route'
+import { Link, navigate, useLocation } from '../route'
 import { useAnyChange, useRepository } from '../services'
 import type { LocalRepository } from '../sync/localRepo'
 import { addDays, addMonths, dayOf, isDateOnly, mondayOf, today, weekNumber } from '../training/dates'
@@ -10,7 +10,8 @@ import { isInRange, Limits } from '../training/limits'
 import type { DateOnly, Exercise, Workout, WorkoutStatus } from '../training/model'
 import { BarItem, GLASS_CAPSULE } from '../ui/Layout'
 import { ModalSheet } from '../ui/ModalSheet'
-import { Group } from '../ui/List'
+import { Chevron, Group } from '../ui/List'
+import { ROW } from '../ui/styles'
 import { useMonthSwipe } from './useMonthSwipe'
 import { weekRange } from './weekRange'
 
@@ -540,6 +541,29 @@ export function CalendarPage() {
           </>
         )}
       </section>
+
+      {/* The workouts deleted lately, last, as Photos and Notes keep their Recently Deleted: where
+          to look for a workout that is gone. */}
+      <Group className="mt-section">
+        <li>
+          <Link href="/trash" className={ROW} data-testid="trash-link">
+            <svg
+              className="size-6 shrink-0 text-tint"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 002 2h6a2 2 0 002-2l1-12M9 7V4h6v3" />
+            </svg>
+            <span className="min-w-0 flex-1 text-[1.0625rem]">{t('Trash.Heading')}</span>
+            <Chevron />
+          </Link>
+        </li>
+      </Group>
     </>
   )
 }

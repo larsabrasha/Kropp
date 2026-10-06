@@ -77,7 +77,7 @@ export function TrashPage() {
 
   return (
     <>
-      <BackLink href="/settings" label={t('Settings.Heading')} />
+      <BackLink href="/calendar" label={t('Calendar.Heading')} />
       <h1 className="large-title">{t('Trash.Heading')}</h1>
 
       {error !== null && (
