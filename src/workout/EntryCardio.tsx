@@ -3,14 +3,16 @@ import { completeCardio, hasResult } from '../training/editing'
 import { Limits } from '../training/limits'
 import type { WorkoutExercise } from '../training/model'
 import { num, result } from '../training/text'
-import { EditorActions } from '../ui/EditorActions'
+import { ModalSheet } from '../ui/ModalSheet'
 import { Stepper } from '../ui/Stepper'
+import { GROUP, ROW } from '../ui/styles'
 import { CheckMark } from './CheckMark'
+import { SkipMark } from './SkipMark'
 import { toInt } from './toInt'
 
 /**
- * Cardio has no sets, so one large button finishes it, like the set buttons do. With what was done
- * open for correcting, it steps aside: two buttons would compete.
+ * Cardio has no sets, so one large button finishes it, like the set buttons do. What was done is
+ * corrected in a sheet over it.
  */
 export function EntryCardio({
   entry,
@@ -40,52 +42,72 @@ export function EntryCardio({
   onClose: () => void
   onClear: () => void
 }) {
-  if (editing)
-    return (
-      <div className="mt-3" data-testid="cardio-editor">
-        <div className="flex flex-col gap-2">
-          <Stepper
-            label={t('Entry.Minutes')}
-            value={entry.durationMinutes}
-            step={0.5}
-            max={Limits.minutes}
-            start={entry.targetDurationMinutes ?? 5}
-            onChange={(v) => onChange({ ...entry, durationMinutes: v })}
-          />
+  // Correcting what was done is a task of its own, as for a set: a small sheet over the workout.
+  const editor = editing && (
+    <ModalSheet
+      title={t('Entry.Result')}
+      onClose={onClose}
+      testId="cardio-editor"
+      closeTestId="close-editor"
+      fit
+      portal={false}
+    >
+      <div className="flex flex-col gap-5">
+        <ul className={GROUP}>
+          <li>
+            <Stepper
+              row
+              label={t('Entry.Minutes')}
+              value={entry.durationMinutes}
+              step={0.5}
+              max={Limits.minutes}
+              start={entry.targetDurationMinutes ?? 5}
+              onChange={(v) => onChange({ ...entry, durationMinutes: v })}
+            />
+          </li>
           {!timeOnly && (
             <>
-              <Stepper
-                label={t('Entry.Km')}
-                value={entry.distanceKm}
-                step={0.1}
-                max={Limits.distanceKm}
-                start={entry.targetDistanceKm ?? 1}
-                onChange={(v) => onChange({ ...entry, distanceKm: v })}
-              />
-              <Stepper
-                label={t('Entry.Pulse')}
-                value={entry.avgHeartRate}
-                start={120}
-                max={Limits.heartRate}
-                onChange={(v) => onChange({ ...entry, avgHeartRate: toInt(v) })}
-              />
+              <li>
+                <Stepper
+                  row
+                  label={t('Entry.Km')}
+                  value={entry.distanceKm}
+                  step={0.1}
+                  max={Limits.distanceKm}
+                  start={entry.targetDistanceKm ?? 1}
+                  onChange={(v) => onChange({ ...entry, distanceKm: v })}
+                />
+              </li>
+              <li>
+                <Stepper
+                  row
+                  label={t('Entry.Pulse')}
+                  value={entry.avgHeartRate}
+                  start={120}
+                  max={Limits.heartRate}
+                  onChange={(v) => onChange({ ...entry, avgHeartRate: toInt(v) })}
+                />
+              </li>
             </>
           )}
-        </div>
-        <div className="mt-5">
-          {hasResult(entry) ? (
-            <EditorActions
-              onDone={onClose}
-              onDelete={onClear}
-              deleteLabel={t('Entry.ClearResult')}
-              deleteTestId="clear-cardio"
-            />
-          ) : (
-            <EditorActions onDone={onClose} />
-          )}
-        </div>
+        </ul>
+        {hasResult(entry) && (
+          <ul className={GROUP}>
+            <li>
+              <button
+                type="button"
+                onClick={onClear}
+                data-testid="clear-cardio"
+                className={`${ROW} w-full text-[1.0625rem] text-red-600 dark:text-red-500`}
+              >
+                {t('Entry.ClearResult')}
+              </button>
+            </li>
+          </ul>
+        )}
       </div>
-    )
+    </ModalSheet>
+  )
 
   if (hasResult(entry)) {
     const done = result(measuredEntry, 'Cardio')
@@ -96,7 +118,7 @@ export function EntryCardio({
           onClick={onToggle}
           aria-expanded="false"
           aria-label={t('Entry.CardioDone', done)}
-          className="relative inline-flex min-h-14 flex-1 items-center justify-center rounded-xl bg-green-600 px-3 text-lg font-semibold text-white tabular-nums hover:bg-green-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-500"
+          className="relative inline-flex min-h-14 flex-1 items-center justify-center rounded-xl bg-green-700 px-3 text-lg font-semibold text-white tabular-nums hover:bg-green-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-500"
           data-testid="cardio-done"
         >
           <span className="flex items-center gap-2">
@@ -104,6 +126,7 @@ export function EntryCardio({
             <span>{done}</span>
           </span>
         </button>
+        {editor}
       </div>
     )
   }
@@ -137,13 +160,14 @@ export function EntryCardio({
         </button>
       ) : (
         <span
-          className={`inline-flex min-h-14 flex-1 flex-col items-center justify-center rounded-xl bg-fill px-3 text-label-2 tabular-nums ${entry.isSkipped ? 'line-through' : ''}`}
+          className={`inline-flex min-h-14 flex-1 flex-col items-center justify-center rounded-xl bg-fill px-3 tabular-nums ${entry.isSkipped ? 'text-label-3' : 'text-label-2'}`}
           aria-label={entry.isSkipped ? t('Entry.Skipped') : label}
           data-testid="cardio-planned"
         >
-          {content}
+          {entry.isSkipped ? <SkipMark /> : content}
         </span>
       )}
+      {editor}
     </div>
   )
 }

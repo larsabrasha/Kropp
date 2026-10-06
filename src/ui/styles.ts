@@ -10,7 +10,7 @@ const KINDS: Record<ButtonKind, string> = {
   gray: 'bg-fill text-gray-900 dark:text-white',
   destructive: 'bg-red-500/15 text-red-600 dark:text-red-400',
   destructiveFilled: 'bg-red-600 text-white',
-  green: 'bg-green-600 text-white',
+  green: 'bg-green-700 text-white',
 }
 
 const SIZES: Record<ButtonSize, string> = {
@@ -26,6 +26,9 @@ const SIZES: Record<ButtonSize, string> = {
 export function button(kind: ButtonKind, size: ButtonSize = 'regular'): string {
   return `inline-flex shrink-0 items-center justify-center gap-2 rounded-full font-semibold transition-[transform,opacity] duration-150 active:scale-[0.97] active:opacity-80 disabled:opacity-50 disabled:active:scale-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 ${KINDS[kind]} ${SIZES[size]}`
 }
+
+/** A grouped list inside a sheet, its rows (ROW) separated by hairlines. */
+export const GROUP = 'ios-list overflow-hidden rounded-[1.625rem] bg-cell'
 
 /** A card in a list's shape, for content that is not a list of rows. */
 export const CARD = 'rounded-[1.625rem] bg-cell'

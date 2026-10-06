@@ -26,7 +26,7 @@ beforeEach(() => {
 const openFromHome = async () => {
   const w = await seed(workout({ date: TODAY, exercises: [entry({ exerciseId: BENCH.id })] }))
   app.renderAt('/')
-  fireEvent.click($(`main a[href="/workouts/${w.id}"]:not([data-testid=upcoming])`))
+  fireEvent.click($(`main a[href="/workouts/${w.id}"]`))
   return w
 }
 
@@ -104,7 +104,7 @@ it('opens a workout once when its row is tapped twice before the transition star
   }) as typeof document.startViewTransition
   const w = await seed(workout({ date: TODAY, exercises: [entry({ exerciseId: BENCH.id })] }))
   app.renderAt('/')
-  const row = $(`main a[href="/workouts/${w.id}"]:not([data-testid=upcoming])`)
+  const row = $(`main a[href="/workouts/${w.id}"]`)
   const before = window.history.length
 
   fireEvent.click(row)
@@ -113,4 +113,21 @@ it('opens a workout once when its row is tapped twice before the transition star
 
   expect(window.history.length).toBe(before + 1)
   expect(started).toEqual(['push'])
+})
+
+it('keeps where the list was scrolled when coming back to it', async () => {
+  const scrolled: number[] = []
+  vi.spyOn(window, 'scrollTo').mockImplementation(((options: ScrollToOptions) => {
+    scrolled.push(options.top ?? 0)
+  }) as typeof window.scrollTo)
+  vi.spyOn(window, 'scrollY', 'get').mockReturnValue(640)
+  await openFromHome()
+  vi.spyOn(window, 'scrollY', 'get').mockReturnValue(0)
+
+  fireEvent.click($('[data-testid=back]'))
+
+  expect(window.location.pathname).toBe('/')
+  // Opened at the top, back where it was left.
+  expect(scrolled.at(-1)).toBe(640)
+  expect(scrolled).toContain(0)
 })

@@ -98,8 +98,8 @@ export function ExerciseEntryCard({
   const hidesResults = panel === 'Illustration'
 
   // Only the top row, on an exercise that is neither the one the user is on nor done in any
-  // part: the rest of the list stays quiet. One skipped whole is struck through at that row;
-  // one skipped part way shows its sets, with the skipped ones struck through.
+  // part: the rest of the list stays quiet. One skipped whole says so in that row; one skipped
+  // part way shows its sets, the skipped ones with a skip symbol.
   const collapsed = editing || (!forTemplate && !current && !hasResult(entry))
   const whollySkipped = !forTemplate && entry.isSkipped && !hasResult(entry)
 
@@ -247,17 +247,15 @@ export function ExerciseEntryCard({
         </button>
         <div className="min-w-0 flex-1">
           <h3
-            className={`font-semibold ${current && !editing ? 'break-words' : 'truncate'} ${whollySkipped ? 'text-gray-400 line-through dark:text-gray-500' : ''}`}
+            className={`font-semibold ${current && !editing ? 'break-words' : 'truncate'} ${whollySkipped ? 'text-label-2' : ''}`}
             data-skipped={whollySkipped ? 'true' : 'false'}
           >
             {exercise?.name ?? t('Exercise.Unknown')}
-            {whollySkipped && <span className="sr-only">({t('Entry.Skipped')})</span>}
           </h3>
-          <p
-            className={`truncate text-[0.9375rem] text-label-2 tabular-nums ${whollySkipped ? 'line-through' : ''}`}
-            data-testid="target"
-          >
-            {targetText}
+          {/* Skipped whole, it says so first in the grey line, where iOS would never strike it through. */}
+          <p className="truncate text-[0.9375rem] text-label-2 tabular-nums">
+            {whollySkipped && <span data-testid="skipped">{t('Entry.Skipped')} · </span>}
+            <span data-testid="target">{targetText}</span>
           </p>
         </div>
         {editing ? (
@@ -388,7 +386,6 @@ export function ExerciseEntryCard({
           measuredLastTime={measured(lastTime)}
           lastTimeDate={lastTimeDate}
           settingsParts={settingsParts}
-          onOpenEditor={() => toggle('Edit')}
         />
       )}
     </article>

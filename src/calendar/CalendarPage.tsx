@@ -159,13 +159,13 @@ export function CalendarPage() {
       `flex size-[2.125rem] items-center justify-center rounded-full text-[1.0625rem] leading-none ${
         on
           ? isToday
-            ? 'bg-red-500 font-semibold text-white'
+            ? 'bg-red-600 font-semibold text-white'
             : 'bg-gray-900 font-semibold text-white dark:bg-white dark:text-black'
           : isToday
-            ? 'font-semibold text-red-500'
+            ? 'font-semibold text-red-600 dark:text-red-400'
             : inMonth
               ? ''
-              : 'text-label-3'
+              : 'text-label-2'
       }`
     if (dayWorkouts !== undefined && dayWorkouts.length > 0) {
       const on = selected === date
@@ -222,11 +222,11 @@ export function CalendarPage() {
         data-testid={live ? 'calendar' : undefined}
       >
         <div role="row" className="contents">
-          <span role="columnheader" className="py-1 text-xs text-gray-400 dark:text-gray-500">
+          <span role="columnheader" className="py-1 text-xs text-label-2">
             {t('Calendar.WeekShort')}
           </span>
           {shortestDayNames().map((name, i) => (
-            <span key={i} role="columnheader" className="py-1 text-xs font-medium text-gray-500 dark:text-gray-400">
+            <span key={i} role="columnheader" className="py-1 text-xs font-medium text-label-2">
               {name}
             </span>
           ))}
@@ -235,7 +235,7 @@ export function CalendarPage() {
           <div role="row" className="contents" key={monday}>
             <span
               role="rowheader"
-              className="flex items-center justify-center text-xs text-gray-400 dark:text-gray-500"
+              className="flex items-center justify-center text-xs font-medium text-label-2 tabular-nums"
             >
               {weekNumber(monday)}
             </span>

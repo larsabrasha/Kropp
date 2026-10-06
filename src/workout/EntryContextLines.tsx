@@ -16,8 +16,9 @@ function ago(date: DateOnly): string {
 }
 
 /**
- * Below the sets, one line each, every one opening the editor: how it went last time and what was
- * said then, the settings to use, and what is said this time. The lines under the buttons stand in
+ * Below the sets, one line each of grey text, as iOS sets a footnote, to read and not to tap: how it
+ * went last time and what was said then, the settings to use, and what is said this time. The
+ * name's row is the way into the editor. The lines under the buttons stand in
  * by half the buttons' corner radius (px-1.5), where the eye sees the rounded edge begin; flush with
  * it they look crowded, a whole radius in.
  */
@@ -29,7 +30,6 @@ export function EntryContextLines({
   measuredLastTime,
   lastTimeDate,
   settingsParts,
-  onOpenEditor,
 }: {
   entry: WorkoutExercise
   kind: ExerciseKind
@@ -40,20 +40,18 @@ export function EntryContextLines({
   lastTimeDate: DateOnly | undefined
   /** The settings to use: the exercise's own, then this time's. */
   settingsParts: string[]
-  onOpenEditor: () => void
 }) {
   return (
     <>
       {lastTime && measuredLastTime && (
-        <LastTimeLines last={lastTime} shown={measuredLastTime} date={lastTimeDate} kind={kind} onTap={onOpenEditor} />
+        <LastTimeLines last={lastTime} shown={measuredLastTime} date={lastTimeDate} kind={kind} />
       )}
       {settingsParts.length > 0 && (
-        <button
-          type="button"
-          onClick={onOpenEditor}
+        <p
+          role="note"
           aria-label={`${t('Entry.Settings')}: ${settingsParts.join(', ')}`}
           data-testid="settings-line"
-          className="mt-1.5 flex w-full items-start gap-2 rounded-md px-1.5 text-left text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+          className="mt-1.5 flex w-full items-start gap-2 px-1.5 text-sm text-gray-500 dark:text-gray-400"
         >
           <span className="flex h-5 w-5 shrink-0 items-center justify-center" aria-hidden="true">
             <svg
@@ -71,15 +69,14 @@ export function EntryContextLines({
             </svg>
           </span>
           <span className="min-w-0 break-words">{settingsParts.join(' · ')}</span>
-        </button>
+        </p>
       )}
       {!forTemplate && entry.comment?.trim() && (
-        <button
-          type="button"
-          onClick={onOpenEditor}
+        <p
+          role="note"
           aria-label={`${t('Entry.Comment')}: ${entry.comment}`}
           data-testid="comment"
-          className="mt-1.5 flex w-full items-start gap-2 rounded-md px-1.5 text-left text-sm text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-gray-100"
+          className="mt-1.5 flex w-full items-start gap-2 px-1.5 text-sm text-gray-700 dark:text-gray-300"
         >
           <span className="flex h-5 w-5 shrink-0 items-center justify-center" aria-hidden="true">
             <svg className="size-[18px] text-gray-500 dark:text-gray-400" viewBox="0 0 24 24" fill="currentColor">
@@ -87,7 +84,7 @@ export function EntryContextLines({
             </svg>
           </span>
           <span className="min-w-0 break-words whitespace-pre-line">{entry.comment}</span>
-        </button>
+        </p>
       )}
     </>
   )
@@ -99,25 +96,22 @@ function LastTimeLines({
   shown,
   date,
   kind,
-  onTap,
 }: {
   last: WorkoutExercise
   shown: WorkoutExercise
   date: DateOnly | undefined
   kind: ExerciseKind
-  onTap: () => void
 }) {
   const label = date ? `${shortDate(date)} (${ago(date)}), ${result(shown, kind)}` : result(shown, kind)
   const first = shown.sets[0]?.weightKg
   const uniform = kind === 'Strength' && shown.sets.every((x) => x.weightKg === first) ? first : undefined
   return (
     <>
-      <button
-        type="button"
-        onClick={onTap}
+      <p
+        role="note"
         aria-label={t('Entry.LastTime', label)}
         data-testid="last-time"
-        className="mt-4 flex w-full items-start gap-2 rounded-md px-1.5 text-left text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+        className="mt-4 flex w-full items-start gap-2 px-1.5 text-sm text-gray-500 dark:text-gray-400"
       >
         <span className="flex h-5 w-5 shrink-0 items-center justify-center" aria-hidden="true">
           <svg
@@ -164,14 +158,13 @@ function LastTimeLines({
             </span>
           )}
         </span>
-      </button>
+      </p>
       {last.comment?.trim() && (
-        <button
-          type="button"
-          onClick={onTap}
+        <p
+          role="note"
           aria-label={`${t('Entry.LastComment')}: ${last.comment}`}
           data-testid="last-comment"
-          className="mt-1 flex w-full items-start gap-2 rounded-md px-1.5 text-left text-sm text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+          className="mt-1 flex w-full items-start gap-2 px-1.5 text-sm text-gray-400 dark:text-gray-500"
         >
           <span className="flex h-5 w-5 shrink-0 items-start justify-center" aria-hidden="true">
             <svg
@@ -192,7 +185,7 @@ function LastTimeLines({
             </svg>
           </span>
           <span className="min-w-0 break-words whitespace-pre-line">{last.comment}</span>
-        </button>
+        </p>
       )}
     </>
   )

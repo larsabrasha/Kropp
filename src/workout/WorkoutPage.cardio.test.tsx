@@ -105,8 +105,8 @@ it('opens the fields to finish cardio with nothing planned or done before', asyn
 
   click(await waitForElement('[data-testid=cardio-next]'))
 
-  await waitForElement('[data-testid=cardio-editor]')
-  expect($$('[data-testid=cardio-next]')).toEqual([])
+  // A sheet over the card, titled for what it corrects.
+  expect((await waitForElement('[data-testid=cardio-editor]')).getAttribute('aria-label')).toBe('Resultat')
   expect((await reload(w.id)).exercises[0]!.durationMinutes).toBeUndefined()
 
   click($('[data-testid=cardio-editor] [data-testid=close-editor]'))

@@ -2,7 +2,6 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { expect, it } from 'vitest'
 import { picture } from '../illustrations/illustrations'
-import { addDays } from '../training/dates'
 import { newId, type Exercise, type Workout, type WorkoutExercise, type WorkoutTemplate } from '../training/model'
 import { createTestApp } from '../test/render'
 
@@ -68,12 +67,20 @@ it('plans an empty workout from the last row', async () => {
   await waitFor(() => expect(rowNames()).toEqual(['Bröst', 'Tomt pass']))
   expect(document.querySelectorAll('form')).toHaveLength(0)
   fireEvent.click(document.querySelector('[data-template=empty]')!)
+  fireEvent.click(screen.getByTestId('confirm-plan'))
 
-  await waitFor(() => expect(window.location.pathname).toContain('/workouts/'))
+  await waitFor(async () => expect(await app.repository.getAll('workout')).toHaveLength(2))
   const added = (await app.repository.getAll('workout')).find((w) => w.id !== old.id)!
   expect([added.templateId, added.sessionNumber, added.status]).toEqual([undefined, 104, 'Planned'])
   expect(added.exercises).toEqual([])
-  expect(window.location.pathname).toBe(`/workouts/${added.id}`)
+  // The page stays, as iOS stays where a thing was added; the new workout lights up where it lands.
+  expect(window.location.pathname).toBe('/')
+  const link = await waitFor(() => screen.getByTestId('upcoming'))
+  expect(link.getAttribute('href')).toBe(`/workouts/${added.id}`)
+  expect(link.hasAttribute('data-lit')).toBe(true)
+  expect(
+    document.querySelector(`[data-testid=workout-list] a[href="/workouts/${old.id}"]`)!.hasAttribute('data-lit'),
+  ).toBe(false)
 })
 
 it('lists workouts as links with a summary', async () => {
@@ -104,40 +111,95 @@ it('lists workouts as links with a summary', async () => {
   })
 })
 
-it('groups workouts by weeks that start on monday', async () => {
+it('lists the three latest workouts, and leads to the calendar for all of them', async () => {
   const app = createTestApp()
-  for (const day of ['2026-09-20', '2026-09-21', '2026-09-23', '2026-09-14']) {
+  for (const day of ['2026-09-20', '2026-09-21', '2026-09-22', '2026-09-14']) {
     const w = workout(day)
     await app.repository.save('workout', w.id, w)
   }
 
   app.renderAt('/')
 
-  await waitFor(() => {
-    const weeks = screen.getAllByTestId('week')
-    expect(weeks.map((w) => [...w.querySelectorAll('h2 span')].map((x) => x.textContent.trim()).join(' '))).toEqual([
-      'Vecka 39 21–27 september',
-      'Vecka 38 14–20 september',
-    ])
-    expect(weeks.map((w) => w.querySelectorAll('li').length)).toEqual([2, 2])
-  })
+  const rows = within(screen.getByTestId('workout-list')).getAllByRole('link')
+  expect(rows.map((r) => within(r).getByTestId('workout-meta').textContent.toLowerCase())).toEqual([
+    expect.stringContaining('tisdag 22 sep'),
+    expect.stringContaining('måndag 21 sep'),
+    expect.stringContaining('söndag 20 sep'),
+  ])
+  expect(screen.getByTestId('show-all').textContent).toBe('Visa alla')
+  expect(screen.getByTestId('show-all').getAttribute('href')).toBe('/calendar')
 })
 
-it('shows four weeks and more on request', async () => {
+it('shows the week as days done and planned, and opens the calendar from it', async () => {
   const app = createTestApp()
-  for (let week = 0; week < 6; week++) {
-    const w = workout(addDays('2026-09-21', -7 * week))
+  // Monday done, Tuesday planned and missed, today (Wednesday) planned, Friday planned, last week done.
+  const done = (date: string) => workout(date, { exercises: [entry(newId(), { sets: [{ reps: 8 }] })] })
+  for (const w of [
+    done('2026-09-21'),
+    workout('2026-09-22'),
+    workout('2026-09-23'),
+    workout('2026-09-25'),
+    done('2026-09-18'),
+  ])
     await app.repository.save('workout', w.id, w)
-  }
+
   app.renderAt('/')
 
-  await waitFor(() => expect(screen.getAllByTestId('week')).toHaveLength(4))
-  expect(screen.getByTestId('more-weeks').textContent).toContain('2 äldre')
+  const strip = screen.getByTestId('week-strip')
+  expect([...strip.querySelectorAll('li[data-mark]')].map((d) => d.getAttribute('data-mark'))).toEqual([
+    'done',
+    'none',
+    'planned',
+    'none',
+    'planned',
+    'none',
+    'none',
+  ])
+  expect(screen.getByTestId('week-summary').textContent).toBe('1 gjort · 2 planerade')
+  // What each trains in a word under its day; with no exercises to tell, just a workout.
+  expect([...strip.querySelectorAll('[data-testid=day-name]')].map((d) => d.textContent)).toEqual([
+    'Pass',
+    'Pass',
+    'Pass',
+  ])
+  const link = screen.getByTestId('week-link')
+  expect(link.getAttribute('href')).toBe('/calendar?day=2026-09-23')
+  expect(link.getAttribute('aria-label')).toBe('Den här veckan: 1 gjort · 2 planerade. Kalender')
+})
 
-  fireEvent.click(screen.getByTestId('more-weeks'))
+it('shows the next workout large: its day, exercises with their plan, last time, and what a tap does', async () => {
+  const app = createTestApp()
+  const names = ['Bänkpress', 'Flyes', 'Dips', 'Armhävningar']
+  const xs = names.map(exercise)
+  for (const x of xs) await app.repository.save('exercise', x.id, x)
+  const tp = template('Bröst')
+  await app.repository.save('template', tp.id, tp)
+  const entries = xs.map((x, i) => entry(x.id, { order: i, targetSets: 3, targetReps: 8 }))
+  const last = workout('2026-09-16', {
+    templateId: tp.id,
+    exercises: [entry(xs[0]!.id, { sets: [{ reps: 8 }] })],
+  })
+  const next = workout('2026-09-23', { templateId: tp.id, sessionNumber: 7, exercises: entries })
+  await app.repository.save('workout', last.id, last)
+  await app.repository.save('workout', next.id, next)
 
-  expect(screen.getAllByTestId('week')).toHaveLength(6)
-  expect(screen.queryByTestId('more-weeks')).toBeNull()
+  app.renderAt('/')
+
+  const card = screen.getByTestId('upcoming')
+  expect(card.getAttribute('href')).toBe(`/workouts/${next.id}`)
+  // How far away heads the card; the day is in its grey line.
+  expect(screen.getByTestId('upcoming-when').textContent).toBe('I dag')
+  expect(screen.getByTestId('next').getAttribute('aria-label')).toBe('Aktuellt pass')
+  expect(within(card).getByTestId('upcoming-meta').textContent).toBe('Onsdag 23 sep. · Nr 7 · 4 övningar')
+  const rows = [...within(card).getByTestId('upcoming-exercises').children].map((r) => r.textContent)
+  expect(rows).toEqual(['Bänkpress3 × 8', 'Flyes3 × 8', 'Dips3 × 8', '+ 1 övning till'])
+  // Each with its picture, where it has one.
+  const pictures = within(card)
+    .getAllByTestId('upcoming-exercise')
+    .map((r) => r.querySelector('img')?.getAttribute('src'))
+  expect(pictures).toEqual([picture('bench-press'), undefined, undefined])
+  expect(within(card).getByTestId('upcoming-last').textContent).toBe('Förra gången: ons 16 sep')
+  expect(within(card).getByTestId('upcoming-action').textContent).toBe('Starta passet')
 })
 
 it('says one exercise in the singular', async () => {
@@ -161,7 +223,7 @@ it('without templates offers only an empty workout, as the suggestion, and expla
   expect(screen.getByTestId('plan').getAttribute('data-template')).toBe('empty')
 })
 
-it('plans the suggested template in one tap', async () => {
+it('plans the suggested template, chosen already, with the big button', async () => {
   const app = createTestApp()
   const bench = exercise('Bröst maskin')
   const pull = exercise('Pull down maskin')
@@ -190,10 +252,15 @@ it('plans the suggested template in one tap', async () => {
   expect(screen.getByTestId('next-date').textContent.toLowerCase()).toBe('i morgon, 24 sep.')
   // Tomorrow says how far it is already.
   expect(screen.queryByTestId('plan-days')).toBeNull()
+  // Chosen already: its checkmark, and the big button says what it does.
+  expect(screen.getByTestId('plan').getAttribute('aria-pressed')).toBe('true')
+  expect(screen.getByTestId('plan').querySelector('[data-testid=chosen]')).not.toBeNull()
+  expect(screen.getByTestId('confirm-plan').textContent).toBe('Lägg till pass')
 
-  fireEvent.click(screen.getByTestId('plan'))
+  fireEvent.click(screen.getByTestId('confirm-plan'))
 
-  await waitFor(() => expect(window.location.pathname).toContain('/workouts/'))
+  await waitFor(async () => expect(await app.repository.getAll('workout')).toHaveLength(2))
+  expect(window.location.pathname).toBe('/')
   const plan = (await app.repository.getAll('workout')).find((w) => w.id !== done.id)!
   expect(plan.templateId).toBe(back.id)
   expect(plan.date).toBe('2026-09-24')
@@ -201,7 +268,7 @@ it('plans the suggested template in one tap', async () => {
   expect(plan.exercises.map((e) => e.exerciseId)).toEqual([pull.id])
 })
 
-it('plans another template than the suggestion with a tap on its row', async () => {
+it('chooses another template with a tap on its row, and plans it with the button', async () => {
   const app = createTestApp()
   const bench = exercise('Bröst maskin')
   await app.repository.save('exercise', bench.id, bench)
@@ -214,7 +281,20 @@ it('plans another template than the suggestion with a tap on its row', async () 
   await waitFor(() => expect(rows().length).toBeGreaterThan(0))
   fireEvent.click(rows().find((r) => r.textContent.startsWith('Bröst'))!)
 
-  await waitFor(() => expect(window.location.pathname).toContain('/workouts/'))
+  // A tap on a row only chooses it: nothing is added, the checkmark moves, and its exercises show
+  // whole rather than cut short.
+  const chosenRow = rows().find((r) => r.textContent.startsWith('Bröst'))!
+  expect(chosenRow.querySelector('[data-testid=template-exercises]')!.classList).not.toContain('truncate')
+  expect(window.location.pathname).toBe('/')
+  expect(await app.repository.getAll('workout')).toEqual([])
+  expect(
+    rows()
+      .filter((r) => r.getAttribute('aria-pressed') === 'true')
+      .map((r) => r.textContent),
+  ).toEqual([expect.stringMatching(/^Bröst/)])
+  fireEvent.click(screen.getByTestId('confirm-plan'))
+
+  await waitFor(async () => expect(await app.repository.getAll('workout')).toHaveLength(1))
   const all = await app.repository.getAll('workout')
   expect(all).toHaveLength(1)
   expect(all[0]!.templateId).toBe(chest.id)
@@ -257,11 +337,15 @@ it('plans another workout from a template beside an existing plan', async () => 
   expect(rowNames()[0]).toBe('Bröst')
   expect(screen.getByTestId('next-date').textContent.toLowerCase()).toBe('fredag 25 sep.')
   expect(screen.getByTestId('plan-days').textContent).toBe('Om 2 dagar')
-  fireEvent.click(screen.getByTestId('plan'))
+  fireEvent.click(screen.getByTestId('confirm-plan'))
 
-  await waitFor(() => expect(window.location.pathname).toContain('/workouts/'))
+  // The sheet sinks away and the page stays, the new workout lit in the list.
+  await waitFor(() => expect(screen.queryByTestId('planning-sheet')).toBeNull())
+  expect(window.location.pathname).toBe('/')
   const second = (await app.repository.getAll('workout')).find((w) => w.id !== planned.id)!
   expect([second.date, second.templateId, second.sessionNumber]).toEqual(['2026-09-25', tp.id, 103])
+  const row = document.querySelector(`[data-testid=planned-row] a[href="/workouts/${second.id}"]`)!
+  expect(row.hasAttribute('data-lit')).toBe(true)
 })
 
 it('closes the planning sheet when pulled down from a row, without planning it', async () => {
@@ -296,4 +380,81 @@ it('says how many days away a day chosen for planning is, also one in the past',
   expect(screen.getByTestId('plan-days').textContent).toBe('I går')
   fireEvent.change(screen.getByTestId('plan-date'), { target: { value: '2026-09-20' } })
   expect(screen.getByTestId('plan-days').textContent).toBe('För 3 dagar sedan')
+})
+
+it('lights the row of the workout just left, as iOS does on the way back', async () => {
+  const app = createTestApp()
+  const w = workout('2026-09-21')
+  await app.repository.save('workout', w.id, w)
+  app.renderAt('/')
+  const row = () => document.querySelector(`[data-testid=workout-list] a[href="/workouts/${w.id}"]`)!
+  expect(row().hasAttribute('data-lit')).toBe(false)
+
+  fireEvent.click(row())
+  fireEvent.click(await screen.findByTestId('back'))
+
+  await waitFor(() => expect(window.location.pathname).toBe('/'))
+  expect(row().hasAttribute('data-lit')).toBe(true)
+})
+
+it.each([
+  ['2026-09-24', 'I morgon'],
+  ['2026-09-26', 'Om 3 dagar'],
+])('says how far away the next workout is (%s)', async (date, when) => {
+  const app = createTestApp()
+  const w = workout(date)
+  await app.repository.save('workout', w.id, w)
+  app.renderAt('/')
+
+  expect(screen.getByTestId('upcoming-when').textContent).toBe(when)
+})
+
+it('names each day by what its workout trains', async () => {
+  const app = createTestApp()
+  const chest = { ...exercise('Bänkpress'), categories: ['Chest' as const] }
+  const legs = { ...exercise('Knäböj'), categories: ['Legs' as const] }
+  for (const x of [chest, legs]) await app.repository.save('exercise', x.id, x)
+  const mon = workout('2026-09-21', { exercises: [entry(chest.id, { sets: [{ reps: 8 }] })] })
+  const fri = workout('2026-09-25', { exercises: [entry(legs.id), entry(chest.id, { order: 1 })] })
+  for (const w of [mon, fri]) await app.repository.save('workout', w.id, w)
+
+  app.renderAt('/')
+
+  const names = [...screen.getByTestId('week-strip').querySelectorAll('li[data-mark]')].map(
+    (d) => d.querySelector('span:last-child')!.textContent,
+  )
+  expect(names).toEqual(['Bröst', '', '', '', 'Ben', '', ''])
+})
+
+it('turns to earlier weeks on a swipe, numbered as Swedish weeks, and back to this week', async () => {
+  const app = createTestApp()
+  const done = (date: string) => workout(date, { exercises: [entry(newId(), { sets: [{ reps: 8 }] })] })
+  for (const w of [done('2026-09-16'), done('2026-09-18'), done('2026-09-21')])
+    await app.repository.save('workout', w.id, w)
+  app.renderAt('/')
+  const heading = () => screen.getByTestId('week-heading').textContent
+  expect(heading()).toBe('Den här veckanVecka 39')
+  // Nothing after this week: no swipe forward.
+  const swipe = (from: number, to: number) => {
+    const link = screen.getByTestId('week-link').parentElement!
+    fireEvent.pointerDown(link, { pointerId: 1, clientX: from, clientY: 100 })
+    fireEvent.pointerMove(link, { pointerId: 1, clientX: (from + to) / 2, clientY: 100 })
+    fireEvent.pointerMove(link, { pointerId: 1, clientX: to, clientY: 100 })
+    fireEvent.pointerUp(link, { pointerId: 1, clientX: to, clientY: 100 })
+  }
+
+  swipe(60, 300)
+
+  await waitFor(() => expect(heading()).toBe('Vecka 3814–20 sep.'))
+  expect(screen.getByTestId('week-summary').textContent).toBe('2 gjorda')
+  expect(screen.getByTestId('week-link').getAttribute('href')).toBe('/calendar?day=2026-09-14')
+  // The first week with workouts is as far back as it goes.
+  await new Promise((r) => setTimeout(r, 400))
+  swipe(60, 300)
+  await new Promise((r) => setTimeout(r, 400))
+  expect(heading()).toBe('Vecka 3814–20 sep.')
+
+  fireEvent.click(screen.getByTestId('this-week'))
+  expect(heading()).toBe('Den här veckanVecka 39')
+  expect(screen.queryByTestId('this-week')).toBeNull()
 })

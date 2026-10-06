@@ -4,13 +4,15 @@ import { completeNextSet, replaceSet } from '../training/editing'
 import { Limits } from '../training/limits'
 import type { ExerciseKind, SetResult, WorkoutExercise } from '../training/model'
 import { isShort, num, setMain, setText, setWeight } from '../training/text'
-import { EditorActions } from '../ui/EditorActions'
+import { ModalSheet } from '../ui/ModalSheet'
 import { Stepper } from '../ui/Stepper'
+import { GROUP, ROW } from '../ui/styles'
 import { CheckMark } from './CheckMark'
+import { SkipMark } from './SkipMark'
 import { toInt } from './toInt'
 
 /**
- * The set buttons of a strength, bodyweight or timed exercise, and under them the fields of the
+ * The set buttons of a strength, bodyweight or timed exercise, and the sheet with the fields of the
  * done set open for correcting. A done set is solid green, the next one on the current exercise
  * light green, and the rest show their plan in grey: filled, as iOS marks state, never outlined.
  */
@@ -83,13 +85,7 @@ export function EntrySets({
             const set = entry.sets[index]!
             const weight = setWeight(set, kind)
             const shortSet = isShort(set, entry, kind)
-            // The set open for correcting is ringed, so it is clear which one the fields below change.
             const open = openSet === index
-            const ring = open
-              ? (shortSet
-                  ? 'ring-3 ring-amber-600 ring-offset-2 dark:ring-amber-400'
-                  : 'ring-3 ring-green-800 ring-offset-2 dark:ring-green-400') + ' dark:ring-offset-gray-900'
-              : ''
             return (
               <button
                 key={index}
@@ -97,7 +93,7 @@ export function EntrySets({
                 onClick={() => onToggleSet(index)}
                 aria-expanded={open}
                 aria-label={t('Entry.SetDone', index + 1, setText(set, kind))}
-                className={`relative inline-flex min-h-14 min-w-0 flex-col items-center justify-center rounded-xl px-1 whitespace-nowrap tabular-nums focus-visible:outline-2 focus-visible:outline-offset-2 ${shortSet ? 'bg-amber-300 text-gray-900 hover:bg-amber-400 focus-visible:outline-amber-500' : 'bg-green-600 text-white hover:bg-green-700 focus-visible:outline-green-500'} ${ring}`}
+                className={`relative inline-flex min-h-14 min-w-0 flex-col items-center justify-center rounded-xl px-1 whitespace-nowrap tabular-nums focus-visible:outline-2 focus-visible:outline-offset-2 ${shortSet ? 'bg-amber-300 text-gray-900 hover:bg-amber-400 focus-visible:outline-amber-500' : 'bg-green-700 text-white hover:bg-green-800 focus-visible:outline-green-500'}`}
                 data-testid="set-done"
                 data-open={open ? 'true' : 'false'}
                 data-short={shortSet ? 'true' : 'false'}
@@ -132,55 +128,78 @@ export function EntrySets({
           return (
             <span
               key={index}
-              className={`inline-flex min-h-14 min-w-0 flex-col items-center justify-center rounded-xl bg-fill px-1 whitespace-nowrap text-label-2 tabular-nums ${entry.isSkipped ? 'line-through' : ''}`}
+              className={`inline-flex min-h-14 min-w-0 flex-col items-center justify-center rounded-xl bg-fill px-1 whitespace-nowrap tabular-nums ${entry.isSkipped ? 'text-label-3' : 'text-label-2'}`}
               aria-label={entry.isSkipped ? t('Entry.SetSkipped', index + 1) : setLabel(index)}
               data-testid="set-planned"
               data-skipped={entry.isSkipped ? 'true' : 'false'}
             >
-              {plannedSetContent(index)}
+              {/* Skipped, the plan gives way to a symbol, fainter: nothing to do there any more. */}
+              {entry.isSkipped ? <SkipMark /> : plannedSetContent(index)}
             </span>
           )
         })}
       </div>
 
+      {/* Correcting a done set is a task of its own, as on iOS: a small sheet over the workout, its
+          fields rows of a form, deleting the set in a group of its own at the bottom. */}
       {editing !== undefined && edited && (
-        <div className="mt-3" data-testid="set-editor">
-          <div className="flex flex-col gap-2">
-            {kind === 'Timed' ? (
-              <Stepper
-                label={t('Entry.Seconds')}
-                value={edited.seconds}
-                step={5}
-                max={Limits.seconds}
-                onChange={(v) => onChange(replaceSet(entry, editing, { ...edited, seconds: toInt(v) }))}
-              />
-            ) : (
-              <Stepper
-                label={t('Entry.Reps')}
-                value={edited.reps}
-                max={Limits.reps}
-                onChange={(v) => onChange(replaceSet(entry, editing, { ...edited, reps: toInt(v) }))}
-              />
-            )}
-            {kind === 'Strength' && (
-              <Stepper
-                label={t('Entry.Kg')}
-                value={edited.weightKg}
-                step={weightStep}
-                max={Limits.weightKg}
-                onChange={(v) => onChange(replaceSet(entry, editing, { ...edited, weightKg: v }))}
-              />
-            )}
+        <ModalSheet
+          title={t('Entry.SetN', editing + 1)}
+          onClose={onClose}
+          testId="set-editor"
+          closeTestId="close-editor"
+          fit
+          portal={false}
+        >
+          <div className="flex flex-col gap-5">
+            <ul className={GROUP}>
+              <li>
+                {kind === 'Timed' ? (
+                  <Stepper
+                    row
+                    label={t('Entry.Seconds')}
+                    value={edited.seconds}
+                    step={5}
+                    max={Limits.seconds}
+                    onChange={(v) => onChange(replaceSet(entry, editing, { ...edited, seconds: toInt(v) }))}
+                  />
+                ) : (
+                  <Stepper
+                    row
+                    label={t('Entry.Reps')}
+                    value={edited.reps}
+                    max={Limits.reps}
+                    onChange={(v) => onChange(replaceSet(entry, editing, { ...edited, reps: toInt(v) }))}
+                  />
+                )}
+              </li>
+              {kind === 'Strength' && (
+                <li>
+                  <Stepper
+                    row
+                    label={t('Entry.Kg')}
+                    value={edited.weightKg}
+                    step={weightStep}
+                    max={Limits.weightKg}
+                    onChange={(v) => onChange(replaceSet(entry, editing, { ...edited, weightKg: v }))}
+                  />
+                </li>
+              )}
+            </ul>
+            <ul className={GROUP}>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => onRemoveSet(editing)}
+                  data-testid="remove-set"
+                  className={`${ROW} w-full text-[1.0625rem] text-red-600 dark:text-red-500`}
+                >
+                  {t('Entry.RemoveSet')}
+                </button>
+              </li>
+            </ul>
           </div>
-          <div className="mt-5">
-            <EditorActions
-              onDone={onClose}
-              onDelete={() => onRemoveSet(editing)}
-              deleteLabel={t('Entry.RemoveSet')}
-              deleteTestId="remove-set"
-            />
-          </div>
-        </div>
+        </ModalSheet>
       )}
     </>
   )

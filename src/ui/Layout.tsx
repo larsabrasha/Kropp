@@ -88,7 +88,7 @@ const ICON_IN_GROUP =
 /**
  * The page's title once its large title has scrolled up under the bar, as iOS shows it then: small
  * and centred in the bar. scroller is what scrolls (the window, or a sheet's page); the title is
- * the first visible h1 in content.
+ * the first visible h1 in content, unless it asks to stay out of the bar (data-no-bar-title).
  */
 function useInlineTitle(
   scroller: RefObject<HTMLElement | null> | 'window',
@@ -102,7 +102,7 @@ function useInlineTitle(
     const target = scroller === 'window' ? window : scroller.current
     if (!target) return
     const check = () => {
-      const h1 = content.current?.querySelector<HTMLElement>('h1:not(.sr-only)')
+      const h1 = content.current?.querySelector<HTMLElement>('h1:not(.sr-only):not([data-no-bar-title])')
       const barBox = bar.current?.getBoundingClientRect()
       const under = !!h1 && !!barBox && h1.getBoundingClientRect().bottom <= barBox.bottom
       setTitle((t) => (under ? { text: h1.textContent, shown: true } : t.shown ? { ...t, shown: false } : t))

@@ -6,11 +6,8 @@ import type { ExerciseKind, WorkoutExercise } from '../training/model'
 import { Stepper } from '../ui/Stepper'
 import { ActionSheet } from '../ui/ActionSheet'
 import { TextRow } from '../ui/Form'
-import { ROW } from '../ui/styles'
+import { GROUP, ROW } from '../ui/styles'
 import { toInt } from './toInt'
-
-// A grouped list of the sheet.
-const GROUP = 'ios-list overflow-hidden rounded-[1.625rem] bg-cell'
 
 /**
  * One place to change this exercise in this workout: the plan first, as it is what changes most,

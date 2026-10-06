@@ -210,11 +210,12 @@ it('shows only the struck top row of an exercise skipped whole', async () => {
   const cards = await waitForElements('[data-testid=exercise-entry]')
   expect(cards[0]!.querySelector('[data-testid=sets]')).toBeNull()
   expect($('h3', cards[0]).getAttribute('data-skipped')).toBe('true')
-  expect($('h3', cards[0]).textContent).toContain('Överhoppad')
-  expect($('[data-testid=target]', cards[0]).classList).toContain('line-through')
+  expect(text($('[data-testid=skipped]', cards[0]))).toBe('Överhoppad ·')
+  expect($$('.line-through', cards[0])).toEqual([])
 
   expect($('h3', cards[1]).getAttribute('data-skipped')).toBe('false')
   expect($$('[data-testid=set-planned]', cards[1]).map((x) => x.getAttribute('data-skipped'))).toEqual(['true', 'true'])
+  expect($$('[data-testid=set-planned] [data-testid=skip-mark]', cards[1])).toHaveLength(2)
 })
 
 it('wraps the name of the current exercise only', async () => {
@@ -234,7 +235,7 @@ it('wraps the name of the current exercise only', async () => {
   )
 })
 
-it('gives the comment a line of its own that opens the editor', async () => {
+it('gives the comment a line of its own, to read', async () => {
   const w = await seed(
     workout({
       date: '2026-09-23',
@@ -248,8 +249,9 @@ it('gives the comment a line of its own that opens the editor', async () => {
   expect(comment.querySelector('svg')).not.toBeNull()
   expect($('[data-testid=settings-line]').textContent).not.toContain('tungt')
 
-  click(comment)
+  expect(comment.tagName).toBe('P')
   // The editor is a sheet over the card, which keeps its comment line under it.
+  click($('[data-testid=edit]'))
   $('[data-testid=entry-sheet] [data-testid=editor]')
   expect($$('[data-testid=comment]')).toHaveLength(1)
 })

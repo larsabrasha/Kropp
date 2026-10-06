@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { fireEvent, screen, within } from '@testing-library/react'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { expect, it } from 'vitest'
 import { createTestApp } from '../test/render'
 
@@ -38,4 +38,14 @@ it('sends an unknown path home', async () => {
   createTestApp().renderAt('/nope')
 
   expect(window.location.pathname).toBe('/')
+})
+
+it('leaves the home page title out of the bar when scrolled, but not a page further in', async () => {
+  // happy-dom lays nothing out, so every h1 counts as scrolled under the bar.
+  const barTitle = (bar: string) => document.querySelector(`.${bar} span.truncate`)!.textContent
+  createTestApp().renderAt('/exercises')
+
+  expect(screen.getByTestId('title').textContent).toBe('Träning')
+  await waitFor(() => expect(barTitle('sheet-navbar')).toBe('Övningar'))
+  expect(barTitle('app-navbar')).toBe('')
 })

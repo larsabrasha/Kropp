@@ -132,3 +132,11 @@ export function workoutName(workout: Workout, exercises: ExerciseMap): string | 
   if (names.length === 1) return names[0]
   return `${names.slice(0, -1).join(', ')} ${t('Common.And')} ${names.at(-1)}`
 }
+
+/** A workout's name in one word, where there is room for no more: its main area, or cardio. */
+export function shortWorkoutName(workout: Workout, exercises: ExerciseMap): string | undefined {
+  const find = (id: string) => exercises.get(id)
+  if (isCardioOnly(workout, find)) return t('Workout.CardioOnly')
+  const first = areasOf(workout, find, categoriesOf)[0]
+  return first === undefined ? undefined : t(`BodyArea.${first}`)
+}

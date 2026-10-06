@@ -19,6 +19,7 @@ export function ModalSheet({
   closeTestId,
   fit = false,
   portal = true,
+  dismissed = false,
 }: {
   title: string
   onClose: () => void
@@ -35,6 +36,8 @@ export function ModalSheet({
    * of what it edits (an exercise's card). Fixed either way, so it still covers the screen.
    */
   portal?: boolean
+  /** Set when the task is done (a workout added): the sheet sinks away, then onClose runs. */
+  dismissed?: boolean
 }) {
   const [closing, setClosing] = useState(false)
   const sheet = useRef<HTMLDivElement>(null)
@@ -43,12 +46,22 @@ export function ModalSheet({
   const root = useRef<HTMLDivElement>(null)
 
   const close = useCallback(() => {
+    if (dismissed) return
     if (matchMedia('(prefers-reduced-motion: reduce)').matches) return onClose()
     setClosing(true)
     setTimeout(onClose, CLOSE_MS)
-  }, [onClose])
+  }, [onClose, dismissed])
 
   useSheetDrag(sheet, bar, page, close)
+
+  // Done from inside: sinks away as when closed; close above ignores a tap meanwhile.
+  const reduced = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
+  const sinking = closing || (dismissed && !reduced)
+  useEffect(() => {
+    if (!dismissed) return
+    const timer = setTimeout(onClose, reduced ? 0 : CLOSE_MS)
+    return () => clearTimeout(timer)
+  }, [dismissed, onClose, reduced])
 
   // A pull on this sheet is this sheet's alone, also when it is drawn inside another that can be
   // pulled (a workout opened in the calendar's sheet).
@@ -72,7 +85,7 @@ export function ModalSheet({
   const content = (
     <div ref={root} className="fixed inset-0 z-50">
       <div
-        className={`absolute inset-0 bg-black/30 dark:bg-black/50 ${closing ? 'motion-safe:animate-[fade-out_280ms_ease-in_forwards]' : 'motion-safe:animate-[fade-in_300ms_ease-out]'}`}
+        className={`absolute inset-0 bg-black/30 dark:bg-black/50 ${sinking ? 'motion-safe:animate-[fade-out_280ms_ease-in_forwards]' : 'motion-safe:animate-[fade-in_300ms_ease-out]'}`}
         onClick={close}
         aria-hidden="true"
       />
@@ -82,7 +95,7 @@ export function ModalSheet({
         aria-modal="true"
         aria-label={title}
         data-testid={testId}
-        className={`modal-sheet absolute flex flex-col overflow-hidden ${fit ? 'modal-sheet-fit inset-x-2 rounded-[2.375rem]' : 'inset-x-0 bottom-0 rounded-t-[2.375rem]'} bg-ground text-gray-900 shadow-[0_-4px_40px_rgb(0_0_0/0.2)] dark:text-white ${closing ? 'motion-safe:animate-[sheet-down_280ms_cubic-bezier(0.32,0.72,0,1)_forwards]' : 'motion-safe:animate-[sheet-up_420ms_cubic-bezier(0.32,0.72,0,1)]'}`}
+        className={`modal-sheet absolute flex flex-col overflow-hidden ${fit ? 'modal-sheet-fit inset-x-2 rounded-[2.375rem]' : 'inset-x-0 bottom-0 rounded-t-[2.375rem]'} bg-ground text-gray-900 shadow-[0_-4px_40px_rgb(0_0_0/0.2)] dark:text-white ${sinking ? 'motion-safe:animate-[sheet-down_280ms_cubic-bezier(0.32,0.72,0,1)_forwards]' : 'motion-safe:animate-[sheet-up_420ms_cubic-bezier(0.32,0.72,0,1)]'}`}
       >
         <header ref={bar} className="relative shrink-0 touch-none pt-2">
           <div
