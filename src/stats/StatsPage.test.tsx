@@ -197,3 +197,30 @@ it('says so when an exercise was never logged, or is not there', async () => {
   app.renderAt(`/stats/exercises/${newId()}`)
   await waitFor(() => expect(screen.getByTestId('not-found')).toBeTruthy())
 })
+
+it('filters the exercises by name, and keeps the filter back from one', async () => {
+  const app = createTestApp()
+  await seed(app)
+  app.renderAt('/stats')
+
+  const names = () =>
+    within(screen.getByTestId('stats-exercises'))
+      .getAllByRole('link')
+      .map((a) => a.querySelector('.font-semibold')!.textContent)
+  expect(names()).toEqual(['Plankan', 'Bänkpress'])
+
+  fireEvent.change(screen.getByTestId('stats-search'), { target: { value: 'BÄNK' } })
+  expect(names()).toEqual(['Bänkpress'])
+
+  fireEvent.click(within(screen.getByTestId('stats-exercises')).getByRole('link'))
+  await waitFor(() => expect(window.location.pathname).toBe(`/stats/exercises/${BENCH.id}`))
+  fireEvent.click(screen.getByTestId('back'))
+  await waitFor(() => expect(window.location.pathname).toBe('/stats'))
+  expect(names()).toEqual(['Bänkpress'])
+
+  const input = screen.getByTestId('stats-search')
+  fireEvent.change(input, { target: { value: 'marklyft' } })
+  expect(screen.getByTestId('stats-no-match').textContent).toBe('Ingen övning matchar.')
+  // The filter outlives the page: leave it empty for the tests after this one.
+  fireEvent.change(input, { target: { value: '' } })
+})

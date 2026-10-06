@@ -1,13 +1,15 @@
 import { useCallback, useState } from 'react'
-import { formatDate, t } from '../i18n/i18n'
+import { formatDate, lower, t } from '../i18n/i18n'
 import { picture, slugFor } from '../illustrations/illustrations'
 import { Link, navigate, useLocation } from '../route'
 import { useAnyChange, useRepository } from '../services'
 import type { LocalRepository } from '../sync/localRepo'
 import { maxDate, mondayOf, today } from '../training/dates'
+import { Limits } from '../training/limits'
 import { DEFAULT_SETTINGS, SETTINGS_ID, type Exercise, type Workout } from '../training/model'
 import { BackLink } from '../ui/Layout'
 import { Chevron, Group } from '../ui/List'
+import { SearchField } from '../ui/SearchField'
 import { SectionHeader } from '../ui/SectionHeader'
 import { Segmented } from '../ui/Segmented'
 import { CARD, PICTURE_ROW, THUMB } from '../ui/styles'
@@ -55,6 +57,10 @@ function read(repository: LocalRepository): Data {
 
 const RECORDS = 5
 
+// The search in the exercise list, kept while the app runs: back from an exercise, the list is
+// still filtered as it was left, as iOS keeps a search on the page below.
+let rememberedSearch = ''
+
 export function StatsPage() {
   const repository = useRepository()
   const { query } = useLocation()
@@ -62,6 +68,11 @@ export function StatsPage() {
   const period: Period = isPeriod(asked) ? asked : DEFAULT_PERIOD
   // Read during the first render, so the page never shows without its data.
   const [data, setData] = useState(() => read(repository))
+  const [search, setSearch] = useState(rememberedSearch)
+  const changeSearch = (value: string) => {
+    rememberedSearch = value
+    setSearch(value)
+  }
   const load = useCallback(() => setData(read(repository)), [repository])
   useAnyChange(load)
 
@@ -101,6 +112,9 @@ export function StatsPage() {
     .map((exercise) => ({ exercise, occasions: occasionsOf(workouts, exercise.id) }))
     .filter((x) => x.occasions.length > 0)
     .sort((a, b) => b.occasions.at(-1)!.date.localeCompare(a.occasions.at(-1)!.date))
+
+  const wanted = lower(search.trim())
+  const shown = done.filter(({ exercise }) => lower(exercise.name).includes(wanted))
 
   const periodQuery = period === DEFAULT_PERIOD ? '' : `?period=${period}`
 
@@ -230,21 +244,52 @@ export function StatsPage() {
 
           <section className="mt-section">
             <SectionHeader>{t('Stats.Exercises')}</SectionHeader>
-            <Group separatorInset="3.75rem" testId="stats-exercises">
-              {done.map(({ exercise, occasions }) => (
-                <li key={exercise.id}>
-                  <ExerciseLink
-                    exercise={exercise}
-                    href={`/stats/exercises/${exercise.id}${periodQuery}`}
-                    detail={
-                      occasions.length === 1
-                        ? t('Stats.ExerciseMetaOne', formatDate(occasions[0]!.date, 'd MMM yyyy'))
-                        : t('Stats.ExerciseMeta', occasions.length, formatDate(occasions.at(-1)!.date, 'd MMM yyyy'))
-                    }
-                  />
-                </li>
-              ))}
-            </Group>
+            {done.length > 1 && (
+              <SearchField
+                value={search}
+                onChange={(e) => changeSearch(e.target.value)}
+                placeholder={t('Exercises.Search')}
+                maxLength={Limits.search}
+                data-testid="stats-search"
+                className="mb-3"
+              />
+            )}
+            {shown.length === 0 ? (
+              <div
+                className="flex flex-col items-center gap-3 px-6 py-10 text-center text-[1.0625rem] text-label-2"
+                data-testid="stats-no-match"
+              >
+                <svg
+                  className="size-12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  aria-hidden="true"
+                >
+                  <circle cx="11" cy="11" r="7" />
+                  <path d="M20 20l-4-4" />
+                </svg>
+                <p>{t('Exercises.NoMatches')}</p>
+              </div>
+            ) : (
+              <Group separatorInset="3.75rem" testId="stats-exercises">
+                {shown.map(({ exercise, occasions }) => (
+                  <li key={exercise.id}>
+                    <ExerciseLink
+                      exercise={exercise}
+                      href={`/stats/exercises/${exercise.id}${periodQuery}`}
+                      detail={
+                        occasions.length === 1
+                          ? t('Stats.ExerciseMetaOne', formatDate(occasions[0]!.date, 'd MMM yyyy'))
+                          : t('Stats.ExerciseMeta', occasions.length, formatDate(occasions.at(-1)!.date, 'd MMM yyyy'))
+                      }
+                    />
+                  </li>
+                ))}
+              </Group>
+            )}
           </section>
         </>
       )}
