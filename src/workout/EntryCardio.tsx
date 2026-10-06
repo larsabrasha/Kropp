@@ -119,7 +119,7 @@ export function EntryCardio({
           onClick={onToggle}
           aria-expanded="false"
           aria-label={t('Entry.CardioDone', done)}
-          className="relative inline-flex min-h-14 flex-1 items-center justify-center rounded-xl bg-green-700 px-3 text-lg font-semibold text-white tabular-nums hover:bg-green-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-500"
+          className="relative inline-flex min-h-14 flex-1 items-center justify-center rounded-full bg-green-700 px-3 text-lg font-semibold text-white tabular-nums hover:bg-green-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-500"
           data-testid="cardio-done"
         >
           <span className="flex items-center gap-2">
@@ -155,13 +155,13 @@ export function EntryCardio({
           onClick={onFinish}
           aria-label={label}
           data-testid="cardio-next"
-          className="inline-flex min-h-14 flex-1 flex-col items-center justify-center rounded-xl bg-green-100 px-3 text-green-800 tabular-nums focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-500 active:bg-green-200 dark:bg-green-900/50 dark:text-green-300 dark:active:bg-green-900/80"
+          className="inline-flex min-h-14 flex-1 flex-col items-center justify-center rounded-full bg-green-100 px-3 text-green-800 tabular-nums focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-500 active:bg-green-200 dark:bg-green-900/50 dark:text-green-300 dark:active:bg-green-900/80"
         >
           {content}
         </button>
       ) : (
         <span
-          className={`inline-flex min-h-14 flex-1 flex-col items-center justify-center rounded-xl bg-fill px-3 tabular-nums ${entry.isSkipped ? 'text-label-3' : 'text-label-2'}`}
+          className={`inline-flex min-h-14 flex-1 flex-col items-center justify-center rounded-full bg-fill px-3 tabular-nums ${entry.isSkipped ? 'text-label-3' : 'text-label-2'}`}
           aria-label={entry.isSkipped ? t('Entry.Skipped') : label}
           data-testid="cardio-planned"
         >

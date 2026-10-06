@@ -13,8 +13,9 @@ import { toInt } from './toInt'
 
 /**
  * The set buttons of a strength, bodyweight or timed exercise, and the sheet with the fields of the
- * done set open for correcting. A done set is solid green, the next one on the current exercise
- * light green, and the rest show their plan in grey: filled, as iOS marks state, never outlined.
+ * done set open for correcting. Capsules, as iOS 26 draws its buttons, in one hue at two strengths
+ * as its tinted and prominent styles: a done set filled green with a check, the next one on the
+ * current exercise tinted green, the rest their plan in grey. Filled, never outlined.
  */
 export function EntrySets({
   entry,
@@ -93,7 +94,7 @@ export function EntrySets({
                 onClick={() => onToggleSet(index)}
                 aria-expanded={open}
                 aria-label={t('Entry.SetDone', index + 1, setText(set, kind))}
-                className={`relative inline-flex min-h-14 min-w-0 flex-col items-center justify-center rounded-xl px-1 whitespace-nowrap tabular-nums focus-visible:outline-2 focus-visible:outline-offset-2 ${shortSet ? 'bg-amber-300 text-gray-900 hover:bg-amber-400 focus-visible:outline-amber-500' : 'bg-green-700 text-white hover:bg-green-800 focus-visible:outline-green-500'}`}
+                className={`relative inline-flex min-h-14 min-w-0 flex-col items-center justify-center rounded-full px-1 whitespace-nowrap tabular-nums focus-visible:outline-2 focus-visible:outline-offset-2 ${shortSet ? 'bg-amber-300 text-gray-900 hover:bg-amber-400 focus-visible:outline-amber-500' : 'bg-green-700 text-white hover:bg-green-800 focus-visible:outline-green-500'}`}
                 data-testid="set-done"
                 data-open={open ? 'true' : 'false'}
                 data-short={shortSet ? 'true' : 'false'}
@@ -119,7 +120,7 @@ export function EntrySets({
                 type="button"
                 onClick={onCompleteNext}
                 aria-label={setLabel(index)}
-                className="inline-flex min-h-14 min-w-0 flex-col items-center justify-center rounded-xl bg-green-100 px-1 whitespace-nowrap text-green-800 tabular-nums focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-500 active:bg-green-200 dark:bg-green-900/50 dark:text-green-300 dark:active:bg-green-900/80"
+                className="inline-flex min-h-14 min-w-0 flex-col items-center justify-center rounded-full bg-green-100 px-1 whitespace-nowrap text-green-800 tabular-nums focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-500 active:bg-green-200 dark:bg-green-900/50 dark:text-green-300 dark:active:bg-green-900/80"
                 data-testid="set-next"
               >
                 {plannedSetContent(index)}
@@ -128,7 +129,7 @@ export function EntrySets({
           return (
             <span
               key={index}
-              className={`inline-flex min-h-14 min-w-0 flex-col items-center justify-center rounded-xl bg-fill px-1 whitespace-nowrap tabular-nums ${entry.isSkipped ? 'text-label-3' : 'text-label-2'}`}
+              className={`inline-flex min-h-14 min-w-0 flex-col items-center justify-center rounded-full bg-fill px-1 whitespace-nowrap tabular-nums ${entry.isSkipped ? 'text-label-3' : 'text-label-2'}`}
               aria-label={entry.isSkipped ? t('Entry.SetSkipped', index + 1) : setLabel(index)}
               data-testid="set-planned"
               data-skipped={entry.isSkipped ? 'true' : 'false'}
