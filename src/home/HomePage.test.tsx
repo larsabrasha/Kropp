@@ -458,3 +458,17 @@ it('turns to earlier weeks on a swipe, numbered as Swedish weeks, and back to th
   expect(heading()).toBe('Den här veckanVecka 39')
   expect(screen.queryByTestId('this-week')).toBeNull()
 })
+
+it('opens the planning sheet and keeps it open after a workout was planned on the page', async () => {
+  const app = createTestApp()
+  app.renderAt('/')
+
+  // Nothing planned: the list on the page itself.
+  fireEvent.click(await screen.findByTestId('confirm-plan'))
+  await waitFor(() => expect(screen.getByTestId('upcoming')).not.toBeNull())
+
+  fireEvent.click(screen.getByTestId('open-planning'))
+  // It stays, rather than sinking away as if just done.
+  await new Promise((r) => setTimeout(r, 400))
+  expect(screen.getByTestId('planning-sheet').getAttribute('aria-label')).toBe('Lägg till ett träningspass')
+})

@@ -137,7 +137,8 @@ export function HomePage() {
       added = withDerivedStatus(added, today())
       highlight(`/workouts/${added.id}`)
       await repository.save('workout', added.id, added)
-      setPlanned(true)
+      // Only the sheet sinks away; planned on the page, it just becomes the next workout.
+      if (planningOpen) setPlanned(true)
     } catch (e) {
       console.error('Could not plan from template', e)
       setError(t('Home.SaveFailed'))
@@ -273,7 +274,11 @@ export function HomePage() {
           )}
           <button
             type="button"
-            onClick={() => setPlanningOpen(true)}
+            onClick={() => {
+              // A workout planned on the page before has nothing to do with this sheet.
+              setPlanned(false)
+              setPlanningOpen(true)
+            }}
             aria-expanded={planningOpen}
             data-testid="open-planning"
             className="fab fixed right-4 z-40 flex size-14 items-center justify-center rounded-full bg-accent-600 text-white shadow-[0_8px_24px_rgb(0_0_0/0.25)] transition-transform duration-200 active:scale-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
