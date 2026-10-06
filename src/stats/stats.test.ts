@@ -10,6 +10,7 @@ import {
   occasionsOf,
   oneRepMax,
   rangeOf,
+  recordSets,
   recordsIn,
   seriesOf,
   setsPerArea,
@@ -67,6 +68,16 @@ describe('logged', () => {
 })
 
 describe('ranges', () => {
+  it('covers 5 weeks from a Monday for a month', () => {
+    const range = rangeOf('1M', '2026-09-23', undefined)
+    expect([range.start, range.end, range.unit, bucketsOf(range).length]).toEqual([
+      '2026-08-24',
+      '2026-09-23',
+      'week',
+      5,
+    ])
+  })
+
   it('covers 13 weeks from a Monday for three months', () => {
     const range = rangeOf('3M', '2026-09-23', undefined)
     expect(range.start).toBe('2026-06-29')
@@ -191,10 +202,25 @@ describe('records', () => {
       '2026-09-23',
     )
     // 62.5 in August beats 60 but falls before the span; 62.5 in September beats nothing.
-    expect(recordsIn(workouts, ALL, { start: '2026-09-01', end: '2026-09-30' })).toBe(2)
-    expect(recordsIn(workouts, ALL, { start: '2026-08-01', end: '2026-08-31' })).toBe(1)
+    expect(
+      recordsIn(workouts, ALL, { start: '2026-09-01', end: '2026-09-30' }).map((r) => [r.point.date, r.previous]),
+    ).toEqual([
+      ['2026-09-15', 65],
+      ['2026-09-01', 62.5],
+    ])
+    expect(recordsIn(workouts, ALL, { start: '2026-08-01', end: '2026-08-31' })).toHaveLength(1)
     // The first time is no record.
-    expect(recordsIn(workouts.slice(0, 1), ALL, { start: '2026-08-01', end: '2026-08-31' })).toBe(0)
+    expect(recordsIn(workouts.slice(0, 1), ALL, { start: '2026-08-01', end: '2026-08-31' })).toEqual([])
+  })
+
+  it('stars each set that beat every set of the exercise before it, none the first time', () => {
+    const first = bench('2026-09-01', [8, 60], [8, 62.5])
+    const today = bench('2026-09-08', [8, 60], [8, 65], [8, 65], [6, 70], [0, 80])
+    // 65 beats 62.5, the second 65 ties it, 70 beats 65; 80 for no reps does not count.
+    expect([...recordSets([first, today], today, 0, BENCH)]).toEqual([1, 3])
+    expect([...recordSets([first, today], first, 0, BENCH)]).toEqual([])
+    // Cardio has no sets to star.
+    expect([...recordSets([first, today], today, 0, RUN)]).toEqual([])
   })
 
   it('reads a series in date order', () => {

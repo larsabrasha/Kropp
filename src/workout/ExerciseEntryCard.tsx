@@ -37,6 +37,7 @@ type Panel = 'None' | 'Edit' | 'Set' | 'CardioResult'
 export function ExerciseEntryCard({
   entry,
   exercise,
+  records,
   lastTime,
   lastTimeDate,
   current,
@@ -49,6 +50,8 @@ export function ExerciseEntryCard({
 }: {
   entry: WorkoutExercise
   exercise: Exercise | undefined
+  /** The sets that were personal records as they were done (stats.ts, recordSets). */
+  records: ReadonlySet<number>
   lastTime?: WorkoutExercise
   /** The day of lastTime. */
   lastTimeDate?: DateOnly
@@ -343,6 +346,7 @@ export function ExerciseEntryCard({
           entry={entry}
           kind={kind}
           current={current}
+          records={records}
           weightStep={weightStep}
           openSet={panel === 'Set' ? setIndex : undefined}
           onToggleSet={(index) => toggle('Set', index)}

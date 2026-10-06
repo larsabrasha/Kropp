@@ -8,7 +8,15 @@ import {
   statusOf,
   type FindExercise,
 } from './editing'
-import { daysBetweenSessions, type DateOnly, type UserSettings, type Workout, type WorkoutTemplate } from './model'
+import {
+  daysBetweenSessions,
+  type DateOnly,
+  type ExerciseKind,
+  type UserSettings,
+  type Workout,
+  type WorkoutExercise,
+  type WorkoutTemplate,
+} from './model'
 
 // What to do next and when: templates, the suggested next template and the suggested day.
 
@@ -16,8 +24,67 @@ import { daysBetweenSessions, type DateOnly, type UserSettings, type Workout, ty
 const SIMILARITY_THRESHOLD = 0.5
 
 /**
- * A planned workout from a template. Each exercise starts from what it was last time, so the
- * plan continues where training left off; the template's targets are for exercises never done.
+ * An exercise's plan carried on from last time: its settings, and what was done rather than what was
+ * planned, so the plan goes on where training left off. Sets: as many as were done, never fewer
+ * than were planned, since much of the history logged only some of its sets. Reps and weight: the
+ * heaviest set's; cardio: the time and distance done. When last time ended early (isSkipped), its
+ * plan stands, as the model keeps it for that. Of an exercise not known, its plan too.
+ */
+export function carriedOn(
+  entry: WorkoutExercise,
+  last: WorkoutExercise | undefined,
+  kind: ExerciseKind | undefined,
+): WorkoutExercise {
+  if (!last) return entry
+  const planned: WorkoutExercise = {
+    ...entry,
+    targetSets: last.targetSets ?? entry.targetSets,
+    targetReps: last.targetReps ?? entry.targetReps,
+    targetWeightKg: last.targetWeightKg ?? entry.targetWeightKg,
+    targetSeconds: last.targetSeconds ?? entry.targetSeconds,
+    targetDurationMinutes: last.targetDurationMinutes ?? cardioTargetMinutes(entry),
+    targetDistanceKm: last.targetDistanceKm ?? cardioTargetKm(entry),
+    settings: last.settings ?? entry.settings,
+  }
+  if (last.isSkipped || kind === undefined) return planned
+  const most = (values: (number | undefined)[]) => {
+    const present = values.filter((v): v is number => v !== undefined)
+    return present.length === 0 ? undefined : Math.max(...present)
+  }
+  const sets = last.sets
+  const targetSets = sets.length > 0 ? Math.max(sets.length, planned.targetSets ?? 0) : planned.targetSets
+  switch (kind) {
+    case 'Strength': {
+      const heaviest = sets
+        .filter((s) => (s.reps ?? 0) > 0 && s.weightKg !== undefined)
+        .reduce<(typeof sets)[number] | undefined>(
+          (best, s) =>
+            !best || s.weightKg! > best.weightKg! || (s.weightKg === best.weightKg && s.reps! > best.reps!) ? s : best,
+          undefined,
+        )
+      return {
+        ...planned,
+        targetSets,
+        targetReps: heaviest?.reps ?? most(sets.map((s) => s.reps)) ?? planned.targetReps,
+        targetWeightKg: heaviest?.weightKg ?? planned.targetWeightKg,
+      }
+    }
+    case 'Bodyweight':
+      return { ...planned, targetSets, targetReps: most(sets.map((s) => s.reps)) ?? planned.targetReps }
+    case 'Timed':
+      return { ...planned, targetSets, targetSeconds: most(sets.map((s) => s.seconds)) ?? planned.targetSeconds }
+    case 'Cardio':
+      return {
+        ...planned,
+        targetDurationMinutes: last.durationMinutes ?? planned.targetDurationMinutes,
+        targetDistanceKm: last.distanceKm ?? planned.targetDistanceKm,
+      }
+  }
+}
+
+/**
+ * A planned workout from a template. Each exercise starts from what was done last time
+ * (carriedOn); the template's targets are for exercises never done.
  */
 export function planFrom(
   template: WorkoutTemplate,
@@ -25,32 +92,54 @@ export function planFrom(
   date: DateOnly,
   sessionNumber: number,
   history: readonly Workout[],
+  exercise: FindExercise,
 ): Workout {
   const plan: Workout = { id, date, sessionNumber, status: 'Planned', templateId: template.id, exercises: [] }
   return {
     ...plan,
-    exercises: template.exercises.map((entry, i) => {
-      const last = lastTime(history, plan, entry.exerciseId)
-      return {
-        ...entry,
-        order: i,
-        sets: [],
-        comment: undefined,
-        targetSets: last?.targetSets ?? entry.targetSets,
-        targetReps: last?.targetReps ?? entry.targetReps,
-        targetWeightKg: last?.targetWeightKg ?? entry.targetWeightKg,
-        targetSeconds: last?.targetSeconds ?? entry.targetSeconds,
-        targetDurationMinutes: last?.targetDurationMinutes ?? cardioTargetMinutes(entry),
-        targetDistanceKm: last?.targetDistanceKm ?? cardioTargetKm(entry),
-        settings: last?.settings ?? entry.settings,
-        // A plan has nothing done yet, whatever the template holds.
-        isSkipped: false,
-        durationMinutes: undefined,
-        distanceKm: undefined,
-        avgHeartRate: undefined,
-      }
-    }),
+    exercises: template.exercises.map((entry, i) => ({
+      ...carriedOn(
+        {
+          ...entry,
+          targetDurationMinutes: cardioTargetMinutes(entry),
+          targetDistanceKm: cardioTargetKm(entry),
+        },
+        lastTime(history, plan, entry.exerciseId),
+        exercise(entry.exerciseId)?.kind,
+      ),
+      order: i,
+      sets: [],
+      comment: undefined,
+      // A plan has nothing done yet, whatever the template holds.
+      isSkipped: false,
+      durationMinutes: undefined,
+      distanceKm: undefined,
+      avgHeartRate: undefined,
+    })),
   }
+}
+
+/**
+ * A plan for today or later brought up to date as it is opened: each exercise not yet begun carried
+ * on from what was done last time, which may be newer than when it was planned. A workout with
+ * anything logged is left alone, and so is the same workout when nothing has changed.
+ */
+export function refreshPlan(
+  workout: Workout,
+  history: readonly Workout[],
+  exercise: FindExercise,
+  today: DateOnly,
+): Workout {
+  if (workout.date < today || statusOf(workout, today) !== 'Planned') return workout
+  let changed = false
+  const exercises = workout.exercises.map((entry) => {
+    if (entry.sets.length > 0 || entry.isSkipped) return entry
+    const next = carriedOn(entry, lastTime(history, workout, entry.exerciseId), exercise(entry.exerciseId)?.kind)
+    if (JSON.stringify(next) === JSON.stringify(entry)) return entry
+    changed = true
+    return next
+  })
+  return changed ? { ...workout, exercises } : workout
 }
 
 /**

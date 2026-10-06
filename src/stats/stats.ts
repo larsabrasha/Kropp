@@ -7,6 +7,7 @@ import {
   type DateOnly,
   type Exercise,
   type ExerciseKind,
+  type SetResult,
   type Workout,
   type WorkoutExercise,
 } from '../training/model'
@@ -15,7 +16,7 @@ import {
 // a set done, a time or a distance; a plan that never happened is not training. An exercise is
 // counted by its kind now, as the workout page shows it.
 
-export const PERIODS = ['3M', '6M', '1Y', 'All'] as const
+export const PERIODS = ['1M', '3M', '6M', '1Y', 'All'] as const
 export type Period = (typeof PERIODS)[number]
 export const DEFAULT_PERIOD: Period = '3M'
 
@@ -46,11 +47,13 @@ export function logged(workouts: readonly Workout[], today: DateOnly): Workout[]
 const firstOfMonth = (date: DateOnly) => dateOf(yearOf(date), monthOf(date), 1)
 
 /**
- * The days a period covers, up to today, and its bars: weeks for three and six months (13 and 26),
- * months for a year (12), and months or, past three years, years for all of it.
+ * The days a period covers, up to today, and its bars: weeks for one, three and six months (5, 13
+ * and 26), months for a year (12), and months or, past three years, years for all of it.
  */
 export function rangeOf(period: Period, today: DateOnly, first: DateOnly | undefined): Range {
   switch (period) {
+    case '1M':
+      return { start: mondayOf(addDays(today, -7 * 4)), end: today, unit: 'week' }
     case '3M':
       return { start: mondayOf(addDays(today, -7 * 12)), end: today, unit: 'week' }
     case '6M':
@@ -326,21 +329,102 @@ export function latestRecords(workouts: readonly Workout[], exercises: readonly 
 }
 
 /**
- * How many records were set in the span: each time an exercise beat everything before it, by the
- * same measure as latestRecords. The first time an exercise is done is none.
+ * Every record set in the span, newest first: each time an exercise beat everything before it, by
+ * the same measure as latestRecords. The first time an exercise is done is none.
  */
-export function recordsIn(workouts: readonly Workout[], exercises: readonly Exercise[], span: Span): number {
-  let count = 0
+export function recordsIn(workouts: readonly Workout[], exercises: readonly Exercise[], span: Span): PersonalRecord[] {
+  const records: PersonalRecord[] = []
   for (const exercise of exercises) {
     const metric = recordMetric(exercise)
     let best: number | undefined
     for (const point of seriesOf(metric, occasionsOf(workouts, exercise.id))) {
       const beats = best !== undefined && (lowerIsBetter(metric) ? point.value < best : point.value > best)
-      if (beats && within(point.date, span)) count++
+      if (beats && within(point.date, span)) records.push({ exercise, metric, point, previous: best! })
       if (best === undefined || beats) best = point.value
     }
   }
-  return count
+  return records.sort((a, b) => b.point.date.localeCompare(a.point.date))
+}
+
+/**
+ * The exercises done in the span, each with what value adds up to over its logged entries there,
+ * most first; none that add up to nothing. By workouts: how many workouts had the exercise.
+ */
+export function exercisesBy(
+  workouts: readonly Workout[],
+  span: Span,
+  find: Find,
+  value: ((entry: WorkoutExercise) => number) | 'workouts',
+): { exercise: Exercise; value: number }[] {
+  const sums = new Map<string, number>()
+  for (const w of workouts) {
+    if (!within(w.date, span)) continue
+    const entries = w.exercises.filter(hasResult)
+    if (value === 'workouts')
+      for (const id of new Set(entries.map((e) => e.exerciseId))) sums.set(id, (sums.get(id) ?? 0) + 1)
+    else for (const e of entries) sums.set(e.exerciseId, (sums.get(e.exerciseId) ?? 0) + value(e))
+  }
+  return [...sums.entries()]
+    .flatMap(([id, sum]) => {
+      const exercise = find(id)
+      return exercise && sum > 0 ? [{ exercise, value: sum }] : []
+    })
+    .sort((a, b) => b.value - a.value || a.exercise.name.localeCompare(b.exercise.name))
+}
+
+/** The week of the span with the most workouts, the earliest of equals; undefined with none. */
+export function bestWeek(workouts: readonly Workout[], span: Span): { monday: DateOnly; workouts: number } | undefined {
+  const weeks = new Map<DateOnly, number>()
+  for (const w of workouts)
+    if (within(w.date, span)) weeks.set(mondayOf(w.date), (weeks.get(mondayOf(w.date)) ?? 0) + 1)
+  return [...weeks.entries()]
+    .sort(([a, n], [b, m]) => m - n || a.localeCompare(b))
+    .map(([monday, n]) => ({ monday, workouts: n }))[0]
+}
+
+/** What a set counts for in its exercise's records; undefined for a set that does not count. */
+function setValue(metric: Metric, set: SetResult): number | undefined {
+  switch (metric) {
+    case 'weight':
+      return (set.reps ?? 0) > 0 ? set.weightKg : undefined
+    case 'bestReps':
+      return set.reps
+    case 'bestSeconds':
+      return set.seconds
+    default:
+      return undefined
+  }
+}
+
+/**
+ * The sets of a workout's entry that were records as they were done: each set that beat every set
+ * of the exercise before it, in earlier workouts and earlier in this one. By the exercise's record
+ * measure, so none for cardio; the first time an exercise is done has nothing to beat.
+ */
+export function recordSets(
+  history: readonly Workout[],
+  workout: Workout,
+  entryIndex: number,
+  exercise: Exercise,
+): Set<number> {
+  const records = new Set<number>()
+  const metric = recordMetric(exercise)
+  const before = history.filter(
+    (w) => w.id !== workout.id && (w.date < workout.date || (w.date === workout.date && w.id < workout.id)),
+  )
+  const earlier = [...before.flatMap((w) => w.exercises), ...workout.exercises.slice(0, entryIndex)].filter(
+    (e) => e.exerciseId === exercise.id,
+  )
+  let best = maxOf(earlier.flatMap((e) => e.sets.map((s) => setValue(metric, s))))
+  if (best === undefined) return records
+  workout.exercises[entryIndex]?.sets.forEach((set, index) => {
+    const value = setValue(metric, set)
+    if (value !== undefined && value > best!) {
+      records.add(index)
+      best = value
+    }
+  })
+  return records
 }
 
 // Axes.

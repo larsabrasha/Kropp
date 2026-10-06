@@ -384,6 +384,73 @@ it('keeps the praise of an earlier workout as it was on its day', async () => {
   expect($$('[data-testid=set-done][data-fresh]')).toEqual([])
 })
 
+it('stars a set heavier than any before it', async () => {
+  await saveWorkout(
+    workout({
+      date: '2026-09-21',
+      status: 'Done',
+      exercises: [entry({ exerciseId: BENCH.id, sets: [{ reps: 8, weightKg: 60 }] })],
+    }),
+  )
+  const w = await seed(
+    workout({
+      date: '2026-09-23',
+      exercises: [
+        entry({
+          exerciseId: BENCH.id,
+          targetSets: 2,
+          sets: [
+            { reps: 8, weightKg: 60 },
+            { reps: 8, weightKg: 62.5 },
+          ],
+        }),
+      ],
+    }),
+  )
+  open(w.id)
+
+  await waitForElements('[data-testid=set-done]')
+  expect($$('[data-testid=set-done]').map((s) => s.getAttribute('data-record'))).toEqual([null, 'true'])
+  expect($$('[data-testid=record-star]')).toHaveLength(1)
+  expect($$('[data-testid=set-done]')[1]!.getAttribute('aria-label')).toMatch(/^Set 2 klart: .*62,5, personbästa$/)
+})
+
+it('opens a plan carried on from what was done last time, and saves it so', async () => {
+  await saveWorkout(
+    workout({
+      date: '2026-09-21',
+      status: 'Done',
+      exercises: [
+        entry({
+          exerciseId: BENCH.id,
+          targetSets: 2,
+          targetReps: 8,
+          targetWeightKg: 60,
+          sets: [
+            { reps: 8, weightKg: 60 },
+            { reps: 8, weightKg: 65 },
+            { reps: 6, weightKg: 65 },
+          ],
+        }),
+      ],
+    }),
+  )
+  const w = await seed(
+    workout({
+      date: '2026-09-25',
+      exercises: [entry({ exerciseId: BENCH.id, targetSets: 2, targetReps: 8, targetWeightKg: 60 })],
+    }),
+  )
+  open(w.id)
+
+  // Three sets as done, eight reps at the heaviest's 65 kg, in the first render.
+  expect($$('[data-testid=set-next], [data-testid=set-planned]')).toHaveLength(3)
+  await waitFor(async () => {
+    const saved = (await reload(w.id)).exercises[0]!
+    expect([saved.targetSets, saved.targetReps, saved.targetWeightKg]).toEqual([3, 8, 65])
+  })
+})
+
 it('celebrates only the set just done, not the ones before it', async () => {
   const w = await seed(
     workout({

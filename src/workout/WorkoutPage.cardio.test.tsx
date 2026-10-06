@@ -123,8 +123,15 @@ it('records the plan before last time when cardio is finished', async () => {
       exercises: [entry({ exerciseId: machine.id, durationMinutes: 3.5, distanceKm: 0.3, avgHeartRate: 130 })],
     }),
   )
+  // Begun, so it is not carried on from last time as it opens (refreshPlan): its own plan stands.
   const w = await seed(
-    workout({ date: '2026-09-23', exercises: [entry({ exerciseId: machine.id, targetDurationMinutes: 5 })] }),
+    workout({
+      date: '2026-09-23',
+      exercises: [
+        entry({ exerciseId: machine.id, targetDurationMinutes: 5 }),
+        entry({ exerciseId: BENCH.id, order: 1, sets: [{ reps: 8 }] }),
+      ],
+    }),
   )
   open(w.id)
 

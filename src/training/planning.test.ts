@@ -10,7 +10,16 @@ import {
   type WorkoutExercise,
   type WorkoutTemplate,
 } from './model'
-import { lastDone, planFrom, suggestDate, suggestDateAfter, suggestTemplate, upcoming } from './planning'
+import {
+  carriedOn,
+  lastDone,
+  planFrom,
+  refreshPlan,
+  suggestDate,
+  suggestDateAfter,
+  suggestTemplate,
+  upcoming,
+} from './planning'
 
 const WEDNESDAY: DateOnly = '2026-09-23'
 
@@ -161,7 +170,7 @@ describe('planning', () => {
     const t = template('Armar och bröst', bench, pullDown)
     const history = [done('2026-09-19', bench)]
 
-    const plan = planFrom(t, crypto.randomUUID(), WEDNESDAY, 102, history)
+    const plan = planFrom(t, crypto.randomUUID(), WEDNESDAY, 102, history, find)
 
     expect(plan.templateId).toBe(t.id)
     expect(plan.status).toBe('Planned')
@@ -191,14 +200,14 @@ describe('planning', () => {
       ],
     }
 
-    const plan = planFrom(t, crypto.randomUUID(), WEDNESDAY, 103, [])
+    const plan = planFrom(t, crypto.randomUUID(), WEDNESDAY, 103, [], find)
 
     const w = plan.exercises[0]!
     expect([w.targetDurationMinutes, w.durationMinutes, w.settings]).toEqual([5, undefined, '60'])
     expect(statusOf(plan, plan.date)).toBe('Planned')
   })
 
-  it("cardio keeps last time's plan like any other exercise", () => {
+  it('cardio carries on from the time done last time, like any other exercise', () => {
     const last = workout({
       date: '2026-09-21',
       status: 'Done',
@@ -210,9 +219,62 @@ describe('planning', () => {
       exercises: [entry({ exerciseId: walk.id, targetDurationMinutes: 5 })],
     }
 
-    const planned = planFrom(t, crypto.randomUUID(), WEDNESDAY, 103, [last]).exercises
+    const planned = planFrom(t, crypto.randomUUID(), WEDNESDAY, 103, [last], find).exercises
     expect(planned).toHaveLength(1)
-    expect(planned[0]!.targetDurationMinutes).toBe(10)
+    expect(planned[0]!.targetDurationMinutes).toBe(8)
+  })
+
+  it('carries on from what was done: more sets than planned, the heaviest set, the settings', () => {
+    const plan = entry({
+      exerciseId: bench.id,
+      targetSets: 3,
+      targetReps: 10,
+      targetWeightKg: 20,
+      settings: 'Sitthöjd 9',
+    })
+    const last = entry({
+      exerciseId: bench.id,
+      targetSets: 3,
+      targetReps: 10,
+      targetWeightKg: 20,
+      settings: 'Sitthöjd 11',
+      sets: [
+        { reps: 10, weightKg: 20 },
+        { reps: 8, weightKg: 25 },
+        { reps: 10, weightKg: 25 },
+        { reps: 6, weightKg: 22.5 },
+      ],
+    })
+
+    const next = carriedOn(plan, last, 'Strength')
+    expect([next.targetSets, next.targetReps, next.targetWeightKg, next.settings]).toEqual([4, 10, 25, 'Sitthöjd 11'])
+    // Fewer sets logged than planned, as much of the history: the plan's sets stand.
+    expect(carriedOn(plan, { ...last, sets: [{ reps: 10, weightKg: 25 }] }, 'Strength').targetSets).toBe(3)
+    // Ended early: last time's plan stands, as the model keeps it.
+    expect(carriedOn(plan, { ...last, isSkipped: true }, 'Strength').targetWeightKg).toBe(20)
+    // Never done: the plan as it is.
+    expect(carriedOn(plan, undefined, 'Strength')).toBe(plan)
+  })
+
+  it('refreshes a plan for today or later as it opens, never one begun or past', () => {
+    const last = workout({
+      date: '2026-09-21',
+      status: 'Done',
+      exercises: [entry({ exerciseId: bench.id, targetSets: 3, sets: [{ reps: 8, weightKg: 30 }] })],
+    })
+    const plan = workout({
+      date: WEDNESDAY,
+      exercises: [entry({ exerciseId: bench.id, targetSets: 3, targetWeightKg: 25 })],
+    })
+
+    expect(refreshPlan(plan, [last, plan], find, WEDNESDAY).exercises[0]!.targetWeightKg).toBe(30)
+    const past = { ...plan, date: '2026-09-22' }
+    expect(refreshPlan(past, [last, past], find, WEDNESDAY)).toBe(past)
+    const begun = { ...plan, exercises: [{ ...plan.exercises[0]!, sets: [{ reps: 8 }] }] }
+    expect(refreshPlan(begun, [last, begun], find, WEDNESDAY)).toBe(begun)
+    // Up to date already: the same workout, nothing to save.
+    const fresh = refreshPlan(plan, [last, plan], find, WEDNESDAY)
+    expect(refreshPlan(fresh, [last, fresh], find, WEDNESDAY)).toBe(fresh)
   })
 
   it('a plan never starts skipped', () => {
@@ -222,7 +284,7 @@ describe('planning', () => {
       exercises: [entry({ exerciseId: bench.id, targetSets: 3, isSkipped: true })],
     }
 
-    const planned = planFrom(t, crypto.randomUUID(), WEDNESDAY, 103, []).exercises
+    const planned = planFrom(t, crypto.randomUUID(), WEDNESDAY, 103, [], find).exercises
     expect(planned).toHaveLength(1)
     expect(planned[0]!.isSkipped).toBe(false)
   })

@@ -19,6 +19,7 @@ import { DateRow, NumberRow, TextRow } from '../ui/Form'
 import { ModalSheet } from '../ui/ModalSheet'
 import { button } from '../ui/styles'
 import { cheerFor } from '../stats/journey'
+import { refreshPlan } from '../training/planning'
 import { logged } from '../stats/stats'
 import { CheerCard } from './CheerCard'
 import { ExerciseList } from './ExerciseList'
@@ -105,9 +106,18 @@ export function WorkoutPage({ id }: { id: string }) {
   const safeBack = CALENDAR_BACK.exec(query.get('back') ?? '')?.[1]
 
   // Read during the first render, so the page never shows without its data.
+  // A plan for today or later opens carried on from what was done last time (refreshPlan), and is
+  // saved so once its first render shows it.
   const [initial] = useState(() => {
     const found = read(repository, id)
-    return { ...found, lock: found.workout !== undefined && opensLockedOn(found.workout, today()) }
+    const fresh = found.workout && refreshPlan(found.workout, found.all, (e) => found.exercises.get(e), today())
+    return {
+      ...found,
+      workout: fresh,
+      all: fresh === found.workout ? found.all : found.all.map((w) => (w.id === fresh!.id ? fresh! : w)),
+      refreshed: fresh !== found.workout,
+      lock: found.workout !== undefined && opensLockedOn(found.workout, today()),
+    }
   })
   const [workout, setWorkout] = useState<Workout | undefined>(initial.workout)
   const [workouts, setWorkouts] = useState<Workout[]>(initial.all)
@@ -159,6 +169,15 @@ export function WorkoutPage({ id }: { id: string }) {
     exercisesNow.current = next
     setExercises(next)
   })
+
+  useEffect(() => {
+    if (!initial.refreshed || !initial.workout) return
+    const plan = initial.workout
+    repository.save('workout', plan.id, plan).catch((e: unknown) => {
+      console.error(`Could not save the refreshed plan ${plan.id}`, e)
+      setError(t('Home.SaveFailed'))
+    })
+  }, [initial, repository])
 
   useEffect(() => {
     if (justDone) cheerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })

@@ -1,22 +1,26 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useState, type ReactNode } from 'react'
 import { formatDate, t } from '../i18n/i18n'
 import { navigate, useLocation } from '../route'
 import { useAnyChange, useRepository } from '../services'
 import type { LocalRepository } from '../sync/localRepo'
-import { maxDate, mondayOf, today } from '../training/dates'
+import { addDays, maxDate, mondayOf, today } from '../training/dates'
 import { DEFAULT_SETTINGS, SETTINGS_ID, type Exercise, type Workout } from '../training/model'
 import { Group } from '../ui/List'
 import { SectionHeader } from '../ui/SectionHeader'
 import { Segmented } from '../ui/Segmented'
-import { CARD } from '../ui/styles'
+import { CARD, ROW } from '../ui/styles'
+import { Chevron } from '../ui/List'
 import { BarChart, HorizontalBars } from './Charts'
 import { ExerciseLink } from '../library/ExerciseListPage'
 import { HueIcon } from './HueIcon'
 import { HUES, type Hue } from './hues'
+import { MeasureSheet } from './MeasureSheet'
 import { axisLabel, formatOne, formatWhole, goalLabel, metricText, periodOptions, rangeText, spanTitle } from './format'
 import {
+  bestWeek,
   bucketsOf,
   DEFAULT_PERIOD,
+  exercisesBy,
   isPeriod,
   latestRecords,
   logged,
@@ -25,6 +29,7 @@ import {
   recordsIn,
   setsPerArea,
   totalsOf,
+  volumeOf,
   workoutVolume,
   type Period,
 } from './stats'
@@ -54,6 +59,33 @@ function read(repository: LocalRepository): Data {
 }
 
 const RECORDS = 5
+/** Exercises listed under a measure. */
+const TOP = 5
+
+type Measure = 'workouts' | 'perWeek' | 'records' | 'exercises' | 'lifted' | 'cardio' | 'sets'
+
+/** Kilograms, in tonnes once they grow long, as they do in a few months. */
+function kgText(kg: number): { value: string; unit: string } {
+  return kg >= 10_000
+    ? { value: formatOne(kg / 1000), unit: t('Stats.Tonnes') }
+    : { value: formatWhole(kg), unit: 'kg' }
+}
+
+// Things to weigh the kilograms against, heaviest first: the first there are two of is named.
+const WEIGHTS = [
+  ['whale', 150_000],
+  ['elephant', 6_000],
+  ['car', 1_500],
+  ['piano', 250],
+] as const
+
+/** "As heavy as 12 elephants", or nothing below two pianos. */
+function comparison(kg: number): string | undefined {
+  const found = WEIGHTS.find(([, weight]) => kg / weight >= 2)
+  if (!found) return undefined
+  const [thing, weight] = found
+  return t('Stats.Compare', t(`Stats.Compare.${thing}`, formatWhole(Math.floor(kg / weight))))
+}
 
 export function StatsPage() {
   const repository = useRepository()
@@ -62,6 +94,8 @@ export function StatsPage() {
   const period: Period = isPeriod(asked) ? asked : DEFAULT_PERIOD
   // Read during the first render, so the page never shows without its data.
   const [data, setData] = useState(() => read(repository))
+  // The measure whose tile was tapped, open in a sheet.
+  const [open, setOpen] = useState<Measure>()
   const load = useCallback(() => setData(read(repository)), [repository])
   useAnyChange(load)
 
@@ -94,14 +128,158 @@ export function StatsPage() {
   const liftsEver = workouts.some((w) => workoutVolume(w, find) > 0)
   const areas = setsPerArea(workouts, range, find)
   const records = latestRecords(workouts, exercises).slice(0, RECORDS)
-  const recordCount = recordsIn(workouts, exercises, range)
-  // Tonnes once the kilograms grow long, as they do in a few months.
-  const lifted =
-    totals.volumeKg >= 10_000
-      ? { value: formatOne(totals.volumeKg / 1000), unit: t('Stats.Tonnes') }
-      : { value: formatWhole(totals.volumeKg), unit: 'kg' }
+  const recordsInRange = recordsIn(workouts, exercises, range)
+  const recordCount = recordsInRange.length
 
   const periodQuery = period === DEFAULT_PERIOD ? '' : `?period=${period}`
+  const periodText = period === 'All' ? t('Stats.Since', formatDate(first, 'd MMM yyyy')) : rangeText(range)
+
+  // The period's tiles: workouts and how often, what came of it (records, else the exercises done),
+  // and what there is to weigh (kilograms, else minutes of cardio, else sets). Never a zero.
+  const tiles: Measure[] = [
+    'workouts',
+    'perWeek',
+    recordCount > 0 ? 'records' : 'exercises',
+    totals.volumeKg > 0 ? 'lifted' : totals.cardioMinutes > 0 ? 'cardio' : 'sets',
+  ]
+
+  function measure(key: Measure): { label: string; value: string; unit?: string; hue: Hue; testId: string } {
+    switch (key) {
+      case 'workouts':
+        return {
+          label: t('Stats.Workouts'),
+          value: formatWhole(totals.workouts),
+          hue: HUES.workouts,
+          testId: 'total-workouts',
+        }
+      case 'perWeek':
+        return {
+          label: t('Stats.PerWeek'),
+          value: formatOne(totals.perWeek),
+          hue: HUES.perWeek,
+          testId: 'total-per-week',
+        }
+      case 'records':
+        return {
+          label: t('Stats.RecordCount'),
+          value: formatWhole(recordCount),
+          hue: HUES.records,
+          testId: 'total-records',
+        }
+      case 'exercises':
+        return {
+          label: t('Stats.Exercises'),
+          value: formatWhole(totals.exercises),
+          hue: HUES.exercises,
+          testId: 'total-exercises',
+        }
+      case 'lifted':
+        return { label: t('Stats.Lifted'), ...kgText(totals.volumeKg), hue: HUES.lifted, testId: 'total-volume' }
+      case 'cardio':
+        return {
+          label: t('Stats.Cardio'),
+          value: formatWhole(totals.cardioMinutes),
+          unit: 'min',
+          hue: HUES.cardio,
+          testId: 'total-cardio',
+        }
+      case 'sets':
+        return { label: t('Stats.SetsTotal'), value: formatWhole(totals.sets), hue: HUES.sets, testId: 'total-sets' }
+    }
+  }
+
+  /** The exercises that make a measure up, each a tap away from its progress. */
+  const ranking = (header: string, rows: { exercise: Exercise; value: number }[], text: (value: number) => string) =>
+    rows.length === 0 ? null : (
+      <Group header={header} separatorInset="3.75rem" testId="measure-exercises">
+        {rows.map((r) => (
+          <li key={r.exercise.id}>
+            <ExerciseLink
+              exercise={r.exercise}
+              href={`/stats/exercises/${r.exercise.id}${periodQuery}`}
+              detail={text(r.value)}
+            />
+          </li>
+        ))}
+      </Group>
+    )
+  const workoutCount = (n: number) => (n === 1 ? t('Stats.WorkoutCountOne') : t('Stats.WorkoutCount', formatWhole(n)))
+  const kgLine = (kg: number) => {
+    const { value, unit } = kgText(kg)
+    return `${value} ${unit}`
+  }
+
+  function details(key: Measure): ReactNode {
+    switch (key) {
+      case 'workouts':
+        return ranking(t('Stats.MostDone'), exercisesBy(workouts, range, find, 'workouts').slice(0, TOP), workoutCount)
+      case 'exercises':
+        return ranking(t('Stats.MostDone'), exercisesBy(workouts, range, find, 'workouts'), workoutCount)
+      case 'perWeek': {
+        const best = bestWeek(workouts, range)
+        return (
+          best && (
+            <Group footer={t('Stats.GoalIs', goal)} testId="best-week">
+              <li className={`${ROW} justify-between`}>
+                <span className="min-w-0">
+                  <span className="block text-[1.0625rem] font-semibold">{t('Stats.BestWeek')}</span>
+                  <span className="block truncate text-[0.9375rem] text-label-2">
+                    {spanTitle({ start: best.monday, end: addDays(best.monday, 6) }, 'week')}
+                  </span>
+                </span>
+                <span className="shrink-0 text-[1.0625rem] font-semibold tabular-nums">
+                  {workoutCount(best.workouts)}
+                </span>
+              </li>
+            </Group>
+          )
+        )
+      }
+      case 'records':
+        return (
+          <Group header={t('Stats.RecordsInPeriod')} separatorInset="3.75rem" testId="measure-records">
+            {recordsInRange.map((r) => (
+              <li key={`${r.exercise.id}-${r.point.workoutId}`}>
+                <ExerciseLink
+                  exercise={r.exercise}
+                  href={`/stats/exercises/${r.exercise.id}${periodQuery}`}
+                  detail={`${formatDate(r.point.date, 'd MMM yyyy')} · ${t('Stats.Previous', metricText(r.metric, r.previous))}`}
+                  trailing={metricText(r.metric, r.point.value)}
+                />
+              </li>
+            ))}
+          </Group>
+        )
+      case 'lifted': {
+        const compared = comparison(totals.volumeKg)
+        return (
+          <>
+            {compared !== undefined && (
+              <p className="-mt-6 px-4 text-[1.0625rem]" data-testid="measure-compare">
+                {compared}
+              </p>
+            )}
+            {ranking(t('Stats.MostLifted'), exercisesBy(workouts, range, find, volumeOf).slice(0, TOP), kgLine)}
+          </>
+        )
+      }
+      case 'cardio':
+        return ranking(
+          t('Stats.MostCardio'),
+          exercisesBy(workouts, range, find, (e) => e.durationMinutes ?? 0).slice(0, TOP),
+          (m) => `${formatWhole(m)} min`,
+        )
+      case 'sets':
+        return ranking(
+          t('Stats.MostSets'),
+          exercisesBy(workouts, range, find, (e) => (find(e.exerciseId)?.kind === 'Cardio' ? 0 : e.sets.length)).slice(
+            0,
+            TOP,
+          ),
+          (n) => `${formatWhole(n)} set`,
+        )
+    }
+  }
 
   return (
     <>
@@ -134,61 +312,26 @@ export function StatsPage() {
             className="mt-section"
           />
           <p className="mt-2 px-4 text-[0.9375rem] text-label-2" data-testid="range">
-            {period === 'All' ? t('Stats.Since', formatDate(first, 'd MMM yyyy')) : rangeText(range)}
+            {periodText}
           </p>
 
           {/* The period's totals, as Fitness lays out its own: tiles two by two, each measure in its
               colour. What counts is showing up: workouts and how often, then what came of it. */}
           <ul className="mt-4 grid grid-cols-2 gap-3" data-testid="totals">
-            <Tile
-              hue={HUES.workouts}
-              label={t('Stats.Workouts')}
-              value={formatWhole(totals.workouts)}
-              testId="total-workouts"
-            />
-            <Tile
-              hue={HUES.perWeek}
-              label={t('Stats.PerWeek')}
-              value={formatOne(totals.perWeek)}
-              testId="total-per-week"
-            />
-            {/* Records when any were set, else the exercises done: never a zero. */}
-            {recordCount > 0 ? (
-              <Tile
-                hue={HUES.records}
-                label={t('Stats.RecordCount')}
-                value={formatWhole(recordCount)}
-                testId="total-records"
-              />
-            ) : (
-              <Tile
-                hue={HUES.exercises}
-                label={t('Stats.Exercises')}
-                value={formatWhole(totals.exercises)}
-                testId="total-exercises"
-              />
-            )}
-            {/* What there is to weigh: kilograms, else minutes of cardio, else sets. Never a zero. */}
-            {totals.volumeKg > 0 ? (
-              <Tile
-                hue={HUES.lifted}
-                label={t('Stats.Lifted')}
-                value={lifted.value}
-                unit={lifted.unit}
-                testId="total-volume"
-              />
-            ) : totals.cardioMinutes > 0 ? (
-              <Tile
-                hue={HUES.cardio}
-                label={t('Stats.Cardio')}
-                value={formatWhole(totals.cardioMinutes)}
-                unit="min"
-                testId="total-cardio"
-              />
-            ) : (
-              <Tile hue={HUES.sets} label={t('Stats.SetsTotal')} value={formatWhole(totals.sets)} testId="total-sets" />
-            )}
+            {tiles.map((key) => (
+              <Tile key={key} {...measure(key)} onOpen={() => setOpen(key)} />
+            ))}
           </ul>
+          {open !== undefined && tiles.includes(open) && (
+            <MeasureSheet
+              {...measure(open)}
+              sub={periodText}
+              about={t(`Stats.About.${open}`)}
+              onClose={() => setOpen(undefined)}
+            >
+              {details(open)}
+            </MeasureSheet>
+          )}
 
           <section className="mt-section">
             <SectionHeader>{t('Stats.Workouts')}</SectionHeader>
@@ -299,10 +442,22 @@ function FigureText({ label, value, unit, hue }: Omit<FigureProps, 'testId'>) {
   )
 }
 
-function Tile({ className, testId, ...figure }: FigureProps & { className?: string }) {
+/** A tile of the period: a button that opens what the measure means and what makes it up. */
+function Tile({ testId, onOpen, ...figure }: FigureProps & { onOpen: () => void }) {
   return (
-    <li className={`${CARD} px-4 py-3 ${className ?? ''}`} data-testid={testId}>
-      <FigureText {...figure} />
+    <li data-testid={testId}>
+      <button
+        type="button"
+        onClick={onOpen}
+        aria-haspopup="dialog"
+        className={`${CARD} relative block w-full px-4 py-3 text-left transition-transform duration-150 active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500`}
+      >
+        {/* On the figure's line, where there is room: the label needs the tile's whole width. */}
+        <span className="absolute right-4 bottom-[1.375rem]">
+          <Chevron />
+        </span>
+        <FigureText {...figure} />
+      </button>
     </li>
   )
 }

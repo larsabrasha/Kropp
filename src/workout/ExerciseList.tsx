@@ -16,6 +16,9 @@ import {
 import { newId, type Exercise, type Workout } from '../training/model'
 import { ExerciseEntryCard } from './ExerciseEntryCard'
 import { ExercisePicker, NewExerciseForm, type NewExercise } from './ExercisePicker'
+import { recordSets } from '../stats/stats'
+
+const NO_RECORDS: ReadonlySet<number> = new Set()
 
 // The exercises of a workout or a template: the cards, drag and drop, and adding from the
 // register. Shared by the workout page and the template page, which only differ in what they
@@ -161,13 +164,15 @@ export function ExerciseList({
       <div ref={entryList} className="flex flex-col gap-5" data-testid="entry-list">
         {owner.exercises.map((entry, index) => {
           const last = forTemplate ? undefined : lastTimeOn(history, owner, entry.exerciseId)
+          const exercise = exercises.get(entry.exerciseId)
           return (
             <ExerciseEntryCard
               key={`${entry.exerciseId}:${entry.order}`}
               forTemplate={forTemplate}
               editing={editing}
               entry={entry}
-              exercise={exercises.get(entry.exerciseId)}
+              exercise={exercise}
+              records={forTemplate || !exercise ? NO_RECORDS : recordSets(history, owner, index, exercise)}
               lastTime={last?.entry}
               lastTimeDate={last?.date}
               current={index === currentEntry}

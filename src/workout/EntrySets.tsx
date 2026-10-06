@@ -21,6 +21,7 @@ export function EntrySets({
   entry,
   kind,
   current,
+  records,
   weightStep,
   openSet,
   onToggleSet,
@@ -32,6 +33,8 @@ export function EntrySets({
   entry: WorkoutExercise
   kind: ExerciseKind
   current: boolean
+  /** The done sets that were personal records, starred. */
+  records: ReadonlySet<number>
   weightStep: number
   /** The set whose panel is open, if any. */
   openSet: number | undefined
@@ -106,13 +109,30 @@ export function EntrySets({
                   onToggleSet(index)
                 }}
                 aria-expanded={open}
-                aria-label={t('Entry.SetDone', index + 1, setText(set, kind))}
+                aria-label={
+                  records.has(index)
+                    ? t('Entry.SetRecord', t('Entry.SetDone', index + 1, setText(set, kind)))
+                    : t('Entry.SetDone', index + 1, setText(set, kind))
+                }
                 className={`${fresh === index ? 'set-fresh ' : ''}relative inline-flex min-h-14 min-w-0 flex-col items-center justify-center rounded-full px-1 whitespace-nowrap tabular-nums focus-visible:outline-2 focus-visible:outline-offset-2 ${shortSet ? 'bg-amber-300 text-gray-900 hover:bg-amber-400 focus-visible:outline-amber-500' : 'bg-green-700 text-white hover:bg-green-800 focus-visible:outline-green-500'}`}
                 data-testid="set-done"
                 data-open={open ? 'true' : 'false'}
                 data-short={shortSet ? 'true' : 'false'}
                 data-fresh={fresh === index ? 'true' : undefined}
+                data-record={records.has(index) ? 'true' : undefined}
               >
+                {/* A personal record: a star on the capsule's corner, ringed off from it. */}
+                {records.has(index) && (
+                  <span
+                    className="absolute -top-1.5 -right-1 flex size-6 items-center justify-center rounded-full bg-amber-400 text-white ring-2 ring-cell"
+                    data-testid="record-star"
+                    aria-hidden="true"
+                  >
+                    <svg className="size-3.5" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 3.5l2.5 5.2 5.6.8-4 4 1 5.6L12 16.4l-5.1 2.7 1-5.6-4-4 5.6-.8z" />
+                    </svg>
+                  </span>
+                )}
                 <span className="flex items-center gap-1.5">
                   <CheckMark />
                   <span className="text-xl leading-tight font-semibold" data-testid="set-main">

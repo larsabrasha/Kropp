@@ -133,7 +133,7 @@ export function HomePage() {
     setError(undefined)
     try {
       const history = workouts
-      let added = planFrom(template, newId(), planDate, nextSessionNumber(history), history)
+      let added = planFrom(template, newId(), planDate, nextSessionNumber(history), history, (id) => exercises.get(id))
       if (template.id === EMPTY_ID) added = { ...added, templateId: undefined }
       added = withDerivedStatus(added, today())
       highlight(`/workouts/${added.id}`)

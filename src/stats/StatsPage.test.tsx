@@ -235,3 +235,41 @@ it('never shows a zero: cardio or sets take the place of kilograms never lifted'
   expect(tile('total-exercises')).toBe('1')
   expect(within(screen.getByTestId('totals')).getAllByRole('listitem')).toHaveLength(4)
 })
+
+it('opens a tile in a sheet: what it means, and what made it up', async () => {
+  const app = createTestApp()
+  await seed(app)
+  app.renderAt('/stats')
+
+  fireEvent.click(within(screen.getByTestId('total-records')).getByRole('button'))
+  const sheet = await screen.findByTestId('measure-sheet')
+  expect(within(sheet).getByTestId('measure-value').textContent).toBe('3')
+  expect(within(sheet).getByTestId('measure-about').textContent).toContain('slog allt du gjort i den förut')
+  // Newest first, each with what it beat.
+  const rows = within(within(sheet).getByTestId('measure-records')).getAllByRole('link')
+  expect(rows.map((r) => r.textContent)).toEqual([
+    'Plankan21 sep. 2026 · upp från 60 s75 s',
+    'Bänkpress14 sep. 2026 · upp från 62,5 kg65 kg',
+    'Bänkpress9 sep. 2026 · upp från 60 kg62,5 kg',
+  ])
+
+  fireEvent.click(within(sheet).getByTestId('close-measure'))
+  await waitFor(() => expect(screen.queryByTestId('measure-sheet')).toBeNull())
+
+  fireEvent.click(within(screen.getByTestId('total-volume')).getByRole('button'))
+  expect((await screen.findByTestId('measure-compare')).textContent).toBe('Lika tungt som 2 bilar.')
+  expect(within(screen.getByTestId('measure-exercises')).getByRole('link').textContent).toMatch(/3\s440 kg/)
+})
+
+it('shows the best week and the goal under workouts a week', async () => {
+  const app = createTestApp()
+  await seed(app)
+  app.renderAt('/stats?period=1M')
+
+  expect(within(screen.getByTestId('period')).getByRole('radio', { checked: true }).textContent).toBe('1 mån')
+  fireEvent.click(within(screen.getByTestId('total-per-week')).getByRole('button'))
+  const best = await screen.findByTestId('best-week')
+  expect(best.textContent).toContain('Bästa veckan')
+  expect(best.textContent).toContain('3 pass')
+  expect(screen.getByTestId('measure-sheet').textContent).toContain('Ditt mål är 3 pass i veckan.')
+})
