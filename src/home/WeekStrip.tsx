@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { useMonthSwipe } from '../calendar/useMonthSwipe'
+import { weekRange } from '../calendar/weekRange'
 import { formatDate, t } from '../i18n/i18n'
 import { Link } from '../route'
-import { addDays, dayOf, mondayOf, monthOf, weekNumber } from '../training/dates'
+import { addDays, mondayOf, weekNumber } from '../training/dates'
 import { shortWorkoutName, type ExerciseMap } from '../training/categories'
 import { statusOf } from '../training/editing'
 import type { DateOnly, Workout } from '../training/model'
@@ -12,17 +13,10 @@ import { Chevron } from '../ui/List'
 // with a check for a day with a workout done, a green ring for one planned, grey for the rest, and
 // what the day's workout trains in a word under it, and the count below. It opens on this week; swiped sideways it turns to the weeks before and
 // after, as the calendar turns its months (useMonthSwipe), as far as there are workouts. A tap opens
-// the calendar on the week shown. Weeks start on Monday and are numbered by ISO 8601, as Swedish
+// the calendar with the week shown chosen. Weeks start on Monday and are numbered by ISO 8601, as Swedish
 // calendars number them.
 
 type Mark = 'done' | 'planned' | 'none'
-
-function weekRange(monday: DateOnly): string {
-  const sunday = addDays(monday, 6)
-  return monthOf(monday) === monthOf(sunday)
-    ? `${dayOf(monday)}–${dayOf(sunday)} ${formatDate(sunday, 'MMM')}`
-    : `${formatDate(monday, 'd MMM')} – ${formatDate(sunday, 'd MMM')}`
-}
 
 export function WeekStrip({
   workouts,
@@ -168,7 +162,7 @@ export function WeekStrip({
             </div>
           )}
           <Link
-            href={`/calendar?day=${isThisWeek ? day : monday}`}
+            href={`/calendar?week=${monday}`}
             aria-label={`${heading}: ${summary}. ${t('Calendar.Heading')}`}
             data-testid="week-link"
             className="block px-3 py-3 active:bg-cell-pressed focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-500"

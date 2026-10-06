@@ -17,7 +17,7 @@ export const sv: Messages = {
   'Calendar.PreviousYear': 'Föregående år',
   'Calendar.ThisMonth': 'Tillbaka till denna månad',
   'Calendar.WeekShort': 'v.',
-  'Calendar.WholeMonth': 'Visa hela månaden',
+  'Calendar.WholeMonth': 'Hela månaden',
   'Calendar.Workouts': '{0} pass',
   'Common.And': 'och',
   'Common.Back': 'Tillbaka',

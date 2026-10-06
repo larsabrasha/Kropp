@@ -16,7 +16,7 @@ export const en = {
   'Calendar.PreviousYear': 'Previous year',
   'Calendar.ThisMonth': 'Back to this month',
   'Calendar.WeekShort': 'Wk',
-  'Calendar.WholeMonth': 'Show the whole month',
+  'Calendar.WholeMonth': 'Whole month',
   'Calendar.Workouts': '{0} workouts',
   'Common.And': 'and',
   'Common.Back': 'Back',

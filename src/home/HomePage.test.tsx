@@ -163,7 +163,7 @@ it('shows the week as days done and planned, and opens the calendar from it', as
     'Pass',
   ])
   const link = screen.getByTestId('week-link')
-  expect(link.getAttribute('href')).toBe('/calendar?day=2026-09-23')
+  expect(link.getAttribute('href')).toBe('/calendar?week=2026-09-21')
   expect(link.getAttribute('aria-label')).toBe('Den här veckan: 1 gjort · 2 planerade. Kalender')
 })
 
@@ -447,7 +447,7 @@ it('turns to earlier weeks on a swipe, numbered as Swedish weeks, and back to th
 
   await waitFor(() => expect(heading()).toBe('Vecka 3814–20 sep.'))
   expect(screen.getByTestId('week-summary').textContent).toBe('2 gjorda')
-  expect(screen.getByTestId('week-link').getAttribute('href')).toBe('/calendar?day=2026-09-14')
+  expect(screen.getByTestId('week-link').getAttribute('href')).toBe('/calendar?week=2026-09-14')
   // The first week with workouts is as far back as it goes.
   await new Promise((r) => setTimeout(r, 400))
   swipe(60, 300)

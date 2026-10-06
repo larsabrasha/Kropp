@@ -50,10 +50,50 @@ it('shows the chosen day’s workouts, and the way back leads to that day', asyn
   )
   expect(here()).toBe('/calendar?day=2026-09-21')
 
+  expect(screen.getByTestId('whole-month').textContent).toBe('Hela månaden')
   fireEvent.click(screen.getByTestId('whole-month'))
 
   expect(screen.getByTestId('calendar-workouts').querySelectorAll('[data-testid=workout-name]')).toHaveLength(2)
   expect(here()).toBe('/calendar')
+})
+
+it('chooses a whole week with a tap on its number, and the way back leads to that week', async () => {
+  const app = createTestApp()
+  const sat = await save(app, '2026-09-26', 'Rygg')
+  const mon = await save(app, '2026-09-21', 'Ben')
+  await save(app, '2026-09-14', 'Bröst')
+  app.renderAt('/calendar')
+  const week = () => document.querySelector<HTMLElement>("[data-testid=week-number][data-week='2026-09-21']")!
+
+  expect(week().textContent).toBe('39')
+  expect(week().getAttribute('aria-label')).toBe('Vecka 39, 21–27 sep.')
+  fireEvent.click(week())
+
+  expect(week().getAttribute('aria-pressed')).toBe('true')
+  expect(screen.getByTestId('shown-heading').textContent.trim()).toBe('Vecka 39 · 21–27 sep.')
+  expect([...screen.getByTestId('calendar-workouts').querySelectorAll('a')].map((a) => a.getAttribute('href'))).toEqual(
+    [`/workouts/${mon.id}?back=calendar%3Fweek%3D2026-09-21`, `/workouts/${sat.id}?back=calendar%3Fweek%3D2026-09-21`],
+  )
+  expect(here()).toBe('/calendar?week=2026-09-21')
+
+  // A second tap, the month again.
+  fireEvent.click(week())
+  expect(screen.getByTestId('shown-heading').textContent.trim()).toBe('Alla pass i september (3 st)')
+  expect(here()).toBe('/calendar')
+})
+
+it('chooses a week that begins in the month before without leaving the month shown', async () => {
+  const app = createTestApp()
+  await save(app, '2026-09-30', 'Ben')
+  await save(app, '2026-10-02', 'Rygg')
+  app.renderAt('/calendar?month=2026-10')
+
+  fireEvent.click(document.querySelector("[data-testid=week-number][data-week='2026-09-28']")!)
+
+  expect(screen.getByTestId('month').textContent).toBe('oktober 2026')
+  expect(screen.getByTestId('shown-heading').textContent.trim()).toBe('Vecka 40 · 28 sep. – 4 okt.')
+  expect(screen.getByTestId('calendar-workouts').querySelectorAll('[data-testid=workout-name]')).toHaveLength(2)
+  expect(here()).toBe('/calendar?month=2026-10&week=2026-09-28')
 })
 
 it('steps by month and by year', async () => {

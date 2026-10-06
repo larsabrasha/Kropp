@@ -11,6 +11,7 @@ import type { DateOnly, Exercise, Workout, WorkoutStatus } from '../training/mod
 import { BackLink, BarItem, GLASS_CAPSULE } from '../ui/Layout'
 import { Group } from '../ui/List'
 import { useMonthSwipe } from './useMonthSwipe'
+import { weekRange } from './weekRange'
 
 interface Data {
   workouts: Workout[]
@@ -24,18 +25,48 @@ const firstOfMonth = (date: DateOnly): DateOnly => `${date.slice(0, 7)}-01`
 const FIRST_MONTH = firstOfMonth(Limits.firstDate)
 const LAST_MONTH = firstOfMonth(Limits.lastDate)
 
-/** The month and day in the address (?day=, ?month=): a valid day wins over a month. */
-function fromQuery(query: URLSearchParams, day: DateOnly): { month: DateOnly; selected: DateOnly | undefined } {
+/** What is chosen under the calendar: a day, a whole week (by its Monday), or nothing (the month). */
+type Selection = { day: DateOnly } | { week: DateOnly } | undefined
+
+/**
+ * The month and the choice in the address (?day=, ?week=, ?month=). A valid day or week wins, and
+ * shows its own month unless a month is given too (a week that begins in the month before).
+ */
+function fromQuery(query: URLSearchParams, day: DateOnly): { month: DateOnly; selected: Selection } {
+  const monthParameter = query.get('month')
+  const first = monthParameter !== null && /^\d{4}-\d{2}$/.test(monthParameter) ? `${monthParameter}-01` : undefined
+  const month = first !== undefined && isDateOnly(first) && isInRange(first) ? first : undefined
   const dayParameter = query.get('day')
   if (dayParameter !== null && isDateOnly(dayParameter) && isInRange(dayParameter))
-    return { month: firstOfMonth(dayParameter), selected: dayParameter }
-  const monthParameter = query.get('month')
-  if (monthParameter !== null && /^\d{4}-\d{2}$/.test(monthParameter)) {
-    const first = `${monthParameter}-01`
-    if (isDateOnly(first) && isInRange(first)) return { month: first, selected: undefined }
-  }
-  return { month: firstOfMonth(day), selected: undefined }
+    return { month: month ?? firstOfMonth(dayParameter), selected: { day: dayParameter } }
+  const weekParameter = query.get('week')
+  if (
+    weekParameter !== null &&
+    isDateOnly(weekParameter) &&
+    isInRange(weekParameter) &&
+    mondayOf(weekParameter) === weekParameter
+  )
+    return { month: month ?? firstOfMonth(weekParameter), selected: { week: weekParameter } }
+  return { month: month ?? firstOfMonth(day), selected: undefined }
 }
+
+/** The address for a month and a choice: only what differs from what the choice implies. */
+function queryFor(month: DateOnly, selected: Selection, day: DateOnly): string {
+  const next = new URLSearchParams()
+  const implied =
+    selected === undefined
+      ? firstOfMonth(day)
+      : 'day' in selected
+        ? firstOfMonth(selected.day)
+        : firstOfMonth(selected.week)
+  if (month !== implied) next.set('month', month.slice(0, 7))
+  if (selected !== undefined && 'day' in selected) next.set('day', selected.day)
+  if (selected !== undefined && 'week' in selected) next.set('week', selected.week)
+  return next.toString()
+}
+
+/** The tint under a chosen week (CalendarPage): light enough for every number on it to keep 4.5:1. */
+const WEEK_BAND = 'bg-tint/12 dark:bg-tint/20'
 
 function dotColour(status: WorkoutStatus): string {
   switch (status) {
@@ -85,20 +116,20 @@ export function CalendarPage() {
 
   const { workouts, byDay, exercises } = data
 
-  /** The workouts under the calendar: the chosen day's, or the whole month's. */
-  const shown =
-    selected !== undefined
-      ? (byDay.get(selected) ?? [])
-      : workouts.filter((w) => w.date.slice(0, 7) === month.slice(0, 7))
+  const selectedDay = selected !== undefined && 'day' in selected ? selected.day : undefined
+  const selectedWeek = selected !== undefined && 'week' in selected ? selected.week : undefined
 
-  const show = (first: DateOnly, selectedDay: DateOnly | undefined) => {
+  /** The workouts under the calendar: the chosen day's or week's, or the whole month's. */
+  const shown =
+    selectedDay !== undefined
+      ? (byDay.get(selectedDay) ?? [])
+      : selectedWeek !== undefined
+        ? workouts.filter((w) => w.date >= selectedWeek && w.date <= addDays(selectedWeek, 6))
+        : workouts.filter((w) => w.date.slice(0, 7) === month.slice(0, 7))
+
+  const show = (first: DateOnly, selection: Selection) => {
     // Replace, not push: stepping through months should not fill the history.
-    const next = new URLSearchParams(window.location.search)
-    if (selectedDay === undefined && first !== firstOfMonth(day)) next.set('month', first.slice(0, 7))
-    else next.delete('month')
-    if (selectedDay !== undefined) next.set('day', selectedDay)
-    else next.delete('day')
-    const search = next.toString()
+    const search = queryFor(first, selection, day)
     navigate(window.location.pathname + (search ? `?${search}` : ''), { replace: true })
   }
 
@@ -109,11 +140,13 @@ export function CalendarPage() {
 
   const swipe = useMonthSwipe(step, (direction) => (direction < 0 ? month > FIRST_MONTH : month < LAST_MONTH))
 
-  const toggle = (date: DateOnly) => show(month, selected === date ? undefined : date)
+  const toggle = (date: DateOnly) => show(month, selectedDay === date ? undefined : { day: date })
+  // A tap on a week's number chooses the whole week; a second one, the month again.
+  const toggleWeek = (monday: DateOnly) => show(month, selectedWeek === monday ? undefined : { week: monday })
 
   const workoutHref = (workout: Workout) =>
     `/workouts/${workout.id}?back=${encodeURIComponent(
-      selected !== undefined ? `calendar?day=${selected}` : `calendar?month=${month.slice(0, 7)}`,
+      `calendar?${queryFor(month, selected, day) || `month=${month.slice(0, 7)}`}`,
     )}`
 
   const stepButton = (months: number, label: string, path: string, testId: string) => {
@@ -153,6 +186,9 @@ export function CalendarPage() {
     const inMonth = date.slice(0, 7) === shownMonth.slice(0, 7)
     const dayWorkouts = inMonth ? byDay.get(date) : undefined
     const isToday = date === day && inMonth
+    // A chosen week lies on one tinted capsule, from its number to its Sunday, so it reads as one.
+    const inWeek = selectedWeek !== undefined && date >= selectedWeek && date <= addDays(selectedWeek, 6)
+    const band = inWeek ? `${WEEK_BAND} ${date === addDays(selectedWeek, 6) ? 'rounded-r-full' : ''}` : ''
     // As iOS's calendar marks days: today's number red, the chosen day's in a filled circle, red
     // when it is today, else black (white in dark mode). Workouts are dots under the number.
     const number = (on: boolean) =>
@@ -162,18 +198,18 @@ export function CalendarPage() {
             ? 'bg-red-600 font-semibold text-white'
             : 'bg-gray-900 font-semibold text-white dark:bg-white dark:text-black'
           : isToday
-            ? 'font-semibold text-red-600 dark:text-red-400'
+            ? 'font-semibold text-red-700 dark:text-red-300'
             : inMonth
               ? ''
               : 'text-label-2'
       }`
     if (dayWorkouts !== undefined && dayWorkouts.length > 0) {
-      const on = selected === date
+      const on = selectedDay === date
       const label = `${formatDate(date, 'dddd d MMMM')}: ${
         dayWorkouts.length === 1 ? t('Calendar.OneWorkout') : t('Calendar.Workouts', dayWorkouts.length)
       }`
       return (
-        <span key={date} role="gridcell" className="flex justify-center">
+        <span key={date} role="gridcell" className={`flex justify-center ${band}`}>
           <button
             type="button"
             onClick={() => toggle(date)}
@@ -181,10 +217,10 @@ export function CalendarPage() {
             aria-label={label}
             data-testid={live ? 'day' : undefined}
             data-date={date}
-            className="flex h-12 w-full max-w-12 flex-col items-center justify-start gap-1 rounded-xl pt-0.5 active:bg-fill focus-visible:outline-2 focus-visible:outline-blue-500"
+            className="flex h-14 w-full max-w-12 flex-col items-center justify-center gap-1 rounded-xl active:bg-fill focus-visible:outline-2 focus-visible:outline-blue-500"
           >
             <span className={number(on)}>{dayOf(date)}</span>
-            <span className="flex gap-0.5" aria-hidden="true">
+            <span className="flex h-1.5 gap-0.5" aria-hidden="true">
               {dayWorkouts.slice(0, 3).map((workout) => {
                 const status = statusOf(workout, day)
                 return (
@@ -201,9 +237,11 @@ export function CalendarPage() {
       )
     }
     return (
-      <span key={date} role="gridcell" className="flex justify-center">
-        <span className="flex h-12 w-full max-w-12 flex-col items-center justify-start pt-0.5">
+      <span key={date} role="gridcell" className={`flex justify-center ${band}`}>
+        <span className="flex h-14 w-full max-w-12 flex-col items-center justify-center gap-1">
           <span className={number(false)}>{dayOf(date)}</span>
+          {/* The dots' row, empty, so every number sits at the same height. */}
+          <span className="h-1.5" aria-hidden="true" />
         </span>
       </span>
     )
@@ -235,9 +273,21 @@ export function CalendarPage() {
           <div role="row" className="contents" key={monday}>
             <span
               role="rowheader"
-              className="flex items-center justify-center text-xs font-medium text-label-2 tabular-nums"
+              className={`flex items-center justify-center ${selectedWeek === monday ? `${WEEK_BAND} rounded-l-full` : ''}`}
             >
-              {weekNumber(monday)}
+              <button
+                type="button"
+                onClick={() => toggleWeek(monday)}
+                aria-pressed={selectedWeek === monday ? 'true' : 'false'}
+                aria-label={`${t('Home.Week', weekNumber(monday))}, ${weekRange(monday)}`}
+                data-testid={live ? 'week-number' : undefined}
+                data-week={monday}
+                className={`flex size-7 items-center justify-center rounded-full text-xs text-tint tabular-nums active:bg-fill focus-visible:outline-2 focus-visible:outline-blue-500 ${
+                  selectedWeek === monday ? 'font-bold dark:text-white' : 'font-medium'
+                }`}
+              >
+                {weekNumber(monday)}
+              </button>
             </span>
             {Array.from({ length: 7 }, (_, i) => renderDay(addDays(monday, i), shownMonth, live))}
           </div>
@@ -328,32 +378,32 @@ export function CalendarPage() {
           </div>
         ) : (
           <>
-            {/* The list's header: the month, or the chosen day as a filter, as iOS's Mail and Photos
-                show one: a tinted capsule with a cross, which a tap removes to show the whole month
-                again. The line keeps one height either way, so the list never moves. */}
-            <h3
-              className="flex min-h-11 items-center px-4 pb-1 text-[1.0625rem] font-semibold text-label-2"
-              data-testid="shown-heading"
-            >
-              {selected === undefined ? (
-                t('Calendar.AllInMonth', formatDate(month, 'MMMM'), shown.length)
-              ) : (
+            {/* The list's header: the month, or the chosen day, as plain text as every section's
+                header is; with a day chosen, the way back to the whole month at its right, as a
+                section's own action (Visa alla on the home page). A second tap on the day does the
+                same. The line keeps one height either way, so the list never moves. */}
+            <div className="flex min-h-11 items-center justify-between gap-3 px-4 pb-1">
+              <h3
+                className="min-w-0 text-[1.0625rem] font-semibold text-label-2 first-letter:uppercase"
+                data-testid="shown-heading"
+              >
+                {selectedDay !== undefined
+                  ? formatDate(selectedDay, 'dddd d MMMM')
+                  : selectedWeek !== undefined
+                    ? `${t('Home.Week', weekNumber(selectedWeek))} · ${weekRange(selectedWeek)}`
+                    : t('Calendar.AllInMonth', formatDate(month, 'MMMM'), shown.length)}
+              </h3>
+              {selected !== undefined && (
                 <button
                   type="button"
                   onClick={() => show(month, undefined)}
-                  aria-label={`${formatDate(selected, 'dddd d MMMM')}, ${t('Calendar.WholeMonth')}`}
-                  title={t('Calendar.WholeMonth')}
                   data-testid="whole-month"
-                  className="-ml-1 inline-flex h-9 items-center gap-1.5 rounded-full bg-tint/15 pr-2 pl-3.5 text-tint active:opacity-60 focus-visible:outline-2 focus-visible:outline-blue-500"
+                  className="-my-2 -mr-2 shrink-0 px-2 py-2 text-[1.0625rem] text-tint active:opacity-60 focus-visible:outline-2 focus-visible:outline-blue-500"
                 >
-                  <span className="inline-block first-letter:uppercase">{formatDate(selected, 'dddd d MMMM')}</span>
-                  <svg className="size-[1.125rem]" viewBox="0 0 24 24" aria-hidden="true">
-                    <circle cx="12" cy="12" r="10" fill="currentColor" opacity="0.25" />
-                    <path d="M9 9l6 6M15 9l-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                  </svg>
+                  {t('Calendar.WholeMonth')}
                 </button>
               )}
-            </h3>
+            </div>
             <Group testId="calendar-workouts" separatorInset="4.25rem">
               {shown.map((workout) => (
                 <li key={workout.id}>
