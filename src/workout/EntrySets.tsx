@@ -44,6 +44,14 @@ export function EntrySets({
   const plannedSlots = Math.max(entry.targetSets ?? 0, entry.sets.length)
   // The set tapped, for its fields to pop over it on an iPad or a computer.
   const [anchor, setAnchor] = useState<HTMLElement | null>(null)
+  // The set just done, which celebrates itself once: a set more than at the last render. Sets
+  // loaded done, or left after one is removed, stay still.
+  const [count, setCount] = useState(entry.sets.length)
+  const [fresh, setFresh] = useState<number>()
+  if (entry.sets.length !== count) {
+    setCount(entry.sets.length)
+    setFresh(entry.sets.length > count ? entry.sets.length - 1 : undefined)
+  }
 
   // Three to a row on a phone whatever the count, since three sets is the common case.
   const setColumns =
@@ -99,10 +107,11 @@ export function EntrySets({
                 }}
                 aria-expanded={open}
                 aria-label={t('Entry.SetDone', index + 1, setText(set, kind))}
-                className={`relative inline-flex min-h-14 min-w-0 flex-col items-center justify-center rounded-full px-1 whitespace-nowrap tabular-nums focus-visible:outline-2 focus-visible:outline-offset-2 ${shortSet ? 'bg-amber-300 text-gray-900 hover:bg-amber-400 focus-visible:outline-amber-500' : 'bg-green-700 text-white hover:bg-green-800 focus-visible:outline-green-500'}`}
+                className={`${fresh === index ? 'set-fresh ' : ''}relative inline-flex min-h-14 min-w-0 flex-col items-center justify-center rounded-full px-1 whitespace-nowrap tabular-nums focus-visible:outline-2 focus-visible:outline-offset-2 ${shortSet ? 'bg-amber-300 text-gray-900 hover:bg-amber-400 focus-visible:outline-amber-500' : 'bg-green-700 text-white hover:bg-green-800 focus-visible:outline-green-500'}`}
                 data-testid="set-done"
                 data-open={open ? 'true' : 'false'}
                 data-short={shortSet ? 'true' : 'false'}
+                data-fresh={fresh === index ? 'true' : undefined}
               >
                 <span className="flex items-center gap-1.5">
                   <CheckMark />

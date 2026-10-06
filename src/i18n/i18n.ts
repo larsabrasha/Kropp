@@ -39,6 +39,16 @@ export function formatNumber(value: number): string {
   return new Intl.NumberFormat(locale(), { maximumFractionDigits: 2, useGrouping: false }).format(value)
 }
 
+const ENGLISH_ORDINALS: Record<string, string> = { one: 'st', two: 'nd', few: 'rd', other: 'th' }
+
+/** An ordinal number: "1:a", "3:e", "21:a" in Swedish, "1st", "3rd", "21st" in English. */
+export function formatOrdinal(n: number): string {
+  const whole = new Intl.NumberFormat(locale(), { maximumFractionDigits: 0 }).format(n)
+  if (language === 'en') return whole + ENGLISH_ORDINALS[new Intl.PluralRules('en', { type: 'ordinal' }).select(n)]
+  const a = (n % 10 === 1 || n % 10 === 2) && n % 100 !== 11 && n % 100 !== 12
+  return `${whole}:${a ? 'a' : 'e'}`
+}
+
 const part = (date: Date, options: Intl.DateTimeFormatOptions) =>
   new Intl.DateTimeFormat(locale(), { ...options, timeZone: 'UTC' }).format(date)
 

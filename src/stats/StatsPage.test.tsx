@@ -84,12 +84,13 @@ it('sums up the period in its first render, counting only what was logged', asyn
   expect(tile('total-workouts')).toBe('7')
   // From the first week trained, 7 September, not from 29 June: 7 workouts in 17 days.
   expect(tile('total-per-week')).toBe('2,9')
-  expect(tile('total-sets')).toBe('9')
+  // Bench beat itself on 9 and 14 September, the plank on 21 September.
+  expect(tile('total-records')).toBe('3')
   expect(tile('total-volume')).toMatch(/^3\s440$/)
   expect(screen.getByTestId('range').textContent).toBe('29 juni–23 sep. 2026')
 })
 
-it('draws a bar a week with the goal, and counts the weeks the goal was reached', async () => {
+it('draws a bar a week with the goal', async () => {
   const app = createTestApp()
   await seed(app)
   app.renderAt('/stats')
@@ -98,7 +99,8 @@ it('draws a bar a week with the goal, and counts the weeks the goal was reached'
   const bars = within(chart).getAllByTestId('bar')
   expect(bars).toHaveLength(13)
   expect(within(chart).getByTestId('goal-line')).toBeTruthy()
-  expect(screen.getByTestId('streak').textContent).toBe('2 veckor i rad med minst 3 pass.')
+  // Weeks short of the goal are never counted against it.
+  expect(screen.queryByTestId('streak')).toBeNull()
 })
 
 it('reads out the bar picked with the arrow keys', async () => {
@@ -207,4 +209,29 @@ it("opens an exercise's details in a sheet over its progress, which closes back 
   const sheet = screen.getByRole('dialog')
   expect(within(sheet).getByRole('heading', { level: 1 }).textContent).toBe('Bänkpress')
   expect(within(sheet).getByTitle('Stäng').getAttribute('href')).toBe(`/stats/exercises/${BENCH.id}`)
+})
+
+it('counts from the first workout under all of it', async () => {
+  const app = createTestApp()
+  await seed(app)
+  app.renderAt('/stats?period=All')
+
+  // Seven workouts, the planned one not among them.
+  expect(tile('total-workouts')).toBe('7')
+  expect(screen.getByTestId('range').textContent).toBe('Sedan första passet, 7 sep. 2026')
+})
+
+it('never shows a zero: cardio or sets take the place of kilograms never lifted', async () => {
+  const app = createTestApp()
+  await app.repository.save('exercise', PLANK.id, PLANK)
+  const w = workout('2026-09-21', [entry(PLANK.id, [{ seconds: 60 }, { seconds: 60 }])])
+  await app.repository.save('workout', w.id, w)
+  app.renderAt('/stats')
+
+  expect(screen.queryByTestId('total-volume')).toBeNull()
+  expect(tile('total-sets')).toBe('2')
+  // The first time is no record: the exercises done take its place.
+  expect(screen.queryByTestId('total-records')).toBeNull()
+  expect(tile('total-exercises')).toBe('1')
+  expect(within(screen.getByTestId('totals')).getAllByRole('listitem')).toHaveLength(4)
 })

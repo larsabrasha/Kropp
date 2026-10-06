@@ -1,5 +1,6 @@
 import { useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react'
 import { CARD } from '../ui/styles'
+import type { Hue } from './hues'
 import { niceDomain, niceScale } from './stats'
 
 // Charts as iOS 26's Health draws them: in a card, the number read out large above the plot, the
@@ -15,12 +16,12 @@ export interface Readout {
   sub: string
 }
 
-function ReadoutView({ label, value, unit, sub }: Readout) {
+function ReadoutView({ label, value, unit, sub, hue }: Readout & { hue?: Hue }) {
   return (
     <div aria-live="polite" data-testid="readout">
       <p className="text-[0.8125rem] font-semibold text-label-2 uppercase">{label}</p>
       <p className="mt-0.5 leading-tight">
-        <span className="text-[1.75rem] font-bold" data-testid="readout-value">
+        <span className={`text-[1.75rem] font-bold ${hue?.text ?? ''}`} data-testid="readout-value">
           {value}
         </span>
         {unit !== undefined && <span className="ml-1 text-[0.9375rem] font-semibold text-label-2">{unit}</span>}
@@ -131,7 +132,7 @@ function Frame({
           ))}
           {marker !== undefined && (
             <div
-              className="pointer-events-none absolute inset-x-0 border-t-[1.5px] border-green-600 dark:border-green-500"
+              className="pointer-events-none absolute inset-x-0 border-t-[1.5px] border-dashed border-gray-900/70 dark:border-white/70"
               style={{ bottom: `${toY(marker.value) * 100}%` }}
               data-testid="goal-line"
             />
@@ -205,6 +206,7 @@ export function BarChart({
   goal,
   whole = false,
   caption,
+  hue,
   testId,
 }: {
   bars: Bar[]
@@ -216,6 +218,8 @@ export function BarChart({
   /** Counted things: whole steps on the axis. */
   whole?: boolean
   caption: string
+  /** The measure's colour, for its bars and figure; the app's tint without one. */
+  hue?: Hue
   testId?: string
 }) {
   const top = Math.max(0, ...bars.map((b) => b.value), goal?.value ?? 0)
@@ -229,7 +233,7 @@ export function BarChart({
 
   return (
     <div className={`${CARD} p-4`} data-testid={testId}>
-      <ReadoutView {...readout} />
+      <ReadoutView {...readout} hue={hue} />
       <Frame
         ticks={ticks}
         toY={toY}
@@ -250,7 +254,7 @@ export function BarChart({
           {bars.map((b, i) => (
             <div key={i} className="flex h-full min-w-0 flex-1 items-end justify-center">
               <div
-                className={`w-[62%] max-w-6 rounded-t-[4px] bg-tint transition-opacity duration-150 ${
+                className={`w-[62%] max-w-6 rounded-t-[4px] ${hue?.fill ?? 'bg-tint'} transition-opacity duration-150 ${
                   picked !== undefined && picked !== i ? 'opacity-35' : ''
                 }`}
                 style={{ height: `${toY(b.value) * 100}%`, minHeight: b.value > 0 ? 2 : 0 }}
@@ -387,10 +391,12 @@ export function LineChart({
 export function HorizontalBars({
   rows,
   format,
+  hue,
   testId,
 }: {
   rows: { label: string; value: number }[]
   format: (value: number) => string
+  hue?: Hue
   testId?: string
 }) {
   const top = Math.max(1, ...rows.map((r) => r.value))
@@ -401,7 +407,7 @@ export function HorizontalBars({
           <span className="w-20 shrink-0 truncate text-[0.9375rem]">{row.label}</span>
           <span className="flex min-w-0 flex-1 items-center gap-2" aria-hidden="true">
             <span
-              className="h-2.5 rounded-r-[4px] bg-tint"
+              className={`h-2.5 rounded-r-[4px] ${hue?.fill ?? 'bg-tint'}`}
               style={{ width: `${(row.value / top) * 100}%`, minWidth: 2 }}
             />
           </span>

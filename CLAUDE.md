@@ -56,6 +56,16 @@ code back, not the test.
 - Respect the safe areas (`env(safe-area-inset-*)`) — the app runs full screen from the home screen.
 - An icon-only button carries an `aria-label`.
 
+## Only positive feedback
+- The goal is to train for life, not to max every workout. The app rewards showing up and keeping
+  on; every workout is better than none, and every slump is normal.
+- Count only what was done, never what was not. No streaks that break, no "missed", "behind",
+  "only" or "lost", no red or warning for a week without workouts, no falling trend shown as one.
+- Prefer numbers that only grow (workouts, weeks trained, years) and praise that is true on the
+  workout's own day (`src/stats/journey.ts`). A returning workout is welcomed back, never reminded of the gap.
+- The week's goal (`sessionsPerWeek`) plans and earns extra praise when reached; falling short of
+  it shows nothing.
+
 ## Empty states
 - Every view that can be empty shows an empty state with an SVG icon and a short text.
 - A page has two states, empty and content, plus an error message when the device's data could not

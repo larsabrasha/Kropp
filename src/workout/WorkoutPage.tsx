@@ -8,7 +8,7 @@ import { iconFor, workoutName, type ExerciseMap } from '../training/categories'
 import { isDateOnly, today } from '../training/dates'
 import { opensLocked as opensLockedOn, statusOf, withDerivedStatus } from '../training/editing'
 import { isInRange, Limits } from '../training/limits'
-import type { Exercise, Workout } from '../training/model'
+import { DEFAULT_SETTINGS, SETTINGS_ID, type Exercise, type Workout } from '../training/model'
 import { invariant, parseInt0 } from '../training/text'
 import { moveToTrash } from '../training/trash'
 import { BackLink, BarItem, DoneButton } from '../ui/Layout'
@@ -18,6 +18,9 @@ import { ActionSheet } from '../ui/ActionSheet'
 import { DateRow, NumberRow, TextRow } from '../ui/Form'
 import { ModalSheet } from '../ui/ModalSheet'
 import { button } from '../ui/styles'
+import { cheerFor } from '../stats/journey'
+import { logged } from '../stats/stats'
+import { CheerCard } from './CheerCard'
 import { ExerciseList } from './ExerciseList'
 import { Picture } from '../ui/Picture'
 
@@ -52,15 +55,25 @@ const sameExercises = (a: Workout, b: Workout) => {
   return ids.size === other.size && [...ids].every((id) => other.has(id))
 }
 
-/** The workout, every workout (for last time) and the exercises, from the repository's memory. */
+/**
+ * The workout, every workout (for last time and the praise) and the exercises, from the
+ * repository's memory, and the week's goal.
+ */
 function read(repository: LocalRepository, id: string) {
   try {
     const all = repository.peekAll('workout')
     const exercises: ReadonlyMap<string, Exercise> = new Map(repository.peekAll('exercise').map((e) => [e.id, e]))
-    return { all, exercises, workout: all.find((w) => w.id === id) }
+    const goal = (repository.peek('settings', SETTINGS_ID) ?? DEFAULT_SETTINGS).sessionsPerWeek
+    return { all, exercises, goal, workout: all.find((w) => w.id === id) }
   } catch (e) {
     console.error(`Could not read workout ${id}`, e)
-    return { all: [], exercises: new Map<string, Exercise>(), workout: undefined, error: t('Home.LoadFailed') }
+    return {
+      all: [],
+      exercises: new Map<string, Exercise>(),
+      goal: DEFAULT_SETTINGS.sessionsPerWeek,
+      workout: undefined,
+      error: t('Home.LoadFailed'),
+    }
   }
 }
 
@@ -99,6 +112,10 @@ export function WorkoutPage({ id }: { id: string }) {
   const [workout, setWorkout] = useState<Workout | undefined>(initial.workout)
   const [workouts, setWorkouts] = useState<Workout[]>(initial.all)
   const [exercises, setExercises] = useState<ReadonlyMap<string, Exercise>>(initial.exercises)
+  const [goal, setGoal] = useState(initial.goal)
+  // Finished by a save on this page just now, so its praise rises into view.
+  const [justDone, setJustDone] = useState(false)
+  const cheerRef = useRef<HTMLDivElement>(null)
   const [editingDetails, setEditingDetails] = useState(false)
   const [opensLocked, setOpensLocked] = useState(initial.lock)
   const [locked, setLocked] = useState(initial.lock)
@@ -124,6 +141,7 @@ export function WorkoutPage({ id }: { id: string }) {
     exercisesNow.current = found.exercises
     setWorkouts(found.all)
     setExercises(found.exercises)
+    setGoal(found.goal)
     setWorkout(found.workout)
     if (found.workout && lockDecidedFor.current !== found.workout.id) {
       lockDecidedFor.current = found.workout.id
@@ -141,6 +159,10 @@ export function WorkoutPage({ id }: { id: string }) {
     exercisesNow.current = next
     setExercises(next)
   })
+
+  useEffect(() => {
+    if (justDone) cheerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+  }, [justDone])
 
   useEffect(() => {
     if (scrolledFor.current === id) return
@@ -164,6 +186,7 @@ export function WorkoutPage({ id }: { id: string }) {
     const next = withDerivedStatus(edited, today())
     const exercisesChanged = !workout || !sameExercises(workout, next)
     const previous = workout
+    setJustDone(next.status === 'Done' && previous?.status !== 'Done')
     setWorkout(next)
     setWorkouts((all) => [...all.filter((w) => w.id !== next.id), next])
     setError(undefined)
@@ -221,6 +244,9 @@ export function WorkoutPage({ id }: { id: string }) {
   }
 
   const icon = workout ? iconFor(workout, exercises) : undefined
+  const day = today()
+  const cheer =
+    workout && statusOf(workout, day) === 'Done' ? cheerFor(workout, logged(workouts, day), goal) : undefined
   const editing = editingList && !locked && (workout?.exercises.length ?? 0) > 0
   if (editingList && !editing) setEditingList(false)
 
@@ -422,6 +448,12 @@ export function WorkoutPage({ id }: { id: string }) {
                 onExerciseChange={saveExercise}
               />
             </div>
+
+            {cheer && (
+              <div ref={cheerRef} className="mt-6">
+                <CheerCard cheer={cheer} date={workout.date} fresh={justDone} />
+              </div>
+            )}
 
             {confirmingDelete && (
               <ActionSheet

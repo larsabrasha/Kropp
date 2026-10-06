@@ -18,6 +18,7 @@ import {
   open,
   reload,
   saveExercise,
+  saveWorkout,
   seed,
   text,
   waitForElement,
@@ -332,6 +333,71 @@ it('derives the status from the sets, with no switch for it', async () => {
 
   await waitFor(() => expect($('[data-testid=details]').textContent).toContain('Planerat'))
   await waitFor(async () => expect((await reload(w.id)).status).toBe('Planned'))
+})
+
+it('praises a workout once it is finished, by what it was of all and of its month', async () => {
+  const before = workout({
+    date: '2026-09-21',
+    status: 'Done',
+    exercises: [entry({ exerciseId: BENCH.id, sets: [{ reps: 8, weightKg: 60 }] })],
+  })
+  const w = await seed(
+    workout({ date: '2026-09-23', exercises: [entry({ exerciseId: BENCH.id, targetSets: 1, targetReps: 8 })] }),
+  )
+  await saveWorkout(before)
+  open(w.id)
+
+  await waitForElement('[data-testid=details]')
+  expect($$('[data-testid=cheer]')).toEqual([])
+
+  click($('[data-testid=set-next]'))
+
+  await waitForElement('[data-testid=cheer]')
+  expect(text($('[data-testid=cheer-title]'))).toBe('Starkt!')
+  expect(text($('[data-testid=cheer-detail]'))).toBe('Ditt 2:a pass · 2:a i september')
+  // Just finished: the set celebrates itself, and confetti bursts over the praise.
+  expect($('[data-testid=set-done]').getAttribute('data-fresh')).toBe('true')
+  expect($$('[data-testid=confetti] .confetti')).toHaveLength(22)
+})
+
+it('keeps the praise of an earlier workout as it was on its day', async () => {
+  const first = await seed(
+    workout({
+      date: '2026-09-21',
+      status: 'Done',
+      exercises: [entry({ exerciseId: BENCH.id, sets: [{ reps: 8, weightKg: 60 }] })],
+    }),
+  )
+  await saveWorkout(
+    workout({
+      date: '2026-09-22',
+      status: 'Done',
+      exercises: [entry({ exerciseId: BENCH.id, sets: [{ reps: 8, weightKg: 60 }] })],
+    }),
+  )
+  open(first.id)
+
+  expect((await waitForElement('[data-testid=cheer]')).getAttribute('data-kind')).toBe('first')
+  expect(text($('[data-testid=cheer-title]'))).toBe('Ditt första pass!')
+  // Opened, not finished now: nothing moves.
+  expect($$('[data-testid=confetti]')).toEqual([])
+  expect($$('[data-testid=set-done][data-fresh]')).toEqual([])
+})
+
+it('celebrates only the set just done, not the ones before it', async () => {
+  const w = await seed(
+    workout({
+      date: '2026-09-23',
+      exercises: [entry({ exerciseId: BENCH.id, targetSets: 3, targetReps: 8, sets: [{ reps: 8 }] })],
+    }),
+  )
+  open(w.id)
+
+  click(await waitForElement('[data-testid=set-next]'))
+
+  await waitFor(() => expect($$('[data-testid=set-done]')).toHaveLength(2))
+  expect($$('[data-testid=set-done]').map((s) => s.getAttribute('data-fresh'))).toEqual([null, 'true'])
+  expect($$('[data-testid=cheer]')).toEqual([])
 })
 
 it('asks before deleting, and then moves the workout to the trash', async () => {

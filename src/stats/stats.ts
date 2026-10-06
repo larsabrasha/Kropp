@@ -108,6 +108,8 @@ export function workoutVolume(workout: Workout, find: Find): number {
 export interface Totals {
   workouts: number
   perWeek: number
+  /** Different exercises logged. */
+  exercises: number
   sets: number
   volumeKg: number
   cardioMinutes: number
@@ -123,6 +125,7 @@ export function totalsOf(workouts: readonly Workout[], span: Span, find: Find): 
   return {
     workouts: inSpan.length,
     perWeek: inSpan.length / weeksIn(span),
+    exercises: new Set(inSpan.flatMap((w) => w.exercises.filter(hasResult).map((e) => e.exerciseId))).size,
     sets: inSpan.reduce((sum, w) => sum + setsOf(w, find), 0),
     volumeKg: inSpan.reduce((sum, w) => sum + workoutVolume(w, find), 0),
     cardioMinutes,
@@ -136,27 +139,6 @@ export function perBucket(
   value: (inBucket: Workout[]) => number,
 ): { span: Span; value: number }[] {
   return bucketsOf(range).map((span) => ({ span, value: value(workouts.filter((w) => within(w.date, span))) }))
-}
-
-/**
- * Weeks in a row with at least goal workouts, counted back from the last full week. This week
- * adds to the streak once it reaches the goal, and does not break it before then.
- */
-export function goalStreak(workouts: readonly Workout[], today: DateOnly, goal: number): number {
-  const count = (monday: DateOnly) =>
-    workouts.filter((w) => within(w.date, { start: monday, end: addDays(monday, 6) })).length
-  const thisMonday = mondayOf(today)
-  let streak = count(thisMonday) >= goal ? 1 : 0
-  const first = workouts[0]?.date
-  for (
-    let monday = addDays(thisMonday, -7);
-    first !== undefined && monday >= mondayOf(first);
-    monday = addDays(monday, -7)
-  ) {
-    if (count(monday) < goal) break
-    streak++
-  }
-  return streak
 }
 
 /** Sets done for each body area in the span, most first; an exercise's sets count for each of its areas. */
@@ -341,6 +323,24 @@ export function latestRecords(workouts: readonly Workout[], exercises: readonly 
     if (latest) records.push(latest)
   }
   return records.sort((a, b) => b.point.date.localeCompare(a.point.date))
+}
+
+/**
+ * How many records were set in the span: each time an exercise beat everything before it, by the
+ * same measure as latestRecords. The first time an exercise is done is none.
+ */
+export function recordsIn(workouts: readonly Workout[], exercises: readonly Exercise[], span: Span): number {
+  let count = 0
+  for (const exercise of exercises) {
+    const metric = recordMetric(exercise)
+    let best: number | undefined
+    for (const point of seriesOf(metric, occasionsOf(workouts, exercise.id))) {
+      const beats = best !== undefined && (lowerIsBetter(metric) ? point.value < best : point.value > best)
+      if (beats && within(point.date, span)) count++
+      if (best === undefined || beats) best = point.value
+    }
+  }
+  return count
 }
 
 // Axes.

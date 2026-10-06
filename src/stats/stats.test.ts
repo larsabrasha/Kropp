@@ -3,7 +3,6 @@ import type { Exercise, SetResult, Workout, WorkoutExercise } from '../training/
 import {
   bestOf,
   bucketsOf,
-  goalStreak,
   latestRecords,
   logged,
   niceDomain,
@@ -11,6 +10,7 @@ import {
   occasionsOf,
   oneRepMax,
   rangeOf,
+  recordsIn,
   seriesOf,
   setsPerArea,
   totalsOf,
@@ -97,14 +97,14 @@ describe('ranges', () => {
 })
 
 describe('totals', () => {
-  it('counts workouts, sets and kilograms in the span, cardio by its minutes', () => {
+  it('counts workouts, the exercises done, sets and kilograms in the span, cardio by its minutes', () => {
     const workouts = [
       bench('2026-09-01', [10, 50], [8, 60]),
       workout('2026-09-10', [entry('plank', [{ seconds: 60 }]), entry('run', [], { durationMinutes: 20 })]),
       bench('2026-06-01', [10, 100]),
     ]
     const totals = totalsOf(workouts, { start: '2026-08-31', end: '2026-09-13' }, find)
-    expect(totals).toEqual({ workouts: 2, perWeek: 1, sets: 3, volumeKg: 980, cardioMinutes: 20 })
+    expect(totals).toEqual({ workouts: 2, perWeek: 1, exercises: 3, sets: 3, volumeKg: 980, cardioMinutes: 20 })
   })
 
   it('counts sets for every area of the exercise, and none for cardio', () => {
@@ -117,23 +117,6 @@ describe('totals', () => {
       { area: 'Arms', sets: 2 },
       { area: 'Core', sets: 1 },
     ])
-  })
-})
-
-describe('goal streak', () => {
-  // 2026-09-23 is a Wednesday.
-  const weekOf = (monday: string, count: number) => Array.from({ length: count }, () => bench(monday, [8, 60]))
-
-  it('counts full weeks back, and this week only once it is reached', () => {
-    const workouts = [...weekOf('2026-08-31', 3), ...weekOf('2026-09-07', 3), ...weekOf('2026-09-14', 3)]
-    expect(goalStreak(workouts, '2026-09-23', 3)).toBe(3)
-    expect(goalStreak([...workouts, ...weekOf('2026-09-21', 3)], '2026-09-23', 3)).toBe(4)
-  })
-
-  it('stops at a week short of the goal', () => {
-    const workouts = [...weekOf('2026-08-31', 3), ...weekOf('2026-09-07', 2), ...weekOf('2026-09-14', 3)]
-    expect(goalStreak(workouts, '2026-09-23', 3)).toBe(1)
-    expect(goalStreak([], '2026-09-23', 3)).toBe(0)
   })
 })
 
@@ -194,6 +177,24 @@ describe('records', () => {
       ['bench', '2026-08-15', 65, 62.5],
       ['plank', '2026-08-09', 75, 60],
     ])
+  })
+
+  it('counts every record set in a span, records before it setting the bar', () => {
+    const workouts = logged(
+      [
+        bench('2026-08-01', [8, 60]),
+        bench('2026-08-08', [8, 62.5]),
+        bench('2026-09-01', [8, 65]),
+        bench('2026-09-08', [8, 62.5]),
+        bench('2026-09-15', [8, 67.5]),
+      ],
+      '2026-09-23',
+    )
+    // 62.5 in August beats 60 but falls before the span; 62.5 in September beats nothing.
+    expect(recordsIn(workouts, ALL, { start: '2026-09-01', end: '2026-09-30' })).toBe(2)
+    expect(recordsIn(workouts, ALL, { start: '2026-08-01', end: '2026-08-31' })).toBe(1)
+    // The first time is no record.
+    expect(recordsIn(workouts.slice(0, 1), ALL, { start: '2026-08-01', end: '2026-08-31' })).toBe(0)
   })
 
   it('reads a series in date order', () => {

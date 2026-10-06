@@ -571,3 +571,91 @@ html:has(.modal-sheet) {
     transform: translateY(100%);
   }
 }
+
+/* A set just done (EntrySets): the capsule gives a small spring, its tick draws itself, and a ring
+   of green spreads out and fades. Only the set just tapped, never the ones loaded done. */
+@media (prefers-reduced-motion: no-preference) {
+  .set-fresh {
+    animation: set-pop 420ms cubic-bezier(0.32, 1.6, 0.5, 1);
+  }
+  .set-fresh [data-testid='check'] path {
+    stroke-dasharray: 24;
+    animation: check-draw 360ms 80ms ease-out both;
+  }
+  .set-fresh::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    animation: set-ring 700ms ease-out forwards;
+  }
+}
+@keyframes set-pop {
+  0% {
+    transform: scale(0.92);
+  }
+  55% {
+    transform: scale(1.06);
+  }
+}
+@keyframes check-draw {
+  from {
+    stroke-dashoffset: 24;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes set-ring {
+  from {
+    box-shadow: 0 0 0 0 rgb(34 197 94 / 0.55);
+  }
+  to {
+    box-shadow: 0 0 0 14px rgb(34 197 94 / 0);
+  }
+}
+
+/* A workout just finished (CheerCard): confetti bursts from the star and falls away. Each piece
+   flies to its own --x and --y, turning --r. None at all for reduced motion. */
+.confetti {
+  display: none;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .confetti {
+    display: block;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0.5rem;
+    height: 0.75rem;
+    border-radius: 0.125rem;
+    pointer-events: none;
+    opacity: 0;
+    animation: confetti 1300ms cubic-bezier(0.2, 0.7, 0.3, 1) var(--delay, 0ms) forwards;
+  }
+  .cheer-star-fresh {
+    animation: star-pop 600ms 120ms cubic-bezier(0.32, 1.6, 0.5, 1) both;
+  }
+}
+@keyframes confetti {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) rotate(0) scale(0.4);
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--x)), calc(-50% + var(--y))) rotate(var(--r)) scale(1);
+  }
+}
+@keyframes star-pop {
+  0% {
+    transform: scale(0.4) rotate(-30deg);
+  }
+  60% {
+    transform: scale(1.18) rotate(8deg);
+  }
+}

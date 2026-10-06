@@ -11,16 +11,18 @@ import { Segmented } from '../ui/Segmented'
 import { CARD } from '../ui/styles'
 import { BarChart, HorizontalBars } from './Charts'
 import { ExerciseLink } from '../library/ExerciseListPage'
+import { HueIcon } from './HueIcon'
+import { HUES, type Hue } from './hues'
 import { axisLabel, formatOne, formatWhole, goalLabel, metricText, periodOptions, rangeText, spanTitle } from './format'
 import {
   bucketsOf,
   DEFAULT_PERIOD,
-  goalStreak,
   isPeriod,
   latestRecords,
   logged,
   perBucket,
   rangeOf,
+  recordsIn,
   setsPerArea,
   totalsOf,
   workoutVolume,
@@ -91,8 +93,13 @@ export function StatsPage() {
   )
   const liftsEver = workouts.some((w) => workoutVolume(w, find) > 0)
   const areas = setsPerArea(workouts, range, find)
-  const streak = goalStreak(workouts, day, goal)
   const records = latestRecords(workouts, exercises).slice(0, RECORDS)
+  const recordCount = recordsIn(workouts, exercises, range)
+  // Tonnes once the kilograms grow long, as they do in a few months.
+  const lifted =
+    totals.volumeKg >= 10_000
+      ? { value: formatOne(totals.volumeKg / 1000), unit: t('Stats.Tonnes') }
+      : { value: formatWhole(totals.volumeKg), unit: 'kg' }
 
   const periodQuery = period === DEFAULT_PERIOD ? '' : `?period=${period}`
 
@@ -124,24 +131,70 @@ export function StatsPage() {
             onChange={choose}
             label={t('Stats.Period')}
             testId="period"
-            className="mt-4"
+            className="mt-section"
           />
           <p className="mt-2 px-4 text-[0.9375rem] text-label-2" data-testid="range">
-            {rangeText(range)}
+            {period === 'All' ? t('Stats.Since', formatDate(first, 'd MMM yyyy')) : rangeText(range)}
           </p>
 
-          {/* The period's totals, as Fitness lays out its own: tiles two by two. */}
+          {/* The period's totals, as Fitness lays out its own: tiles two by two, each measure in its
+              colour. What counts is showing up: workouts and how often, then what came of it. */}
           <ul className="mt-4 grid grid-cols-2 gap-3" data-testid="totals">
-            <Tile label={t('Stats.Workouts')} value={formatWhole(totals.workouts)} testId="total-workouts" />
-            <Tile label={t('Stats.PerWeek')} value={formatOne(totals.perWeek)} testId="total-per-week" />
-            <Tile label={t('Stats.Sets')} value={formatWhole(totals.sets)} testId="total-sets" />
-            <Tile label={t('Stats.Lifted')} value={formatWhole(totals.volumeKg)} unit="kg" testId="total-volume" />
+            <Tile
+              hue={HUES.workouts}
+              label={t('Stats.Workouts')}
+              value={formatWhole(totals.workouts)}
+              testId="total-workouts"
+            />
+            <Tile
+              hue={HUES.perWeek}
+              label={t('Stats.PerWeek')}
+              value={formatOne(totals.perWeek)}
+              testId="total-per-week"
+            />
+            {/* Records when any were set, else the exercises done: never a zero. */}
+            {recordCount > 0 ? (
+              <Tile
+                hue={HUES.records}
+                label={t('Stats.RecordCount')}
+                value={formatWhole(recordCount)}
+                testId="total-records"
+              />
+            ) : (
+              <Tile
+                hue={HUES.exercises}
+                label={t('Stats.Exercises')}
+                value={formatWhole(totals.exercises)}
+                testId="total-exercises"
+              />
+            )}
+            {/* What there is to weigh: kilograms, else minutes of cardio, else sets. Never a zero. */}
+            {totals.volumeKg > 0 ? (
+              <Tile
+                hue={HUES.lifted}
+                label={t('Stats.Lifted')}
+                value={lifted.value}
+                unit={lifted.unit}
+                testId="total-volume"
+              />
+            ) : totals.cardioMinutes > 0 ? (
+              <Tile
+                hue={HUES.cardio}
+                label={t('Stats.Cardio')}
+                value={formatWhole(totals.cardioMinutes)}
+                unit="min"
+                testId="total-cardio"
+              />
+            ) : (
+              <Tile hue={HUES.sets} label={t('Stats.SetsTotal')} value={formatWhole(totals.sets)} testId="total-sets" />
+            )}
           </ul>
 
           <section className="mt-section">
             <SectionHeader>{t('Stats.Workouts')}</SectionHeader>
             <BarChart
               testId="workouts-chart"
+              hue={HUES.workouts}
               bars={count}
               format={formatWhole}
               whole
@@ -157,13 +210,6 @@ export function StatsPage() {
               goal={range.unit === 'week' ? { value: goal, label: goalLabel(goal) } : undefined}
               caption={`${t('Stats.Workouts')} ${per}`}
             />
-            <p className="px-4 pt-1.5 text-[0.8125rem] text-label-2" data-testid="streak">
-              {streak === 0
-                ? t('Stats.StreakNone', goal)
-                : streak === 1
-                  ? t('Stats.StreakOne', goal)
-                  : t('Stats.Streak', streak, goal)}
-            </p>
           </section>
 
           {liftsEver && (
@@ -171,6 +217,7 @@ export function StatsPage() {
               <SectionHeader>{t('Stats.Volume')}</SectionHeader>
               <BarChart
                 testId="volume-chart"
+                hue={HUES.lifted}
                 bars={volume}
                 format={formatWhole}
                 unit="kg"
@@ -195,6 +242,7 @@ export function StatsPage() {
             ) : (
               <HorizontalBars
                 testId="areas"
+                hue={HUES.sets}
                 rows={areas.map((a) => ({ label: t(`BodyArea.${a.area}`), value: a.sets }))}
                 format={formatWhole}
               />
@@ -225,16 +273,36 @@ export function StatsPage() {
   )
 }
 
-function Tile({ label, value, unit, testId }: { label: string; value: string; unit?: string; testId: string }) {
+interface FigureProps {
+  label: string
+  value: string
+  unit?: string
+  hue: Hue
+  testId: string
+}
+
+/** A measure's label after its icon, and its figure large, both in its colour. */
+function FigureText({ label, value, unit, hue }: Omit<FigureProps, 'testId'>) {
   return (
-    <li className={`${CARD} px-4 py-3`} data-testid={testId}>
-      <p className="text-[0.9375rem] font-semibold text-label-2">{label}</p>
-      <p className="mt-0.5 leading-tight">
-        <span className="text-[1.75rem] font-bold" data-testid="tile-value">
+    <>
+      <p className="flex items-center gap-1.5 text-[0.9375rem] font-semibold text-label-2">
+        <HueIcon hue={hue} />
+        <span className="truncate">{label}</span>
+      </p>
+      <p className="mt-0.5 truncate leading-tight">
+        <span className={`text-[1.75rem] font-bold ${hue.text}`} data-testid="tile-value">
           {value}
         </span>
         {unit !== undefined && <span className="ml-1 text-[0.9375rem] font-semibold text-label-2">{unit}</span>}
       </p>
+    </>
+  )
+}
+
+function Tile({ className, testId, ...figure }: FigureProps & { className?: string }) {
+  return (
+    <li className={`${CARD} px-4 py-3 ${className ?? ''}`} data-testid={testId}>
+      <FigureText {...figure} />
     </li>
   )
 }
