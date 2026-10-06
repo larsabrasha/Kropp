@@ -5,6 +5,8 @@ import { ExercisesPage } from './exercises/ExercisesPage'
 import { HomePage } from './home/HomePage'
 import { FixedLocation, match, navigate, setTransitions, useLocation, type Transition } from './route'
 import { SettingsPage } from './settings/SettingsPage'
+import { ExerciseStatsPage } from './stats/ExerciseStatsPage'
+import { StatsPage } from './stats/StatsPage'
 import { TemplatePage } from './templates/TemplatePage'
 import { TemplatesPage } from './templates/TemplatesPage'
 import { TrashPage } from './trash/TrashPage'
@@ -24,7 +26,8 @@ interface Route {
   sheet: boolean | ((query: URLSearchParams) => boolean)
 }
 
-const fromCalendar = (query: URLSearchParams) => /^\/?calendar(\?|$)/.test(query.get('back') ?? '')
+// A workout opened from the calendar's sheet or the statistics' opens in that sheet.
+const fromCalendar = (query: URLSearchParams) => /^\/?(calendar|stats)(\?|\/|$)/.test(query.get('back') ?? '')
 
 const routes: Route[] = [
   { pattern: '/', page: () => <HomePage />, depth: 0, sheet: false },
@@ -36,6 +39,8 @@ const routes: Route[] = [
   { pattern: '/exercises', page: () => <ExercisesPage />, depth: 2, sheet: true },
   { pattern: '/exercises/:id', page: ({ id }) => <ExercisePage key={id} id={id!} />, depth: 3, sheet: true },
   { pattern: '/trash', page: () => <TrashPage />, depth: 2, sheet: true },
+  { pattern: '/stats', page: () => <StatsPage />, depth: 1, sheet: true },
+  { pattern: '/stats/exercises/:id', page: ({ id }) => <ExerciseStatsPage key={id} id={id!} />, depth: 2, sheet: true },
 ]
 
 interface Found {
@@ -52,10 +57,18 @@ function find(url: string): Found | undefined {
     const params = match(route.pattern, path)
     if (!params) continue
     const sheet = typeof route.sheet === 'function' ? route.sheet(query) : route.sheet
-    const depth = sheet && route.pattern === '/workouts/:id' ? 2 : route.depth
+    // In a sheet, a workout lies one above the page it was opened from.
+    const depth = sheet && route.pattern === '/workouts/:id' ? backDepth(query) + 1 : route.depth
     return { url, page: route.page(params), depth, sheet }
   }
   return undefined
+}
+
+/** The depth of the page a workout in a sheet leads back to: the calendar's, or an exercise's statistics. */
+function backDepth(query: URLSearchParams): number {
+  const back = `/${(query.get('back') ?? '').replace(/^\/+/, '')}`
+  const [path = '/'] = back.split('?')
+  return routes.find((r) => r.pattern !== '/workouts/:id' && match(r.pattern, path))?.depth ?? 1
 }
 
 const isSheetUrl = (href: string) => find(href)?.sheet === true

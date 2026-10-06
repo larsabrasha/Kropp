@@ -20,8 +20,8 @@ import { ModalSheet } from '../ui/ModalSheet'
 import { button } from '../ui/styles'
 import { ExerciseList } from './ExerciseList'
 
-// Only the calendar of this app, never a URL from elsewhere.
-const CALENDAR_BACK = /^\/?(calendar\?(month=\d{4}-\d{2}|day=\d{4}-\d{2}-\d{2}))$/
+// Only the calendar or an exercise's statistics of this app, never a URL from elsewhere.
+const CALENDAR_BACK = /^\/?(calendar\?(month=\d{4}-\d{2}|day=\d{4}-\d{2}-\d{2})|stats\/exercises\/[0-9a-fA-F-]{36})$/
 
 /** The pictures of a workout's exercises: only the ones in use, never the whole catalog. */
 function picturesOf(workout: Workout | undefined, exercises: ExerciseMap): string[] {
@@ -219,7 +219,13 @@ export function WorkoutPage({ id }: { id: string }) {
     <>
       <BackLink
         href={safeBack ? `/${safeBack}` : '/'}
-        label={safeBack ? t('Calendar.Heading') : t('Workout.Back')}
+        label={
+          safeBack === undefined
+            ? t('Workout.Back')
+            : safeBack.startsWith('stats')
+              ? t('Stats.Heading')
+              : t('Calendar.Heading')
+        }
         testId="back"
       />
 
