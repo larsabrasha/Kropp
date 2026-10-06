@@ -63,7 +63,8 @@ export default defineConfig({
     environment: 'node',
     // Dates in the tests are days in Sweden, wherever the tests run.
     env: { TZ: 'Europe/Stockholm' },
-    // e2e/*.spec.ts are Playwright's, run by `npm run e2e` against the production build.
-    exclude: [...configDefaults.exclude, 'e2e/**'],
+    // e2e/*.spec.ts are Playwright's, run by `npm run e2e` against the production build. Claude's
+    // worktrees under .claude are other checkouts, with tests of their own.
+    exclude: [...configDefaults.exclude, 'e2e/**', '.claude/**'],
   },
 })
