@@ -3,6 +3,7 @@ import { createContext, useContext, useEffect, useRef, useSyncExternalStore, typ
 import type { SyncCoordinator } from './sync/coordinator'
 import type { SyncEngine, SyncStatus } from './sync/engine'
 import type { LocalRepository } from './sync/localRepo'
+import type { AggregateType } from './sync/protocol'
 
 /**
  * What the pages read and write through. Pages never call the API: they read and save locally,
@@ -52,14 +53,14 @@ export function useRemoteChange(listener: () => void) {
   useEffect(() => repository.onRemoteChange(() => latest.current()), [repository])
 }
 
-/** Calls listener after every local save, with the repository's memory already updated. */
-export function useLocalChange(listener: () => void) {
+/** Calls listener after a local save of an aggregate of type, with the repository's memory already updated. */
+export function useLocalChange(type: AggregateType, listener: () => void) {
   const { repository } = useServices()
   const latest = useRef(listener)
   useEffect(() => {
     latest.current = listener
   })
-  useEffect(() => repository.onChange(() => latest.current()), [repository])
+  useEffect(() => repository.onChange((saved) => saved === type && latest.current()), [repository, type])
 }
 
 /** Calls listener after every local save, as well as after a sync stored data. */

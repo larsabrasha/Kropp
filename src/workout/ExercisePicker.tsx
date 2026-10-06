@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { compareText, lower, t } from '../i18n/i18n'
-import { picture, slugFor } from '../illustrations/illustrations'
+import { slugFor } from '../illustrations/illustrations'
 import { Limits } from '../training/limits'
 import { EXERCISE_KINDS, type BodyArea, type Exercise, type ExerciseKind } from '../training/model'
 import { CategoryChips } from '../ui/CategoryChips'
 import { FreeRow, SelectRow } from '../ui/Form'
 import { Group } from '../ui/List'
 import { SearchField } from '../ui/SearchField'
-import { button, PICTURE_ROW, THUMB } from '../ui/styles'
+import { button, PICTURE_ROW } from '../ui/styles'
+import { Picture } from '../ui/Picture'
 
 export interface NewExercise {
   name: string
@@ -65,17 +66,7 @@ export function ExercisePicker({
             return (
               <li key={exercise.id}>
                 <button type="button" onClick={() => onPick(exercise)} className={`${PICTURE_ROW} w-full text-left`}>
-                  <span className={`size-9 ${THUMB}`} aria-hidden="true">
-                    {slug !== undefined && (
-                      <img
-                        src={picture(slug)}
-                        alt=""
-                        loading="lazy"
-                        className="illustration size-full object-contain p-0.5"
-                        data-testid="picker-thumbnail"
-                      />
-                    )}
-                  </span>
+                  <Picture slug={slug} size="list" lazy imageTestId="picker-thumbnail" />
                   <span className="min-w-0 flex-1 truncate text-[1.0625rem]">{exercise.name}</span>
                   <span className="text-[0.9375rem] text-label-2">{t(`Exercise.Kind.${exercise.kind}`)}</span>
                 </button>

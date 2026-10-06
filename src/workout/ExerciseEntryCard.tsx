@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { t } from '../i18n/i18n'
-import { nameOf, picture, slugFor } from '../illustrations/illustrations'
+import { nameOf, slugFor } from '../illustrations/illustrations'
 import {
   cardioTargetKm,
   cardioTargetMinutes,
@@ -25,6 +25,7 @@ import { EntryContextLines } from './EntryContextLines'
 import { ExerciseDetails } from '../exercises/ExercisePage'
 import { EntryEditor } from './EntryEditor'
 import { EntrySets } from './EntrySets'
+import { Picture } from '../ui/Picture'
 
 // Compact by default: the name with the plan under it, the set buttons, one grey line of context.
 // Everything else opens in a sheet over the card, never in it, as iOS opens a task: the editor from
@@ -213,28 +214,7 @@ export function ExerciseEntryCard({
             </svg>
           </button>
         )}
-        <span
-          aria-hidden="true"
-          data-testid="thumbnail"
-          className={`size-10 shrink-0 overflow-hidden rounded-lg ${slug === undefined ? 'bg-fill text-label-2' : 'bg-gray-100 dark:bg-gray-800'}`}
-        >
-          {slug !== undefined ? (
-            <img src={picture(slug)} alt="" className="illustration size-full object-contain p-0.5" />
-          ) : (
-            <svg
-              className="m-auto size-5"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              aria-hidden="true"
-            >
-              <rect x="4" y="4" width="16" height="16" rx="2" />
-              <path d="M4 16l4-4 4 4 3-3 5 5" />
-            </svg>
-          )}
-        </span>
+        <Picture slug={slug} size="row" testId="thumbnail" />
         <div className="min-w-0 flex-1">
           <h3
             className={`font-semibold ${current && !editing ? 'break-words' : 'truncate'} ${whollySkipped ? 'text-label-2' : ''}`}
@@ -335,12 +315,7 @@ export function ExerciseEntryCard({
             onOpenExercise={exercise ? () => setShowingExercise(true) : undefined}
             picture={
               slug !== undefined ? (
-                <div
-                  className="mx-auto aspect-square w-full max-w-40 rounded-[1.625rem] bg-cell p-2"
-                  data-testid="illustration-large"
-                >
-                  <img src={picture(slug)} alt={nameOf(slug)} className="illustration size-full object-contain" />
-                </div>
+                <Picture slug={slug} size="large" alt={nameOf(slug)} testId="illustration-large" />
               ) : undefined
             }
           />

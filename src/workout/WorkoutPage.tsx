@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { formatDate, t } from '../i18n/i18n'
 import { picture, prefetch, slugFor } from '../illustrations/illustrations'
 import { navigate, useLocation } from '../route'
@@ -19,6 +19,7 @@ import { DateRow, NumberRow, TextRow } from '../ui/Form'
 import { ModalSheet } from '../ui/ModalSheet'
 import { button } from '../ui/styles'
 import { ExerciseList } from './ExerciseList'
+import { Picture } from '../ui/Picture'
 
 // Only the calendar or an exercise's statistics of this app, never a URL from elsewhere.
 const CALENDAR_BACK = /^\/?(calendar\?(month=\d{4}-\d{2}|day=\d{4}-\d{2}-\d{2})|stats\/exercises\/[0-9a-fA-F-]{36})$/
@@ -116,7 +117,7 @@ export function WorkoutPage({ id }: { id: string }) {
   const deletingNow = useRef(false)
 
   // After a sync: what it brought, without locking a workout the user has unlocked meanwhile.
-  const load = useCallback(() => {
+  const load = () => {
     const found = read(repository, id)
     if (found.error !== undefined) return setError(found.error)
     exercisesNow.current = found.exercises
@@ -129,12 +130,12 @@ export function WorkoutPage({ id }: { id: string }) {
       setLocked(lock)
       setOpensLocked(lock)
     }
-  }, [repository, id])
+  }
 
   useRemoteChange(load)
   // An exercise changed in a card's sheet: its name and picture follow on the cards at once. Only
-  // the exercises: the workout itself is this page's own, and saved from here.
-  useLocalChange(() => {
+  // the exercises, and only when one was saved: the workout itself is this page's own.
+  useLocalChange('exercise', () => {
     const next = new Map(repository.peekAll('exercise').map((e) => [e.id, e]))
     exercisesNow.current = next
     setExercises(next)
@@ -147,7 +148,7 @@ export function WorkoutPage({ id }: { id: string }) {
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
   }, [id, workout, exercises])
 
-  const closeDetails = useCallback(() => setEditingDetails(false), [])
+  const closeDetails = () => setEditingDetails(false)
 
   const lock = () => {
     setLocked(true)
@@ -314,16 +315,7 @@ export function WorkoutPage({ id }: { id: string }) {
           {/* The same as the workout's row in the list: picture, name, day, exercises and status. The
               grey line, with the number and note too, opens the details for editing. */}
           <div className="mt-2 flex items-center gap-3" data-testid="details">
-            <span className="size-14 shrink-0 overflow-hidden rounded-[0.875rem] bg-cell" aria-hidden="true">
-              {icon && (
-                <img
-                  src={picture(icon)}
-                  alt=""
-                  className="illustration size-full object-contain p-1"
-                  data-testid="workout-icon"
-                />
-              )}
-            </span>
+            <Picture slug={icon} size="header" imageTestId="workout-icon" />
             <div className="min-w-0 flex-1">
               <div className="flex items-start justify-between gap-2">
                 <h1 className="min-w-0 text-[1.75rem] leading-tight font-bold break-words">{title}</h1>

@@ -52,7 +52,7 @@ const emptyMemory = (): Memory => ({
  * flashes empty. The store stays the truth: getAll and get read it, and nothing is kept only here.
  */
 export class LocalRepository {
-  private listeners = new Set<() => void>()
+  private listeners = new Set<(type: AggregateType) => void>()
   private remoteListeners = new Set<() => void>()
   private memory = emptyMemory()
   private loadError: unknown = undefined
@@ -61,8 +61,8 @@ export class LocalRepository {
 
   constructor(readonly store: LocalStore) {}
 
-  /** Calls listener after every local save, with memory already updated. */
-  onChange(listener: () => void): () => void {
+  /** Calls listener after every local save, with memory already updated, with the type saved. */
+  onChange(listener: (type: AggregateType) => void): () => void {
     this.listeners.add(listener)
     return () => this.listeners.delete(listener)
   }
@@ -148,6 +148,6 @@ export class LocalRepository {
     const memory = this.memory[type] as Map<string, unknown>
     if (isDeleted || data === null) memory.delete(id)
     else memory.set(id, readers[type](JSON.parse(data)))
-    for (const listener of this.listeners) listener()
+    for (const listener of this.listeners) listener(type)
   }
 }

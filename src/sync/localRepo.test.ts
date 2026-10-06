@@ -44,6 +44,17 @@ describe("the repository's memory", () => {
     expect(seen).toEqual([[w], [{ ...w, note: 'Rygg' }], []])
   })
 
+  it('tells the listeners what type was saved, so a page can follow only what it shows', async () => {
+    const repository = new LocalRepository(new MemoryStore())
+    const types: string[] = []
+    repository.onChange((type) => types.push(type))
+
+    await repository.save('workout', workout('Ben').id, workout('Ben'))
+    await repository.delete('exercise', '00000000-0000-0000-0000-000000000001')
+
+    expect(types).toEqual(['workout', 'exercise'])
+  })
+
   it('reads what a sync stored, and only then tells the views', async () => {
     const store = new MemoryStore()
     const repository = new LocalRepository(store)

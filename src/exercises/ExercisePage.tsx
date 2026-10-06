@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react'
 import { t } from '../i18n/i18n'
-import { nameOf, picture, slugFor } from '../illustrations/illustrations'
+import { nameOf, slugFor } from '../illustrations/illustrations'
 import { useLocation } from '../route'
 import { useRemoteChange, useRepository } from '../services'
 import type { LocalRepository } from '../sync/localRepo'
@@ -21,6 +21,7 @@ import { FreeRow, SelectRow, SwitchRow, TextRow } from '../ui/Form'
 import { Group } from '../ui/List'
 import { ROW } from '../ui/styles'
 import { IllustrationPicker } from './IllustrationPicker'
+import { Picture } from '../ui/Picture'
 
 // What belongs to the exercise itself and holds in every workout and template that uses it.
 // What belongs to one occasion stays on the workout's card.
@@ -252,12 +253,7 @@ export function ExerciseDetails({ id: routeId, heading = true }: { id: string; h
             <Group header={t('Exercises.Picture')}>
               <FreeRow>
                 {slug !== undefined ? (
-                  <div
-                    className="mx-auto aspect-square w-full max-w-48 rounded-[0.875rem] bg-fill p-2"
-                    data-testid="illustration-large"
-                  >
-                    <img src={picture(slug)} alt={nameOf(slug)} className="illustration size-full object-contain" />
-                  </div>
+                  <Picture slug={slug} size="large" alt={nameOf(slug)} testId="illustration-large" />
                 ) : (
                   <p className="text-[0.9375rem] text-label-2">{t('Illustration.None')}</p>
                 )}
@@ -279,7 +275,12 @@ export function ExerciseDetails({ id: routeId, heading = true }: { id: string; h
           {/* Choosing a picture is a task of its own, in a sheet, never in the page. */}
           {choosingIllustration && (
             <ModalSheet title={t('Illustration.Change')} onClose={closeChoice} testId="illustration-sheet">
-              <IllustrationPicker selected={slug} onPick={pickIllustration} />
+              <IllustrationPicker
+                selected={slug}
+                onPick={pickIllustration}
+                areas={categoriesOf(exercise)}
+                cardio={exercise.kind === 'Cardio'}
+              />
             </ModalSheet>
           )}
         </>

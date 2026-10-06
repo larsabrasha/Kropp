@@ -88,7 +88,7 @@ export function TemplatePage({ id }: { id: string }) {
 
   useRemoteChange(load)
   // An exercise changed in a card's sheet: its name and picture follow on the cards at once.
-  useLocalChange(() => setExercises(new Map(repository.peekAll('exercise').map((e) => [e.id, e]))))
+  useLocalChange('exercise', () => setExercises(new Map(repository.peekAll('exercise').map((e) => [e.id, e]))))
 
   async function save(next: WorkoutTemplate) {
     const previous = template

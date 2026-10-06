@@ -3,7 +3,7 @@ import { iconFor, type ExerciseMap } from '../training/categories'
 import { Limits } from '../training/limits'
 import { EMPTY_ID, type DateOnly, type Workout, type WorkoutTemplate } from '../training/model'
 import { Link } from '../route'
-import { PlanIcon } from '../ui/PlanIcon'
+import { Picture } from '../ui/Picture'
 import { useState } from 'react'
 import { button, PICTURE_ROW } from '../ui/styles'
 import { useCommit } from '../ui/useCommit'
@@ -159,7 +159,7 @@ export function PlanList({
                     </svg>
                   </span>
                 ) : (
-                  <PlanIcon slug={iconFor(asWorkout(template), exercises)} />
+                  <Picture slug={iconFor(asWorkout(template), exercises)} size="plan" />
                 )}
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[1.0625rem] font-semibold">{template.name}</span>

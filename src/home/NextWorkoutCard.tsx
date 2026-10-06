@@ -1,12 +1,11 @@
 import { capitalize, formatDate, t } from '../i18n/i18n'
-import { picture, slugFor } from '../illustrations/illustrations'
+import { slugFor } from '../illustrations/illustrations'
 import { Link } from '../route'
 import { iconFor, workoutName, type ExerciseMap } from '../training/categories'
 import { hasResult, statusOf } from '../training/editing'
 import type { DateOnly, Workout } from '../training/model'
 import { target } from '../training/text'
-import { PlanIcon } from '../ui/PlanIcon'
-import { THUMB } from '../ui/styles'
+import { Picture } from '../ui/Picture'
 
 // The workout up next, as the large card at the top of the home page: what it is called and when,
 // its exercises with their plan, when it was done last, and one large button into it. The card is
@@ -55,10 +54,7 @@ export function NextWorkoutCard({
       data-testid="upcoming"
     >
       <span className="flex items-center gap-3">
-        <PlanIcon
-          slug={iconFor(workout, exercises)}
-          className="shrink-0 overflow-hidden rounded-[0.875rem] bg-white dark:bg-gray-900"
-        />
+        <Picture slug={iconFor(workout, exercises)} size="plan" />
         <span className="min-w-0 flex-1">
           <span className="block truncate text-2xl leading-tight font-bold">
             {workoutName(workout, exercises) ?? t('Home.Heading')}
@@ -89,11 +85,7 @@ export function NextWorkoutCard({
                 data-testid="upcoming-exercise"
               >
                 {/* The exercise's picture, as on its card in the workout: what to do, at a glance. */}
-                <span className={`size-9 ${THUMB}`} aria-hidden="true">
-                  {slug !== undefined && (
-                    <img src={picture(slug)} alt="" className="illustration size-full object-contain p-0.5" />
-                  )}
-                </span>
+                <Picture slug={slug} size="list" />
                 <span className="min-w-0 flex-1 truncate">{exercise?.name ?? t('Exercise.Unknown')}</span>
                 <span className="shrink-0 text-label-2 tabular-nums">{detail}</span>
               </span>

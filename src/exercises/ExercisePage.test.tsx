@@ -132,6 +132,25 @@ it('changes the picture here', async () => {
   await waitFor(async () => expect((await reload(bench.id)).illustration).toBe('pec-deck'))
 })
 
+it('groups the pictures by body area, what the exercise trains first, and filters by one', async () => {
+  const legs = { ...exercise('Benpress', 'Strength'), categories: ['Legs' as const] }
+  await app.repository.save('exercise', legs.id, legs)
+  renderExercise(legs.id)
+
+  fireEvent.click(await screen.findByTestId('change-illustration'))
+  const picker = screen.getByTestId('illustration-picker')
+  const groups = () => [...picker.querySelectorAll('section[data-group]')].map((g) => g.getAttribute('data-group'))
+  expect(groups()).toEqual(['Legs', 'Chest', 'Back', 'Core', 'Arms', 'Shoulders', 'Cardio', 'Other'])
+  // Each picture once: in its own group only.
+  const slugs = [...picker.querySelectorAll('[data-slug]')].map((b) => b.getAttribute('data-slug'))
+  expect(new Set(slugs).size).toBe(slugs.length)
+
+  fireEvent.click(within(screen.getByTestId('picture-filter')).getByText('Bröst'))
+  expect(groups()).toEqual(['Chest'])
+  expect(picker.querySelector('[data-slug=pec-deck]')).not.toBeNull()
+  expect(picker.querySelector('[data-slug=squat]')).toBeNull()
+})
+
 it.each([
   // Opened on its own, from an exercise's statistics: a cross that closes it to the page below.
   [undefined, '/'],

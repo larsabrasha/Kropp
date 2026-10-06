@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react'
 import { compareText, formatDate, lower, t } from '../i18n/i18n'
-import { picture, slugFor } from '../illustrations/illustrations'
+import { slugFor } from '../illustrations/illustrations'
 import { Link, navigate, useLocation } from '../route'
 import { useAnyChange, useRepository } from '../services'
 import type { LocalRepository } from '../sync/localRepo'
@@ -11,7 +11,7 @@ import { Chevron, Group } from '../ui/List'
 import { SearchField } from '../ui/SearchField'
 import { SectionHeader } from '../ui/SectionHeader'
 import { Segmented } from '../ui/Segmented'
-import { CARD, PICTURE_ROW, THUMB } from '../ui/styles'
+import { CARD, PICTURE_ROW } from '../ui/styles'
 import { BarChart, HorizontalBars } from './Charts'
 import { axisLabel, formatOne, formatWhole, goalLabel, metricText, periodOptions, rangeText, spanTitle } from './format'
 import {
@@ -29,6 +29,7 @@ import {
   workoutVolume,
   type Period,
 } from './stats'
+import { Picture } from '../ui/Picture'
 
 // The statistics of all training, as iOS's Health and Fitness sum up theirs: a period to choose at
 // the top, the totals of it as tiles, then charts of workouts and kilograms per week or month,
@@ -339,11 +340,7 @@ function ExerciseLink({
   const slug = slugFor(exercise)
   return (
     <Link href={href} className={`${PICTURE_ROW} ${dimmed ? 'opacity-60' : ''}`}>
-      <span className={`size-9 ${THUMB}`} aria-hidden="true">
-        {slug !== undefined && (
-          <img src={picture(slug)} alt="" loading="lazy" className="illustration size-full object-contain p-0.5" />
-        )}
-      </span>
+      <Picture slug={slug} size="list" lazy />
       <span className="min-w-0 flex-1">
         <span className="block truncate text-[1.0625rem] font-semibold">{exercise.name}</span>
         <span className="block truncate text-[0.9375rem] text-label-2">{detail}</span>

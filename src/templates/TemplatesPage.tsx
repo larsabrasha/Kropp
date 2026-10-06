@@ -8,7 +8,7 @@ import { newId, type Exercise, type WorkoutTemplate } from '../training/model'
 import { BackLink, BarItem, GLASS_CIRCLE } from '../ui/Layout'
 import { Chevron, Group } from '../ui/List'
 import { PICTURE_ROW } from '../ui/styles'
-import { PlanIcon } from '../ui/PlanIcon'
+import { Picture } from '../ui/Picture'
 
 /** The templates by name and the exercises, from the repository's memory. */
 function read(repository: LocalRepository) {
@@ -127,7 +127,8 @@ export function TemplatesPage() {
           {templates.map((template) => (
             <li key={template.id}>
               <Link href={`/templates/${template.id}`} className={PICTURE_ROW}>
-                <PlanIcon
+                <Picture
+                  size="plan"
                   slug={iconFor(
                     { id: template.id, date: '0001-01-01', status: 'Planned', exercises: template.exercises },
                     exercises,
