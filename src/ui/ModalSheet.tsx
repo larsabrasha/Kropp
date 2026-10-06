@@ -261,7 +261,12 @@ export function ModalSheet({
             </button>
           </div>
         </header>
-        <div ref={page} className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+        {/* A sheet as tall as its content takes the content's height, and scrolls it once that is more
+            than the screen has; a flex-1 body would count as nothing towards a fitted height. */}
+        <div
+          ref={page}
+          className={`min-h-0 ${fit && !place ? 'flex-initial' : 'flex-1'} overflow-y-auto overscroll-contain`}
+        >
           <div
             key={isPushed ? 'pushed' : 'first'}
             className={`mx-auto max-w-2xl pt-2 ${place ? 'px-4 pb-4' : fit ? 'px-5 pb-5' : 'px-5 pb-[calc(2rem+env(safe-area-inset-bottom))]'} ${
