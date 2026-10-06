@@ -126,6 +126,9 @@ it('steps by month, and goes further by choosing a month and year', async () => 
 
   fireEvent.click(screen.getByTestId('this-month'))
   expect(screen.getByTestId('month').textContent).toBe('september 2026')
+  // Back on this month, Today fades out out of reach, then goes.
+  expect(screen.getByTestId('this-month').getAttribute('data-leaving')).toBe('true')
+  await waitFor(() => expect(screen.queryByTestId('this-month')).toBeNull())
 })
 
 it('opens on the day in the address', async () => {

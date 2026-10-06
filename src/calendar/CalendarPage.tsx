@@ -12,6 +12,7 @@ import { BarItem, GLASS_CAPSULE } from '../ui/Layout'
 import { ModalSheet } from '../ui/ModalSheet'
 import { Chevron, Group } from '../ui/List'
 import { ROW } from '../ui/styles'
+import { usePresence } from '../ui/usePresence'
 import { useMonthSwipe } from './useMonthSwipe'
 import { weekRange } from './weekRange'
 
@@ -117,6 +118,7 @@ export function CalendarPage() {
   const day = today()
   // The month and the day are in the address, so that the way back from a workout lands here again.
   const { month, selected } = fromQuery(query, day)
+  const todayButton = usePresence(month !== firstOfMonth(day))
   // Read during the first render, so the page never shows without its data.
   const [data, setData] = useState(() => read(repository))
   // The year whose months are offered in place of the days, as iOS's date picker turns its days
@@ -430,16 +432,19 @@ export function CalendarPage() {
         {stepButton(-1, t('Calendar.PreviousMonth'), 'M15 18l-6-6 6-6', 'previous-month')}
         {stepButton(1, t('Calendar.NextMonth'), 'M9 18l6-6-6-6', 'next-month')}
       </div>
-      {month !== firstOfMonth(day) && (
-        // In the bar, as iOS's calendar has its Today: there it never moves the month below.
+      {todayButton.present && (
+        // In the bar, as iOS's calendar has its Today: there it never moves the month below. It
+        // fades in as the month turns away from this one, and out as it turns back.
         <BarItem>
           <button
             type="button"
             onClick={() => show(firstOfMonth(day), undefined)}
             data-testid="this-month"
+            data-leaving={todayButton.leaving ? 'true' : undefined}
+            inert={todayButton.leaving}
             aria-label={t('Calendar.ThisMonth')}
             title={t('Calendar.ThisMonth')}
-            className={`${GLASS_CAPSULE} motion-safe:animate-[fade-in_200ms_ease-out]`}
+            className={`${GLASS_CAPSULE} ${todayButton.leaving ? 'pointer-events-none motion-safe:animate-[fade-out_200ms_ease-in_forwards]' : 'motion-safe:animate-[fade-in_200ms_ease-out]'}`}
           >
             {t('Next.Today')}
           </button>
