@@ -159,3 +159,61 @@ describe('export and import', () => {
     expect(screen.queryByTestId('import-sheet')).toBeNull()
   })
 })
+
+describe('deleting all data', () => {
+  const workout: Workout = { id: crypto.randomUUID(), date: '2026-09-21', status: 'Planned', exercises: [] }
+
+  async function open() {
+    const app = createTestApp()
+    await app.repository.save('workout', workout.id, workout)
+    app.renderAt('/settings')
+    fireEvent.click(await screen.findByTestId('delete-all-data'))
+    return app
+  }
+
+  it('tells what goes, everywhere and for good, before it asks', async () => {
+    await open()
+
+    const sheet = await screen.findByTestId('delete-all-sheet')
+    expect(within(sheet).getByTestId('delete-all-warning').textContent).toBe(
+      'All träning raderas, på den här enheten, på servern och på alla enheter som synkar. Det går inte att ångra.',
+    )
+    expect(within(sheet).getByTestId('delete-all-summary').textContent).toBe('Pass1Övningar0Mallar0')
+    expect(screen.queryByRole('alertdialog')).toBeNull()
+  })
+
+  it('deletes only after the second question', async () => {
+    const app = await open()
+
+    fireEvent.click(await screen.findByTestId('delete-all'))
+    expect(app.repository.peekAll('workout')).toEqual([workout])
+    expect((await screen.findByRole('alertdialog')).textContent).toContain(
+      'Radera all träning på alla enheter? Det går inte att ångra.',
+    )
+    fireEvent.click(screen.getByTestId('confirm-delete-all'))
+
+    await waitFor(() => expect(screen.getByTestId('backup-message').textContent).toBe('All data är raderad.'))
+    expect(app.repository.peekAll('workout')).toEqual([])
+    expect(screen.queryByTestId('delete-all-sheet')).toBeNull()
+  })
+
+  it('deletes nothing when the second question is cancelled', async () => {
+    const app = await open()
+
+    fireEvent.click(await screen.findByTestId('delete-all'))
+    fireEvent.click(within(await screen.findByRole('alertdialog')).getByText('Avbryt'))
+
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull())
+    expect(screen.getByTestId('delete-all-sheet')).toBeTruthy()
+    expect(app.repository.peekAll('workout')).toEqual([workout])
+  })
+
+  it('offers an export first', async () => {
+    await open()
+
+    fireEvent.click(await screen.findByTestId('export-first'))
+
+    expect(await screen.findByTestId('export-sheet')).toBeTruthy()
+    expect(screen.queryByTestId('delete-all-sheet')).toBeNull()
+  })
+})

@@ -2,10 +2,20 @@ import type { Messages } from './i18n'
 
 export const sv: Messages = {
   'Backup.Added': 'Läggs till',
+  'Backup.DeleteAll': 'Radera all data',
+  'Backup.DeleteAllAction': 'Radera allt',
+  'Backup.DeleteAllConfirm': 'Radera all träning på alla enheter? Det går inte att ångra.',
+  'Backup.DeleteAllKept':
+    'Inställningarna behålls. En export kan importeras efteråt och ger tillbaka allt den innehåller.',
+  'Backup.DeleteAllWarning':
+    'All träning raderas, på den här enheten, på servern och på alla enheter som synkar. Det går inte att ångra.',
+  'Backup.Deleted': 'All data är raderad.',
+  'Backup.Deleting': 'Raderar…',
   'Backup.Exercises': 'Övningar',
   'Backup.Export': 'Exportera all data',
   'Backup.ExportAction': 'Exportera',
   'Backup.ExportFailed': 'Exporten gick inte. Försök igen.',
+  'Backup.ExportFirst': 'Exportera först',
   'Backup.ExportTitle': 'Exportera',
   'Backup.Exported': 'Exporterat.',
   'Backup.ExportedOn': 'Exporterad {0}.',

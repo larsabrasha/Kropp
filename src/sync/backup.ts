@@ -1,7 +1,8 @@
 import { validateChange, isSyncChange } from '../training/validate'
-import { now, restoredStamp } from './clock'
+import { readSettings, SETTINGS_ID } from '../training/model'
+import { nextStamp, now, restoredStamp } from './clock'
 import { keyOf, type LocalStore } from './localStore'
-import { ALL_AGGREGATE_TYPES, stampTime, type AggregateType, type SyncChange } from './protocol'
+import { ALL_AGGREGATE_TYPES, AggregateTypes, stampTime, type AggregateType, type SyncChange } from './protocol'
 
 // A backup of everything on the device, as one JSON file the user keeps: every aggregate as it is
 // stored, with the stamp of its last change, so a restore can tell it from a later one. Deleted
@@ -131,23 +132,39 @@ export function parseBackup(text: string, migrations = MIGRATIONS): ParsedBackup
 /**
  * How an aggregate in the file stands to the device's copy. An import follows sync's rule, the
  * newer copy wins, and asks nothing: new and newerInFile are imported; same, newerHere and
- * deletedHere are kept as they are here.
+ * deletedHere are kept as they are here. deletedByReset was deleted when all data was
+ * (LocalRepository.deleteAll): it counts as missing, and is imported.
  */
-export type ImportKind = 'new' | 'same' | 'newerInFile' | 'newerHere' | 'deletedHere'
+export type ImportKind = 'new' | 'same' | 'newerInFile' | 'newerHere' | 'deletedHere' | 'deletedByReset'
 
 export interface ImportItem {
+  /** As it is to be stored: with a new stamp when it must win over a tombstone of the reset. */
   change: SyncChange
   kind: ImportKind
 }
 
 /** Whether an import stores the file's copy of an aggregate of this kind. */
-export const isImported = (kind: ImportKind) => kind === 'new' || kind === 'newerInFile'
+export const isImported = (kind: ImportKind) => kind === 'new' || kind === 'newerInFile' || kind === 'deletedByReset'
 
 /** Compares each aggregate in the file with the device's copy, for the user to see before importing. */
 export async function planImport(store: LocalStore, parsed: ParsedBackup): Promise<ImportItem[]> {
+  const settings = await store.get(keyOf(AggregateTypes.settings, SETTINGS_ID))
+  const resetAt = settings?.data
+    ? readSettings(JSON.parse(settings.data) as Record<string, unknown>).resetAt
+    : undefined
   const items: ImportItem[] = []
   for (const change of parsed.changes) {
     const local = await store.get(keyOf(change.type, change.id))
+    if (
+      local !== undefined &&
+      (local.isDeleted || local.data === null) &&
+      resetAt !== undefined &&
+      stampTime(local.modifiedAt) <= stampTime(resetAt)
+    ) {
+      // Stamped now, so it wins over the tombstone here and on the server.
+      items.push({ change: { ...change, modifiedAt: nextStamp(now(), local.modifiedAt) }, kind: 'deletedByReset' })
+      continue
+    }
     const kind: ImportKind =
       local === undefined
         ? 'new'
@@ -163,7 +180,7 @@ export async function planImport(store: LocalStore, parsed: ParsedBackup): Promi
   return items
 }
 
-/** The changes an import stores, under their own stamps (LocalRepository.restore). */
+/** The changes an import stores (LocalRepository.restore). */
 export const importedChanges = (items: readonly ImportItem[]) =>
   items.filter((i) => isImported(i.kind)).map((i) => i.change)
 

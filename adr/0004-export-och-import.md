@@ -80,6 +80,23 @@ exakt vad som skrivs över. Den hör inte hemma i varje import.
 En stämpel i framtiden sätts till nu (`restoredStamp`). Annars skulle den vinna över varje
 ändring fram till dess.
 
+## Radera all data (2026-10-06)
+
+"Radera all data" i Profil lägger en tombstone på varje aggregat utom inställningarna. Raderingen
+når servern och varje enhet som synkar, och servern skriver över datat med null som vid annan
+radering. Den nattliga backupen av databasen har kvar det som fanns före raderingen.
+
+Det frågar två gånger, så som iOS gör innan en telefon raderas. Ett sheet visar först vad som
+raderas, att det gäller överallt och att det inte går att ångra. Där finns också "Exportera
+först". Den röda knappen ställer sedan en sista fråga längst ner på skärmen.
+
+**Inställningarna får `resetAt`**, tiden för raderingen, ett nytt valfritt fält i `UserSettings`.
+Utan det skulle en import direkt efter raderingen inte ge tillbaka något, eftersom varje tombstone
+är nyare än filen. Därför räknar en import en post vars tombstone är från raderingen eller äldre
+(`modifiedAt <= resetAt`) som saknad. Den importeras med en ny stämpel, så att den vinner över
+tombstone både här och på servern. Det som raderas efter raderingen är fortfarande raderat för
+en import. Efter en radering blir alltså filen utgångspunkten.
+
 ## Följder
 
 - Det här är ingen import från andra appar. En sådan blir en egen omvandling till det här

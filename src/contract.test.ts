@@ -124,8 +124,12 @@ const TEMPLATE_JSON =
   `{"id":"${TEMPLATE_ID}","name":"Ben","exercises":` +
   `[{"exerciseId":"${EXERCISE_ID}","order":0,"targetSets":3,"sets":[],"isSkipped":false}]}`
 
-const settings: Required<UserSettings> = { id: SETTINGS_ID, sessionsPerWeek: 4 }
-const SETTINGS_JSON = `{"id":"${SETTINGS_ID}","sessionsPerWeek":4}`
+const settings: Required<UserSettings> = {
+  id: SETTINGS_ID,
+  sessionsPerWeek: 4,
+  resetAt: '2026-10-06T12:00:00.000Z',
+}
+const SETTINGS_JSON = `{"id":"${SETTINGS_ID}","sessionsPerWeek":4,"resetAt":"2026-10-06T12:00:00.000Z"}`
 
 const trashed: Required<TrashedWorkout> = { id: WORKOUT_ID, deletedAt: '2026-09-23T08:00:00.000Z', workout }
 const TRASHED_JSON = `{"id":"${WORKOUT_ID}","deletedAt":"2026-09-23T08:00:00.000Z","workout":${WORKOUT_JSON}}`
@@ -204,13 +208,27 @@ describe('an older document', () => {
 // Exported files that users keep. Every version ever written is here, as it was written, and must
 // import for as long as the app lives: a new version adds its file and the step from the one before
 // (MIGRATIONS in src/sync/backup.ts); it never changes one that is here.
+// Literal text, never built from the documents above: those grow with the model, a file does not.
 const BACKUP_FILES: Record<number, string> = {
   1:
-    `{"format":"kropp","version":1,"exportedAt":"2026-10-06T12:00:00.000Z","records":[` +
-    `{"type":"workout","id":"${WORKOUT_ID}","modifiedAt":"2026-09-22T18:30:00.123Z","data":${WORKOUT_JSON}},` +
-    `{"type":"exercise","id":"${EXERCISE_ID}","modifiedAt":"2026-09-20T08:00:00.000Z","data":${EXERCISE_JSON}},` +
-    `{"type":"template","id":"${TEMPLATE_ID}","modifiedAt":"2026-09-20T08:00:00.000Z","data":${TEMPLATE_JSON}},` +
-    `{"type":"settings","id":"${SETTINGS_ID}","modifiedAt":"2026-09-20T08:00:00.000Z","data":${SETTINGS_JSON}}]}`,
+    '{"format":"kropp","version":1,"exportedAt":"2026-10-06T12:00:00.000Z","records":[' +
+    '{"type":"workout","id":"6f9619ff-8b86-d011-b42d-00c04fc964ff","modifiedAt":"2026-09-22T18:30:00' +
+    '.123Z","data":{"id":"6f9619ff-8b86-d011-b42d-00c04fc964ff","date":"2026-09-22","sessionNumber":' +
+    '7,"status":"Done","note":"Pigg","templateId":"22222222-2222-2222-2222-222222222222","exercises"' +
+    ':[{"exerciseId":"11111111-1111-1111-1111-111111111111","order":0,"comment":"Tungt","settings":"' +
+    '45 grader","targetSets":3,"targetReps":8,"targetWeightKg":22.5,"targetSeconds":30,"targetDurati' +
+    'onMinutes":20,"targetDistanceKm":3.5,"sets":[{"reps":8,"weightKg":22.5,"seconds":30}],"isSkippe' +
+    'd":false,"durationMinutes":21.5,"distanceKm":3.6,"avgHeartRate":130}]}},' +
+    '{"type":"exercise","id":"11111111-1111-1111-1111-111111111111","modifiedAt":"2026-09-20T08:00:0' +
+    '0.000Z","data":{"id":"11111111-1111-1111-1111-111111111111","name":"Benpress","kind":"Strength"' +
+    ',"settingsNote":"Sitthöjd 11","isArchived":false,"categories":["Legs"],"illustration":"leg-pres' +
+    's","measuresTimeOnly":false,"weightStepKg":2.5}},' +
+    '{"type":"template","id":"22222222-2222-2222-2222-222222222222","modifiedAt":"2026-09-20T08:00:0' +
+    '0.000Z","data":{"id":"22222222-2222-2222-2222-222222222222","name":"Ben","exercises":[{"exercis' +
+    'eId":"11111111-1111-1111-1111-111111111111","order":0,"targetSets":3,"sets":[],"isSkipped":fals' +
+    'e}]}},' +
+    '{"type":"settings","id":"00000000-0000-0000-0000-00000000c0de","modifiedAt":"2026-09-20T08:00:0' +
+    '0.000Z","data":{"id":"00000000-0000-0000-0000-00000000c0de","sessionsPerWeek":4}}]}',
 }
 
 // The aggregate types each version can hold. An app refuses a file of a later version rather than
@@ -238,10 +256,14 @@ describe('the backup file', () => {
 
     const repository = new LocalRepository(new MemoryStore())
     await repository.restore(parsed.changes)
-    expect(repository.peek('workout', WORKOUT_ID)).toEqual(workout)
-    expect(repository.peek('exercise', EXERCISE_ID)).toEqual(exercise)
-    expect(repository.peek('template', TEMPLATE_ID)).toEqual(template)
-    expect(repository.peek('settings', SETTINGS_ID)).toEqual(settings)
+    // Each aggregate lands as reading its document does, with defaults for what came later.
+    const readers = { workout: readWorkout, exercise: readExercise, template: readTemplate, settings: readSettings }
+    const records = (JSON.parse(text) as { records: { type: keyof typeof readers; id: string; data: object }[] })
+      .records
+    expect(records.map((r) => r.type)).toEqual(['workout', 'exercise', 'template', 'settings'])
+    for (const r of records)
+      expect(repository.peek(r.type, r.id)).toEqual(readers[r.type](r.data as Record<string, unknown>))
+    expect(repository.peek('workout', WORKOUT_ID)?.note).toBe('Pigg')
     expect((await repository.store.get(`workout:${WORKOUT_ID}`))?.modifiedAt).toBe('2026-09-22T18:30:00.123Z')
   })
 })

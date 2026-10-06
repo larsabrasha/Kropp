@@ -100,6 +100,12 @@ export interface WorkoutTemplate {
 export interface UserSettings {
   id: string
   sessionsPerWeek: number
+  /**
+   * When all data was last deleted (LocalRepository.deleteAll), as an ISO timestamp in UTC. What
+   * that deleted counts as missing to a later import, so a backup brings it back; what was
+   * deleted after it stays deleted.
+   */
+  resetAt?: string
 }
 
 export const SETTINGS_ID = '00000000-0000-0000-0000-00000000c0de'

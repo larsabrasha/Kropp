@@ -306,3 +306,75 @@ describe('a preview of an import', () => {
     expect(to.repository.peek('workout', deletedHere.id)).toBeUndefined()
   })
 })
+
+describe('deleting all data', () => {
+  it('leaves a tombstone for every aggregate on every device, and keeps the settings with the time', async () => {
+    at('2026-09-21T10:00:00Z')
+    const phone = device()
+    const w = workout('Ben')
+    await phone.repository.save('workout', w.id, w)
+    await phone.repository.save('exercise', exercise.id, exercise)
+    await phone.repository.save('settings', SETTINGS_ID, { id: SETTINGS_ID, sessionsPerWeek: 4 })
+    await phone.engine.sync()
+
+    at('2026-09-22T10:00:00Z')
+    expect(await phone.repository.deleteAll()).toBe(2)
+    expect(phone.repository.peekAll('workout')).toEqual([])
+    expect(phone.repository.peekAll('exercise')).toEqual([])
+    expect(phone.repository.peek('settings', SETTINGS_ID)).toEqual({
+      id: SETTINGS_ID,
+      sessionsPerWeek: 4,
+      resetAt: '2026-09-22T10:00:00.000Z',
+    })
+
+    await phone.engine.sync()
+    const other = device(phone.server)
+    await other.engine.sync()
+    await vi.waitFor(() => expect(other.repository.peek('settings', SETTINGS_ID)?.resetAt).toBeDefined())
+    expect(other.repository.peekAll('workout')).toEqual([])
+    // Nothing of the training is left on the server, only ids and stamps.
+    expect(phone.server.all.filter((r) => r.type !== 'settings').every((r) => r.isDeleted && r.data === null)).toBe(
+      true,
+    )
+  })
+
+  it('lets a backup bring back what it deleted, here and on the server', async () => {
+    at('2026-09-21T10:00:00Z')
+    const phone = device()
+    const w = workout('Ben')
+    await phone.repository.save('workout', w.id, w)
+    const parsed = parseBackup(await fileOf(phone.store))
+
+    at('2026-09-22T10:00:00Z')
+    await phone.repository.deleteAll()
+    await phone.engine.sync()
+
+    at('2026-09-22T11:00:00Z')
+    const items = await planImport(phone.store, parsed)
+    expect(items.map((i) => i.kind)).toEqual(['deletedByReset'])
+    expect(await phone.repository.restore(importedChanges(items))).toBe(1)
+    expect(phone.repository.peek('workout', w.id)).toEqual(w)
+
+    await phone.engine.sync()
+    const fresh = device(phone.server)
+    await fresh.engine.sync()
+    await vi.waitFor(() => expect(fresh.repository.peek('workout', w.id)).toEqual(w))
+  })
+
+  it('still keeps deleted what was deleted after it', async () => {
+    at('2026-09-21T10:00:00Z')
+    const phone = device()
+    const w = workout('Ben')
+    await phone.repository.save('workout', w.id, w)
+    const parsed = parseBackup(await fileOf(phone.store))
+
+    at('2026-09-22T10:00:00Z')
+    await phone.repository.deleteAll()
+    at('2026-09-22T11:00:00Z')
+    await phone.repository.restore(importedChanges(await planImport(phone.store, parsed)))
+    at('2026-09-23T10:00:00Z')
+    await phone.repository.delete('workout', w.id)
+
+    expect((await planImport(phone.store, parsed)).map((i) => i.kind)).toEqual(['deletedHere'])
+  })
+})

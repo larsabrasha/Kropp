@@ -1,10 +1,20 @@
 // English, the fallback. Every key here must also be in sv.ts; the type checker enforces it.
 export const en = {
   'Backup.Added': 'Added',
+  'Backup.DeleteAll': 'Delete All Data',
+  'Backup.DeleteAllAction': 'Delete Everything',
+  'Backup.DeleteAllConfirm': 'Delete all training on every device? This cannot be undone.',
+  'Backup.DeleteAllKept':
+    'Settings are kept. An export can be imported afterwards and brings back everything it holds.',
+  'Backup.DeleteAllWarning':
+    'All training is deleted, on this device, on the server and on every device that syncs. This cannot be undone.',
+  'Backup.Deleted': 'All data is deleted.',
+  'Backup.Deleting': 'Deleting…',
   'Backup.Exercises': 'Exercises',
   'Backup.Export': 'Export All Data',
   'Backup.ExportAction': 'Export',
   'Backup.ExportFailed': 'The export did not work. Try again.',
+  'Backup.ExportFirst': 'Export First',
   'Backup.ExportTitle': 'Export',
   'Backup.Exported': 'Exported.',
   'Backup.ExportedOn': 'Exported on {0}.',

@@ -30,7 +30,7 @@ export function ImportSheet({
   return (
     <ModalSheet title={t('Backup.ImportTitle')} onClose={onClose} testId="import-sheet" fit>
       <ul className={GROUP} data-testid="import-summary">
-        <Row label={t('Backup.Added')} value={count('new')} />
+        <Row label={t('Backup.Added')} value={count('new', 'deletedByReset')} />
         <Row label={t('Backup.Updated')} value={count('newerInFile')} />
         <Row label={t('Backup.Kept')} value={count('same', 'newerHere', 'deletedHere')} />
       </ul>

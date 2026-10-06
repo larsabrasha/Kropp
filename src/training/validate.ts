@@ -118,10 +118,16 @@ function validateTemplate(id: string, t: Json): string | null {
 function validateSettings(id: string, s: Json): string | null {
   const settingsId = optional(s.id, (v) => uuid(v, 'id')) ?? SETTINGS_ID
   const sessions = optional(s.sessionsPerWeek, integer, 'sessionsPerWeek') ?? 3
+  const resetAt = optional(s.resetAt, text, 'resetAt')
+  if (resetAt !== undefined && Number.isNaN(stampTime(resetAt))) throw new ShapeError('resetAt is not a timestamp.')
 
   if (id !== SETTINGS_ID || settingsId !== id) return 'Settings are stored under their fixed id only.'
   if (sessions < MIN_SESSIONS_PER_WEEK || sessions > MAX_SESSIONS_PER_WEEK)
     return 'Sessions per week must be between 1 and 7.'
+  if (resetAt !== undefined) {
+    const year = new Date(stampTime(resetAt)).getUTCFullYear()
+    if (year < 2000 || year > 2100) return 'The reset time is out of range.'
+  }
   return null
 }
 

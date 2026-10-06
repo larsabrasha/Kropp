@@ -4,6 +4,8 @@ import {
   readTemplate,
   readTrashedWorkout,
   readWorkout,
+  DEFAULT_SETTINGS,
+  SETTINGS_ID,
   toJson,
   type Exercise,
   type TrashedWorkout,
@@ -160,6 +162,35 @@ export class LocalRepository {
     }
     for (const type of types) for (const listener of this.listeners) listener(type)
     return stored
+  }
+
+  /**
+   * Deletes all data, on every device: a tombstone for every aggregate but the settings, which
+   * keep the user's preferences and get resetAt, when it happened. An import afterwards treats
+   * what this deleted as missing (planImport), so a backup brings it back. Tells the listeners
+   * once per type. @returns how many were deleted.
+   */
+  async deleteAll(): Promise<number> {
+    let deleted = 0
+    let latest = now()
+    const types = new Set<AggregateType>()
+    for (const type of ALL_AGGREGATE_TYPES as ReadonlySet<AggregateType>) {
+      if (type === AggregateTypes.settings) continue
+      for (const r of await this.store.getAll(type)) {
+        if (r.isDeleted) continue
+        const modifiedAt = nextStamp(now(), r.modifiedAt)
+        if (stampTime(modifiedAt) > stampTime(latest)) latest = modifiedAt
+        await this.store.put({ ...r, modifiedAt, isDeleted: true, data: null, pending: true })
+        this.saves++
+        this.memory[type].delete(r.id)
+        types.add(type)
+        deleted++
+      }
+    }
+    for (const type of types) for (const listener of this.listeners) listener(type)
+    const current = (await this.get(AggregateTypes.settings, SETTINGS_ID)) ?? DEFAULT_SETTINGS
+    await this.save(AggregateTypes.settings, SETTINGS_ID, { ...current, resetAt: latest })
+    return deleted
   }
 
   private async put(type: AggregateType, id: string, data: string | null, isDeleted: boolean) {
