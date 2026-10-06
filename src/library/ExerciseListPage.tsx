@@ -256,12 +256,15 @@ export function ExerciseLink({
   href,
   detail,
   trailing,
+  gain,
   dimmed = false,
 }: {
   exercise: Exercise
   href: string
   detail: string
   trailing?: string
+  /** What trailing improved by, in green under it: "+10 kg". */
+  gain?: string
   /** A hidden exercise, kept for its history. */
   dimmed?: boolean
 }) {
@@ -274,8 +277,18 @@ export function ExerciseLink({
         <span className="block truncate text-[0.9375rem] text-label-2">{detail}</span>
       </span>
       {trailing !== undefined && (
-        <span className="shrink-0 text-[1.0625rem] font-semibold tabular-nums" data-testid="record-value">
-          {trailing}
+        <span className="shrink-0 text-right tabular-nums">
+          <span className="block text-[1.0625rem] font-semibold" data-testid="record-value">
+            {trailing}
+          </span>
+          {gain !== undefined && (
+            <span
+              className="block text-[0.9375rem] font-semibold text-green-700 dark:text-green-400"
+              data-testid="record-gain"
+            >
+              {gain}
+            </span>
+          )}
         </span>
       )}
       <Chevron />

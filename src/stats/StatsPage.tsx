@@ -15,7 +15,17 @@ import { ExerciseLink } from '../library/ExerciseListPage'
 import { HueIcon } from './HueIcon'
 import { HUES, type Hue } from './hues'
 import { MeasureSheet } from './MeasureSheet'
-import { axisLabel, formatOne, formatWhole, goalLabel, metricText, periodOptions, rangeText, spanTitle } from './format'
+import {
+  axisLabel,
+  formatOne,
+  gainText,
+  formatWhole,
+  goalLabel,
+  metricText,
+  periodOptions,
+  rangeText,
+  spanTitle,
+} from './format'
 import {
   bestWeek,
   bucketsOf,
@@ -244,6 +254,7 @@ export function StatsPage() {
                   exercise={r.exercise}
                   href={`/stats/exercises/${r.exercise.id}${periodQuery}`}
                   detail={`${formatDate(r.point.date, 'd MMM yyyy')} · ${t('Stats.Previous', metricText(r.metric, r.previous))}`}
+                  gain={gainText(r.metric, r.point.value, r.previous)}
                   trailing={metricText(r.metric, r.point.value)}
                 />
               </li>
@@ -403,6 +414,7 @@ export function StatsPage() {
                       exercise={r.exercise}
                       href={`/stats/exercises/${r.exercise.id}${periodQuery}`}
                       detail={`${formatDate(r.point.date, 'd MMM yyyy')} · ${t('Stats.Previous', metricText(r.metric, r.previous))}`}
+                      gain={gainText(r.metric, r.point.value, r.previous)}
                       trailing={metricText(r.metric, r.point.value)}
                     />
                   </li>

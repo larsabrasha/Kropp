@@ -52,6 +52,15 @@ export const METRIC_UNITS: Record<Metric, string> = {
 /** A metric's value with its unit: "62,5 kg", "6:05 min/km". */
 export const metricText = (metric: Metric, value: number) => `${metricNumber(metric, value)} ${METRIC_UNITS[metric]}`
 
+/**
+ * How much a record beat the one before it, signed the way it went: "+10 kg", "+3 rep", and
+ * "−0:20 min/km" for a pace, where lower is better.
+ */
+export function gainText(metric: Metric, value: number, previous: number): string {
+  const diff = value - previous
+  return `${diff < 0 ? '−' : '+'}${metricText(metric, Math.abs(diff))}`
+}
+
 /** What one bar covers, in words: "v. 38", "september 2026", "2025". */
 export function spanTitle(span: Span, unit: Unit): string {
   switch (unit) {

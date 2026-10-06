@@ -135,7 +135,8 @@ it('lists the latest records, newest first, with what they beat', async () => {
 
   const records = within(screen.getByTestId('records')).getAllByRole('link')
   expect(records.map((r) => within(r).getByTestId('record-value').textContent)).toEqual(['75 s', '65 kg'])
-  expect(records[1]!.textContent).toContain('upp från 62,5 kg')
+  expect(records[1]!.textContent).toContain('från 62,5 kg')
+  expect(records.map((r) => within(r).getByTestId('record-gain').textContent)).toEqual(['+15 s', '+2,5 kg'])
   expect(records[1]!.getAttribute('href')).toBe(`/stats/exercises/${BENCH.id}`)
 })
 
@@ -248,9 +249,9 @@ it('opens a tile in a sheet: what it means, and what made it up', async () => {
   // Newest first, each with what it beat.
   const rows = within(within(sheet).getByTestId('measure-records')).getAllByRole('link')
   expect(rows.map((r) => r.textContent)).toEqual([
-    'Plankan21 sep. 2026 · upp från 60 s75 s',
-    'Bänkpress14 sep. 2026 · upp från 62,5 kg65 kg',
-    'Bänkpress9 sep. 2026 · upp från 60 kg62,5 kg',
+    'Plankan21 sep. 2026 · från 60 s75 s+15 s',
+    'Bänkpress14 sep. 2026 · från 62,5 kg65 kg+2,5 kg',
+    'Bänkpress9 sep. 2026 · från 60 kg62,5 kg+2,5 kg',
   ])
 
   fireEvent.click(within(sheet).getByTestId('close-measure'))

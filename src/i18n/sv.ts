@@ -292,7 +292,7 @@ export const sv: Messages = {
   'Stats.Period.3M': '3 mån',
   'Stats.Period.6M': '6 mån',
   'Stats.Period.All': 'Allt',
-  'Stats.Previous': 'upp från {0}',
+  'Stats.Previous': 'från {0}',
   'Stats.RecordCount': 'Personbästa',
   'Stats.Records': 'Senaste rekord',
   'Stats.RecordsHelp':

@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest'
+import { setLanguage } from '../i18n/i18n'
+import { gainText } from './format'
 import type { Exercise, SetResult, Workout, WorkoutExercise } from '../training/model'
 import {
   bestOf,
@@ -244,5 +246,15 @@ describe('axes', () => {
   it('rounds both ends of a domain that does not start at 0', () => {
     expect(niceDomain(57.5, 72.5)).toEqual({ min: 55, max: 75, step: 5 })
     expect(niceDomain(60, 60)).toEqual({ min: 50, max: 70, step: 5 })
+  })
+})
+
+describe('a record as text', () => {
+  it('signs what it beat the one before by, a pace going down', () => {
+    setLanguage('sv')
+    expect(gainText('weight', 60, 50)).toBe('+10 kg')
+    expect(gainText('bestReps', 15, 12)).toBe('+3 rep')
+    expect(gainText('distance', 3.3, 3)).toBe('+0,3 km')
+    expect(gainText('pace', 6, 6 + 20 / 60)).toBe('−0:20 min/km')
   })
 })

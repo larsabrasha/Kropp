@@ -292,7 +292,7 @@ export const en = {
   'Stats.Period.3M': '3M',
   'Stats.Period.6M': '6M',
   'Stats.Period.All': 'All',
-  'Stats.Previous': 'up from {0}',
+  'Stats.Previous': 'from {0}',
   'Stats.RecordCount': 'Records',
   'Stats.Records': 'Latest records',
   'Stats.RecordsHelp':
