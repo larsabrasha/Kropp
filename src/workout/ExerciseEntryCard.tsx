@@ -20,7 +20,6 @@ import {
 } from '../training/model'
 import { target } from '../training/text'
 import { ActionSheet } from '../ui/ActionSheet'
-import { DoneRow } from '../ui/EditorActions'
 import { ModalSheet } from '../ui/ModalSheet'
 import { Chevron } from '../ui/List'
 import { button } from '../ui/styles'
@@ -30,9 +29,9 @@ import { EntryEditor } from './EntryEditor'
 import { EntrySets } from './EntrySets'
 
 // Compact by default: the name with the plan under it, the set buttons, one grey line of context.
-// Everything else opens in place on a tap and closes with Klar: one editor under the name, opened
-// from the name's row, except a set's fields, which open under the sets. At the gym, with a plan that
-// was right, the set buttons are all that gets touched — so they stay large and always first.
+// Everything else opens in a sheet over the card, never in it, as iOS opens a task: the editor from
+// the name's row, the picture from the thumbnail, a done set's fields from the set. At the gym, with
+// a plan that was right, the set buttons are all that gets touched — so they stay large and first.
 
 type Panel = 'None' | 'Edit' | 'Set' | 'Illustration' | 'CardioResult'
 
@@ -92,10 +91,6 @@ export function ExerciseEntryCard({
   function measured(e: WorkoutExercise | undefined) {
     return timeOnly && e ? { ...e, distanceKm: undefined, avgHeartRate: undefined, targetDistanceKm: undefined } : e
   }
-
-  // The picture takes the card's place below the header, sets and all; the set and cardio editors
-  // open under what they edit. The editor is a sheet over the card, which stays as it is.
-  const hidesResults = panel === 'Illustration'
 
   // Only the top row, on an exercise that is neither the one the user is on nor done in any
   // part: the rest of the list stays quiet. One skipped whole says so in that row; one skipped
@@ -222,7 +217,7 @@ export function ExerciseEntryCard({
           type="button"
           onClick={() => toggle('Illustration')}
           disabled={editing}
-          aria-expanded={expanded('Illustration')}
+          aria-haspopup="dialog"
           aria-label={t('Illustration.Show', exercise?.name ?? '')}
           title={t('Illustration.Show', exercise?.name ?? '')}
           data-testid="thumbnail"
@@ -323,30 +318,37 @@ export function ExerciseEntryCard({
         </ModalSheet>
       )}
 
-      {/* Only to look at here; the picture belongs to the exercise and is changed on its page. */}
+      {/* The picture large, in a sheet over the card, as everything opened from a card is. Only to
+          look at here; the picture belongs to the exercise and is changed on its page. */}
       {panel === 'Illustration' && (
-        <div className="mt-3" data-testid="illustration">
-          {slug !== undefined ? (
-            <div
-              className="mx-auto aspect-square w-full max-w-64 rounded-lg bg-gray-100 p-2 dark:bg-gray-800"
-              data-testid="illustration-large"
-            >
-              <img src={picture(slug)} alt={nameOf(slug)} className="illustration size-full object-contain" />
-            </div>
-          ) : (
-            <p className="py-2 text-center text-sm text-gray-500 dark:text-gray-400">{t('Illustration.None')}</p>
-          )}
-          <DoneRow onDone={close}>
+        <ModalSheet
+          title={exercise?.name ?? t('Exercise.Unknown')}
+          onClose={close}
+          testId="illustration"
+          fit
+          portal={false}
+        >
+          <div className="flex flex-col gap-section">
+            {slug !== undefined ? (
+              <div
+                className="mx-auto aspect-square w-full max-w-64 rounded-[1.625rem] bg-cell p-3"
+                data-testid="illustration-large"
+              >
+                <img src={picture(slug)} alt={nameOf(slug)} className="illustration size-full object-contain" />
+              </div>
+            ) : (
+              <p className="py-2 text-center text-[1.0625rem] text-label-2">{t('Illustration.None')}</p>
+            )}
             {exercise && (
-              <Link href={exerciseHref} className={button('tinted', 'small')} data-testid="edit-exercise">
+              <Link href={exerciseHref} className={`${button('tinted', 'large')} w-full`} data-testid="edit-exercise">
                 {t('Entry.EditExercise')}
               </Link>
             )}
-          </DoneRow>
-        </div>
+          </div>
+        </ModalSheet>
       )}
 
-      {kind === 'Cardio' && !forTemplate && !collapsed && !hidesResults && (
+      {kind === 'Cardio' && !forTemplate && !collapsed && (
         <EntryCardio
           entry={entry}
           measuredEntry={measured(entry)}
@@ -362,7 +364,7 @@ export function ExerciseEntryCard({
         />
       )}
 
-      {kind !== 'Cardio' && !forTemplate && !collapsed && !hidesResults && (
+      {kind !== 'Cardio' && !forTemplate && !collapsed && (
         <EntrySets
           entry={entry}
           kind={kind}
@@ -377,8 +379,7 @@ export function ExerciseEntryCard({
         />
       )}
 
-      {/* Only with nothing open: an open panel ends the card, so its "Stäng" is the last thing in it. */}
-      {(panel === 'None' || panel === 'Edit') && !collapsed && (
+      {!collapsed && (
         <EntryContextLines
           entry={entry}
           kind={kind}

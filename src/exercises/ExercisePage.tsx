@@ -15,7 +15,7 @@ import {
 } from '../training/model'
 import { invariant, num, parseDecimal } from '../training/text'
 import { CategoryChips } from '../ui/CategoryChips'
-import { DoneRow } from '../ui/EditorActions'
+import { ModalSheet } from '../ui/ModalSheet'
 import { BackLink } from '../ui/Layout'
 import { FreeRow, SelectRow, SwitchRow, TextRow } from '../ui/Form'
 import { Group } from '../ui/List'
@@ -111,6 +111,7 @@ export function ExercisePage({ id: routeId }: { id: string }) {
       void save({ ...exercise, weightStepKg: step === DEFAULT_WEIGHT_STEP_KG ? undefined : step })
   }
 
+  const closeChoice = useCallback(() => setChoosingIllustration(false), [])
   const pickIllustration = (slug: string) => {
     setChoosingIllustration(false)
     if (exercise) void save({ ...exercise, illustration: slug })
@@ -232,41 +233,40 @@ export function ExercisePage({ id: routeId }: { id: string }) {
             />
           </Group>
 
-          <div className="mt-6" data-testid="illustration">
+          <div className="mt-section" data-testid="illustration">
             <Group header={t('Exercises.Picture')}>
-              {choosingIllustration ? (
-                <FreeRow>
-                  <IllustrationPicker selected={slug} onPick={pickIllustration} />
-                  <DoneRow onDone={() => setChoosingIllustration(false)} />
-                </FreeRow>
-              ) : (
-                <>
-                  <FreeRow>
-                    {slug !== undefined ? (
-                      <div
-                        className="mx-auto aspect-square w-full max-w-48 rounded-[0.875rem] bg-fill p-2"
-                        data-testid="illustration-large"
-                      >
-                        <img src={picture(slug)} alt={nameOf(slug)} className="illustration size-full object-contain" />
-                      </div>
-                    ) : (
-                      <p className="text-[0.9375rem] text-label-2">{t('Illustration.None')}</p>
-                    )}
-                  </FreeRow>
-                  <li>
-                    <button
-                      type="button"
-                      onClick={() => setChoosingIllustration(true)}
-                      data-testid="change-illustration"
-                      className={`${ROW} w-full text-[1.0625rem] text-tint`}
-                    >
-                      {t('Illustration.Change')}
-                    </button>
-                  </li>
-                </>
-              )}
+              <FreeRow>
+                {slug !== undefined ? (
+                  <div
+                    className="mx-auto aspect-square w-full max-w-48 rounded-[0.875rem] bg-fill p-2"
+                    data-testid="illustration-large"
+                  >
+                    <img src={picture(slug)} alt={nameOf(slug)} className="illustration size-full object-contain" />
+                  </div>
+                ) : (
+                  <p className="text-[0.9375rem] text-label-2">{t('Illustration.None')}</p>
+                )}
+              </FreeRow>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => setChoosingIllustration(true)}
+                  aria-haspopup="dialog"
+                  data-testid="change-illustration"
+                  className={`${ROW} w-full text-[1.0625rem] text-tint`}
+                >
+                  {t('Illustration.Change')}
+                </button>
+              </li>
             </Group>
           </div>
+
+          {/* Choosing a picture is a task of its own, in a sheet, never in the page. */}
+          {choosingIllustration && (
+            <ModalSheet title={t('Illustration.Change')} onClose={closeChoice} testId="illustration-sheet">
+              <IllustrationPicker selected={slug} onPick={pickIllustration} />
+            </ModalSheet>
+          )}
         </>
       )}
     </>

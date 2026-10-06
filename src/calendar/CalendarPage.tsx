@@ -9,6 +9,7 @@ import { compareOptional, statusOf } from '../training/editing'
 import { isInRange, Limits } from '../training/limits'
 import type { DateOnly, Exercise, Workout, WorkoutStatus } from '../training/model'
 import { BackLink, BarItem, GLASS_CAPSULE } from '../ui/Layout'
+import { ModalSheet } from '../ui/ModalSheet'
 import { Group } from '../ui/List'
 import { useMonthSwipe } from './useMonthSwipe'
 import { weekRange } from './weekRange'
@@ -120,6 +121,12 @@ export function CalendarPage() {
   // The year whose months are offered in place of the days, as iOS's date picker turns its days
   // into a choice of month and year when its title is tapped; undefined while the days show.
   const [choosing, setChoosing] = useState<number>()
+  // Set once a month is chosen there: the sheet sinks away.
+  const [chosen, setChosen] = useState(false)
+  const closeChoice = useCallback(() => {
+    setChoosing(undefined)
+    setChosen(false)
+  }, [])
   const load = useCallback(() => setData(read(repository)), [repository])
   useAnyChange(load)
 
@@ -336,7 +343,7 @@ export function CalendarPage() {
       </button>
     )
     return (
-      <div className="px-3 py-3" data-testid="month-choice">
+      <div className="rounded-[1.625rem] bg-cell px-3 py-3" data-testid="month-choice">
         <div className="flex items-center justify-between">
           {yearStep(-1, t('Calendar.PreviousYear'), 'M15 18l-6-6 6-6', 'previous-year')}
           <span className="text-[1.0625rem] font-semibold tabular-nums" data-testid="choice-year">
@@ -356,7 +363,7 @@ export function CalendarPage() {
                 type="button"
                 disabled={outside}
                 onClick={() => {
-                  setChoosing(undefined)
+                  setChosen(true)
                   show(first, undefined)
                 }}
                 aria-pressed={shown}
@@ -392,17 +399,17 @@ export function CalendarPage() {
         <h2 className="flex min-w-0 flex-1" aria-live="polite">
           <button
             type="button"
-            onClick={() => (choosing === undefined ? setChoosing(Number(month.slice(0, 4))) : setChoosing(undefined))}
-            aria-expanded={choosing !== undefined}
+            onClick={() => setChoosing(Number(month.slice(0, 4)))}
+            aria-haspopup="dialog"
             aria-label={`${monthName}, ${t('Calendar.ChooseMonth')}`}
             data-testid="month-picker"
-            className={`-ml-2 flex min-w-0 items-center gap-1 rounded-lg px-2 py-1 text-lg font-semibold active:opacity-60 focus-visible:outline-2 focus-visible:outline-blue-500 ${choosing !== undefined ? 'text-tint' : ''}`}
+            className="-ml-2 flex min-w-0 items-center gap-1 rounded-lg px-2 py-1 text-lg font-semibold active:opacity-60 focus-visible:outline-2 focus-visible:outline-blue-500"
           >
             <span className="truncate first-letter:uppercase" data-testid="month">
               {monthName}
             </span>
             <svg
-              className={`size-4 shrink-0 text-tint transition-transform duration-200 ${choosing !== undefined ? 'rotate-90' : ''}`}
+              className="size-4 shrink-0 text-tint"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -415,12 +422,8 @@ export function CalendarPage() {
             </svg>
           </button>
         </h2>
-        {choosing === undefined && (
-          <>
-            {stepButton(-1, t('Calendar.PreviousMonth'), 'M15 18l-6-6 6-6', 'previous-month')}
-            {stepButton(1, t('Calendar.NextMonth'), 'M9 18l6-6-6-6', 'next-month')}
-          </>
-        )}
+        {stepButton(-1, t('Calendar.PreviousMonth'), 'M15 18l-6-6 6-6', 'previous-month')}
+        {stepButton(1, t('Calendar.NextMonth'), 'M9 18l6-6-6-6', 'next-month')}
       </div>
       {month !== firstOfMonth(day) && (
         // In the bar, as iOS's calendar has its Today: there it never moves the month below.
@@ -441,24 +444,27 @@ export function CalendarPage() {
       {/* Swiped sideways, the month turns (useMonthSwipe). The months before and after lie ready on
           either side, so a swipe always shows a month; the card clips them. */}
       <div className="mt-3 overflow-hidden rounded-[1.625rem] bg-cell">
-        {choosing !== undefined ? (
-          monthChoice(choosing)
-        ) : (
-          <div {...swipe} className="relative touch-pan-y select-none">
-            {month > FIRST_MONTH && (
-              <div className="absolute top-0 right-full w-full px-3 py-2" inert aria-hidden="true">
-                {grid(addMonths(month, -1), false)}
-              </div>
-            )}
-            <div className="px-3 py-2">{grid(month, true)}</div>
-            {month < LAST_MONTH && (
-              <div className="absolute top-0 left-full w-full px-3 py-2" inert aria-hidden="true">
-                {grid(addMonths(month, 1), false)}
-              </div>
-            )}
-          </div>
-        )}
+        <div {...swipe} className="relative touch-pan-y select-none">
+          {month > FIRST_MONTH && (
+            <div className="absolute top-0 right-full w-full px-3 py-2" inert aria-hidden="true">
+              {grid(addMonths(month, -1), false)}
+            </div>
+          )}
+          <div className="px-3 py-2">{grid(month, true)}</div>
+          {month < LAST_MONTH && (
+            <div className="absolute top-0 left-full w-full px-3 py-2" inert aria-hidden="true">
+              {grid(addMonths(month, 1), false)}
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* Choosing a month further away is a task of its own, in a sheet, as a choice is on iOS. */}
+      {choosing !== undefined && (
+        <ModalSheet title={t('Calendar.ChooseMonth')} onClose={closeChoice} dismissed={chosen} testId="month-sheet" fit>
+          {monthChoice(choosing)}
+        </ModalSheet>
+      )}
 
       <section className="mt-5">
         {data.error !== undefined ? (

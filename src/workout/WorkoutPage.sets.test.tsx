@@ -292,28 +292,25 @@ it('corrects a done set in a sheet titled for it, its fields rows of a form', as
   expect($('[data-testid=set-done]').getAttribute('data-open')).toBe('true')
 })
 
-it.each([['thumbnail', 'illustration']])(
-  'ends the card with the panel %s opens, so its close button is last',
-  async (tap, panel) => {
-    const w = await seed(
-      workout({
-        date: '2026-09-23',
-        exercises: [
-          entry({ exerciseId: BENCH.id, targetSets: 3, targetReps: 8, comment: 'tungt', sets: [{ reps: 8 }] }),
-        ],
-      }),
-    )
-    open(w.id)
-    await waitForElement('[data-testid=comment]')
+it('shows the picture in a sheet over the card, which stays as it was', async () => {
+  const w = await seed(
+    workout({
+      date: '2026-09-23',
+      exercises: [entry({ exerciseId: BENCH.id, targetSets: 3, targetReps: 8, comment: 'tungt', sets: [{ reps: 8 }] })],
+    }),
+  )
+  open(w.id)
+  await waitForElement('[data-testid=comment]')
 
-    click($(`[data-testid=${tap}]`))
+  click($('[data-testid=thumbnail]'))
 
-    const card = $('[data-testid=exercise-entry]')
-    expect([...card.children].at(-1)!.getAttribute('data-testid')).toBe(panel)
-    expect($$('[data-testid=comment]', card)).toEqual([])
-    expect(text($$('button', card).at(-1)!)).toBe('Stäng')
-  },
-)
+  const sheet = $('[data-testid=illustration]')
+  expect(sheet.getAttribute('role')).toBe('dialog')
+  expect(sheet.getAttribute('aria-label')).toBe(BENCH.name)
+  // Never in place: the card keeps its sets and its comment under the sheet.
+  expect($$('[data-testid=sets]')).toHaveLength(1)
+  expect($$('[data-testid=comment]')).toHaveLength(1)
+})
 
 it('wraps sets three to a row and stops at ten', async () => {
   const sets: SetResult[] = Array.from({ length: 10 }, () => ({ reps: 8 }))

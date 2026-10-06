@@ -105,7 +105,8 @@ it('steps by month, and goes further by choosing a month and year', async () => 
   expect(screen.getByTestId('month-picker').getAttribute('aria-label')).toBe('september 2026, Välj månad')
 
   fireEvent.click(screen.getByTestId('month-picker'))
-  expect(screen.queryByTestId('calendar')).toBeNull()
+  // In a sheet of its own, never in place of the days.
+  expect(screen.getByTestId('month-sheet').getAttribute('aria-label')).toBe('Välj månad')
   expect(screen.getByTestId('choice-year').textContent).toBe('2026')
   const months = screen.getAllByTestId('choice-month')
   expect(months.map((m) => m.textContent)).toHaveLength(12)
@@ -114,8 +115,8 @@ it('steps by month, and goes further by choosing a month and year', async () => 
   expect(screen.getByTestId('choice-year').textContent).toBe('2025')
   fireEvent.click(screen.getAllByTestId('choice-month')[8]!)
 
-  expect(screen.queryByTestId('month-choice')).toBeNull()
   expect(screen.getByTestId('month').textContent).toBe('september 2025')
+  await waitFor(() => expect(screen.queryByTestId('month-sheet')).toBeNull())
   expect((await screen.findByTestId('calendar-empty')).textContent).toContain('Inga pass i september.')
 
   fireEvent.click(screen.getByTestId('previous-month'))
