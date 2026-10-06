@@ -112,8 +112,7 @@ describe('export and import', () => {
 
     choose(file)
     const summary = await screen.findByTestId('import-summary')
-    expect(summary.textContent).toBe('Nya1Finns redan0Krockar0')
-    expect(screen.queryByTestId('conflicts')).toBeNull()
+    expect(summary.textContent).toBe('Läggs till1Uppdateras0Behålls0')
     fireEvent.click(screen.getByTestId('confirm-import'))
 
     await waitFor(() => expect(screen.getByTestId('backup-message').textContent).toBe('Importerade 1.'))
@@ -121,7 +120,7 @@ describe('export and import', () => {
     expect((await app.store.getPending()).map((r) => r.id)).toEqual([workout.id])
   })
 
-  it("keeps the newer copy of a conflict, and lists each on a page of its own to choose the file's", async () => {
+  it('keeps what is newer here, without asking, and says so', async () => {
     const file = await exported()
     const app = createTestApp()
     vi.setSystemTime(new Date('2026-09-24T10:00:00Z'))
@@ -129,44 +128,13 @@ describe('export and import', () => {
     app.renderAt('/settings')
 
     choose(file)
-    // Only the summary on the first page, however many conflicts.
-    const showConflicts = await screen.findByTestId('show-conflicts')
-    expect(screen.queryByTestId('conflict')).toBeNull()
-    expect(showConflicts.textContent).toContain('0 av 1 från filen')
+
+    expect((await screen.findByTestId('import-summary')).textContent).toBe('Läggs till0Uppdateras0Behålls1')
+    expect(screen.getByTestId('import-sheet').textContent).toContain(
+      'Det som är nyare i appen, eller raderat där, behålls',
+    )
     expect(screen.getByTestId<HTMLButtonElement>('confirm-import').disabled).toBe(true)
-
-    fireEvent.click(showConflicts)
-    const list = await screen.findByTestId('conflicts')
-    expect(within(list).getByRole('heading').textContent).toBe('Pass')
-    const conflict = within(list).getByTestId('conflict')
-    expect(conflict.textContent).toContain('21 sep. 2026')
-    expect(conflict.textContent).toContain('Nyare här')
-    fireEvent.click(within(conflict).getByRole('radio', { name: 'Filen' }))
-
-    // Back on the first page, the choice holds.
-    fireEvent.click(screen.getByTestId('sheet-back'))
-    expect((await screen.findByTestId('show-conflicts')).textContent).toContain('1 av 1 från filen')
-    expect(screen.getByTestId('confirm-import').textContent).toBe('Importera 1')
-    fireEvent.click(screen.getByTestId('confirm-import'))
-
-    await waitFor(() => expect(app.repository.peek('workout', workout.id)?.note).toBeUndefined())
-  })
-
-  it('chooses for every conflict at once', async () => {
-    const file = await exported()
-    const app = createTestApp()
-    vi.setSystemTime(new Date('2026-09-24T10:00:00Z'))
-    await app.repository.save('workout', workout.id, { ...workout, note: 'Newer here' })
-    app.renderAt('/settings')
-
-    choose(file)
-    const all = await screen.findByTestId('choose-all')
-    fireEvent.click(within(all).getByRole('radio', { name: 'Filen' }))
-
-    expect(screen.getByTestId('show-conflicts').textContent).toContain('1 av 1 från filen')
-    fireEvent.click(screen.getByTestId('show-conflicts'))
-    const conflict = await screen.findByTestId('conflict')
-    expect(within(conflict).getByRole('radio', { name: 'Filen' }).getAttribute('aria-checked')).toBe('true')
+    expect(screen.queryByRole('radio')).toBeNull()
   })
 
   it('imports nothing when the sheet is closed', async () => {

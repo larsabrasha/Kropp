@@ -237,7 +237,7 @@ describe('the backup file', () => {
     expect(parsed.version).toBe(Number(version))
 
     const repository = new LocalRepository(new MemoryStore())
-    await repository.restore(parsed.changes.map((change) => ({ change, overwrite: false })))
+    await repository.restore(parsed.changes)
     expect(repository.peek('workout', WORKOUT_ID)).toEqual(workout)
     expect(repository.peek('exercise', EXERCISE_ID)).toEqual(exercise)
     expect(repository.peek('template', TEMPLATE_ID)).toEqual(template)

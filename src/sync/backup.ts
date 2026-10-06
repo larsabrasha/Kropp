@@ -129,26 +129,19 @@ export function parseBackup(text: string, migrations = MIGRATIONS): ParsedBackup
 }
 
 /**
- * How an aggregate in the file stands to the device's copy. new: the device has none. same: the
- * device has the same. The rest are conflicts, where the device has another version:
- * newerInFile, newerHere, or deletedHere.
+ * How an aggregate in the file stands to the device's copy. An import follows sync's rule, the
+ * newer copy wins, and asks nothing: new and newerInFile are imported; same, newerHere and
+ * deletedHere are kept as they are here.
  */
 export type ImportKind = 'new' | 'same' | 'newerInFile' | 'newerHere' | 'deletedHere'
 
 export interface ImportItem {
   change: SyncChange
   kind: ImportKind
-  /** The device's copy, as stored; undefined when it has none or deleted it. */
-  local?: string
 }
 
-/** Which copy a conflict keeps: the file's, or the one here. */
-export type Choice = 'file' | 'here'
-
-export const isConflict = (kind: ImportKind) => kind !== 'new' && kind !== 'same'
-
-/** What a conflict keeps unless the user chooses: the newer copy, as sync would. */
-export const defaultChoice = (kind: ImportKind): Choice => (kind === 'newerInFile' ? 'file' : 'here')
+/** Whether an import stores the file's copy of an aggregate of this kind. */
+export const isImported = (kind: ImportKind) => kind === 'new' || kind === 'newerInFile'
 
 /** Compares each aggregate in the file with the device's copy, for the user to see before importing. */
 export async function planImport(store: LocalStore, parsed: ParsedBackup): Promise<ImportItem[]> {
@@ -165,24 +158,14 @@ export async function planImport(store: LocalStore, parsed: ParsedBackup): Promi
             : stampTime(change.modifiedAt) > stampTime(local.modifiedAt)
               ? 'newerInFile'
               : 'newerHere'
-    items.push({ change, kind, local: local?.data ?? undefined })
+    items.push({ change, kind })
   }
   return items
 }
 
-/**
- * What LocalRepository.restore is to store. New aggregates keep their stamps, so a change made
- * elsewhere after the backup still wins. A conflict resolved for the file gets a new stamp: the
- * user chose it, so it wins over the copy here and on the server.
- */
-export function restoresOf(items: readonly ImportItem[], choices: ReadonlyMap<string, Choice>) {
-  return items.flatMap(({ change, kind }) => {
-    if (kind === 'new') return [{ change, overwrite: false }]
-    if (!isConflict(kind)) return []
-    const choice = choices.get(keyOf(change.type, change.id)) ?? defaultChoice(kind)
-    return choice === 'file' ? [{ change, overwrite: true }] : []
-  })
-}
+/** The changes an import stores, under their own stamps (LocalRepository.restore). */
+export const importedChanges = (items: readonly ImportItem[]) =>
+  items.filter((i) => isImported(i.kind)).map((i) => i.change)
 
 /** JSON with its keys sorted, so two copies compare equal whatever order their fields came in. */
 function canonical(value: unknown): string {

@@ -5,15 +5,13 @@ import {
   BackupError,
   createBackup,
   parseBackup,
+  importedChanges,
   planImport,
-  restoresOf,
   type Backup,
-  type Choice,
   type ImportItem,
   type ParsedBackup,
 } from '../sync/backup'
 import { today } from '../training/dates'
-import { readExercise, type Exercise } from '../training/model'
 import { Group } from '../ui/List'
 import { ROW } from '../ui/styles'
 import { ExportSheet } from './ExportSheet'
@@ -91,7 +89,7 @@ export function BackupRows() {
     }
     setBusy('import')
     try {
-      // Compared with what the server has too, where it can be reached, so a conflict shows as it is.
+      // Compared with what the server has too, where it can be reached, so the summary tells it as it is.
       await coordinator?.syncNow()
       setImporting({ parsed, items: await planImport(repository.store, parsed) })
     } catch (e) {
@@ -102,11 +100,11 @@ export function BackupRows() {
     }
   }
 
-  const importData = async (choices: ReadonlyMap<string, Choice>) => {
+  const importData = async () => {
     if (!importing) return
     setBusy('import')
     try {
-      const stored = await repository.restore(restoresOf(importing.items, choices))
+      const stored = await repository.restore(importedChanges(importing.items))
       setMessage({ text: t('Backup.Imported', stored), isError: false })
     } catch (e) {
       console.error('Could not import', e)
@@ -172,23 +170,13 @@ export function BackupRows() {
         <ImportSheet
           parsed={importing.parsed}
           items={importing.items}
-          exercises={exercisesOf(repository.peekAll('exercise'), importing.items)}
           busy={busy === 'import'}
-          onImport={(choices) => void importData(choices)}
+          onImport={() => void importData()}
           onClose={() => setImporting(null)}
         />
       )}
     </>
   )
-}
-
-/** The exercises here and in the file, the file's first, to name the workouts in a conflict. */
-function exercisesOf(here: readonly Exercise[], items: readonly ImportItem[]): Map<string, Exercise> {
-  const map = new Map(here.map((e) => [e.id, e]))
-  for (const { change } of items)
-    if (change.type === 'exercise' && change.data !== null)
-      map.set(change.id, readExercise(JSON.parse(change.data) as Record<string, unknown>))
-  return map
 }
 
 /**

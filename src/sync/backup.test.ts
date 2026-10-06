@@ -2,11 +2,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { followSync } from '../services'
 import { FakeSyncApi } from '../test/fakeSyncApi'
 import { SETTINGS_ID, type Exercise, type Workout } from '../training/model'
-import { BackupError, createBackup, parseBackup, planImport, restoresOf, upgrade } from './backup'
+import { BackupError, createBackup, importedChanges, parseBackup, planImport, upgrade } from './backup'
 import { SyncEngine } from './engine'
 import { LocalRepository } from './localRepo'
 import { MemoryStore } from './memoryStore'
-import type { SyncChange } from './protocol'
 
 // A backup holds what the device holds, and restoring it never wins over a later change.
 
@@ -43,9 +42,6 @@ function device(server = new FakeSyncApi()) {
   return { store, repository, engine, server }
 }
 
-/** Restores changes as an import of new aggregates does: under their own stamps. */
-const asIs = (changes: SyncChange[]) => changes.map((change) => ({ change, overwrite: false }))
-
 /** The backup's text, as the file holds it. */
 const fileOf = async (store: MemoryStore) => JSON.stringify(await createBackup(store))
 
@@ -61,7 +57,7 @@ describe('a backup', () => {
     expect(parsed.counts).toMatchObject({ workout: 1, exercise: 1, settings: 1, template: 0 })
 
     const to = device()
-    expect(await to.repository.restore(asIs(parsed.changes))).toBe(3)
+    expect(await to.repository.restore(parsed.changes)).toBe(3)
     expect(to.repository.peek('workout', w.id)).toEqual(w)
     expect(await to.repository.get('exercise', exercise.id)).toEqual(exercise)
     expect((await to.store.getPending()).length).toBe(3)
@@ -90,7 +86,7 @@ describe('a backup', () => {
     const to = device()
     const seen: number[] = []
     to.repository.onChange(() => seen.push(to.repository.peekAll('workout').length))
-    await to.repository.restore(asIs(parseBackup(await fileOf(from.store)).changes))
+    await to.repository.restore(parseBackup(await fileOf(from.store)).changes)
 
     expect(seen).toEqual([2])
   })
@@ -107,7 +103,7 @@ describe('restoring', () => {
     at('2026-09-22T10:00:00Z')
     await repository.save('workout', w.id, { ...w, note: 'After' })
 
-    expect(await repository.restore(asIs(parseBackup(file).changes))).toBe(0)
+    expect(await repository.restore(parseBackup(file).changes)).toBe(0)
     expect(repository.peek('workout', w.id)?.note).toBe('After')
   })
 
@@ -121,7 +117,7 @@ describe('restoring', () => {
     at('2026-09-22T10:00:00Z')
     await repository.delete('workout', w.id)
 
-    expect(await repository.restore(asIs(parseBackup(file).changes))).toBe(0)
+    expect(await repository.restore(parseBackup(file).changes)).toBe(0)
     expect(repository.peek('workout', w.id)).toBeUndefined()
   })
 
@@ -139,7 +135,7 @@ describe('restoring', () => {
 
     // A new device that has not synced yet restores the old backup, then syncs.
     const fresh = device(phone.server)
-    await fresh.repository.restore(asIs(parseBackup(file).changes))
+    await fresh.repository.restore(parseBackup(file).changes)
     await fresh.engine.sync()
     await vi.waitFor(() => expect(fresh.repository.peek('workout', w.id)?.note).toBe('After'))
     expect(JSON.parse(phone.server.all[0]!.data!).note).toBe('After')
@@ -286,39 +282,27 @@ describe('a preview of an import', () => {
     ])
   })
 
-  it("keeps the newer copy of a conflict by default, and the file's where the user chose it", async () => {
+  it('imports what is new or newer in the file, and keeps what is newer or deleted here', async () => {
     at('2026-09-21T10:00:00Z')
     const from = device()
-    const w = workout('In the file')
-    await from.repository.save('workout', w.id, w)
+    const all = ['fresh', 'file', 'here', 'deleted'].map(workout)
+    const [fresh, newerInFile, newerHere, deletedHere] = all as [Workout, Workout, Workout, Workout]
+    for (const w of all) await from.repository.save('workout', w.id, w)
     const parsed = parseBackup(await fileOf(from.store))
 
-    at('2026-09-22T10:00:00Z')
+    at('2026-09-20T10:00:00Z')
     const to = device()
-    await to.repository.save('workout', w.id, { ...w, note: 'Newer here' })
-    const items = await planImport(to.store, parsed)
-
-    expect(restoresOf(items, new Map())).toEqual([])
-    expect(await to.repository.restore(restoresOf(items, new Map([[`workout:${w.id}`, 'file']])))).toBe(1)
-    expect(to.repository.peek('workout', w.id)?.note).toBe('In the file')
-    // Stamped now, so it wins over the copy on the server as well.
-    expect((await to.store.get(`workout:${w.id}`))?.modifiedAt).toBe('2026-09-22T10:00:00.001Z')
-  })
-
-  it('brings back what was deleted here when the user chose the file', async () => {
-    at('2026-09-21T10:00:00Z')
-    const from = device()
-    const w = workout('Ben')
-    await from.repository.save('workout', w.id, w)
-    const parsed = parseBackup(await fileOf(from.store))
-
-    const to = device()
-    await to.repository.save('workout', w.id, w)
+    await to.repository.save('workout', newerInFile.id, { ...newerInFile, note: 'older here' })
     at('2026-09-22T10:00:00Z')
-    await to.repository.delete('workout', w.id)
-    const items = await planImport(to.store, parsed)
+    await to.repository.save('workout', newerHere.id, { ...newerHere, note: 'newer here' })
+    await to.repository.save('workout', deletedHere.id, deletedHere)
+    await to.repository.delete('workout', deletedHere.id)
 
-    await to.repository.restore(restoresOf(items, new Map([[`workout:${w.id}`, 'file']])))
-    expect(to.repository.peek('workout', w.id)).toEqual(w)
+    const changes = importedChanges(await planImport(to.store, parsed))
+    expect(changes.map((c) => c.id).sort()).toEqual([fresh.id, newerInFile.id].sort())
+    expect(await to.repository.restore(changes)).toBe(2)
+    expect(to.repository.peek('workout', newerInFile.id)?.note).toBe('file')
+    expect(to.repository.peek('workout', newerHere.id)?.note).toBe('newer here')
+    expect(to.repository.peek('workout', deletedHere.id)).toBeUndefined()
   })
 })

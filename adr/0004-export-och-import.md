@@ -62,19 +62,23 @@ Både export och import visar först vad de gör, i ett sheet.
   raderade, filnamnet och hur många ändringar som inte är synkade än. Filen byggs när sheetet
   öppnas, så att delningsmenyn öppnas direkt vid trycket. Det kräver Safari.
 - **Import** synkar först, om det går, så att jämförelsen gäller det som servern har. Sedan
-  delas varje post in som *ny*, *finns redan* eller *krock*. En krock betyder att enheten har en
-  annan version: *nyare i filen*, *nyare här* eller *raderad här*. Varje krock behåller som
-  standard den nyaste versionen, precis som sync gör. Användaren kan välja *Här* eller *Filen*
-  för varje krock, eller för alla på en gång.
+  visar den tre tal: *läggs till* (finns inte i appen), *uppdateras* (nyare i filen) och
+  *behålls* (likadant, nyare i appen eller raderat i appen).
 
-**Stämplar vid import:**
+**En import följer samma regel som sync och frågar ingenting: den nyaste versionen vinner.**
+Varje post från filen sparas med stämpeln den hade i filen, och bara om appens kopia är äldre.
+Servern avgör sedan som för en enhet som har varit offline länge. En import kan därför aldrig
+skriva över en senare ändring, inte heller en på servern som appen inte har hämtat än, och den
+kan aldrig väcka liv i något som har raderats. Det som har raderats finns i papperskorgen i 30
+dagar.
 
-- En ny post får behålla stämpeln från filen. Om något har ändrats eller raderats på en annan
-  enhet efter exporten vinner den ändringen ändå hos servern.
-- En krock där användaren valde filen får en ny stämpel (`now`). Användarens val vinner då både
-  här och på servern, och kan väcka liv i något som har raderats.
-- En stämpel i framtiden sätts till nu (`restoredStamp`). Annars skulle den vinna över varje
-  ändring fram till dess.
+Val per krock prövades och valdes bort (2026-10-06). De krävde en vy som visar hur versionerna
+skiljer sig för att vara begripliga, och de löste ett problem som sällan uppstår. Den som vill
+gå tillbaka till en äldre version får i så fall en egen funktion, "Återställ från fil", som visar
+exakt vad som skrivs över. Den hör inte hemma i varje import.
+
+En stämpel i framtiden sätts till nu (`restoredStamp`). Annars skulle den vinna över varje
+ändring fram till dess.
 
 ## Följder
 
