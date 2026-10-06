@@ -13,7 +13,7 @@ import {
 } from '../training/model'
 import { now, nextStamp } from './clock'
 import { keyOf, type LocalStore } from './localStore'
-import { ALL_AGGREGATE_TYPES, AggregateTypes, type AggregateType } from './protocol'
+import { ALL_AGGREGATE_TYPES, AggregateTypes, stampTime, type AggregateType, type SyncChange } from './protocol'
 
 export interface Aggregates {
   workout: Workout
@@ -134,6 +134,34 @@ export class LocalRepository {
   /** Leaves a tombstone, so the deletion reaches the server and every other device. */
   delete(type: AggregateType, id: string): Promise<void> {
     return this.put(type, id, null, true)
+  }
+
+  /**
+   * Stores aggregates from a backup. Without overwrite, under the stamp it had when the backup was
+   * made, and only when the local copy, or its tombstone, is older: the outbox pushes it, and the
+   * server keeps whichever copy is newer, as for a device that was offline for long. So it never
+   * overwrites a later change anywhere, nor brings back what was deleted after the backup. With
+   * overwrite, the user chose the file's copy over the one here: it is stamped now, as a save is,
+   * and wins. Tells the listeners once per type. @returns how many were stored.
+   */
+  async restore(entries: readonly { change: SyncChange; overwrite: boolean }[]): Promise<number> {
+    const types = new Set<AggregateType>()
+    let stored = 0
+    for (const { change, overwrite } of entries) {
+      if (change.data === null) continue
+      const type = change.type as AggregateType
+      const key = keyOf(type, change.id)
+      const existing = await this.store.get(key)
+      if (!overwrite && existing && stampTime(existing.modifiedAt) >= stampTime(change.modifiedAt)) continue
+      const modifiedAt = overwrite ? nextStamp(now(), existing?.modifiedAt) : change.modifiedAt
+      await this.store.put({ key, type, id: change.id, modifiedAt, isDeleted: false, data: change.data, pending: true })
+      this.saves++
+      ;(this.memory[type] as Map<string, unknown>).set(change.id, readers[type](JSON.parse(change.data)))
+      types.add(type)
+      stored++
+    }
+    for (const type of types) for (const listener of this.listeners) listener(type)
+    return stored
   }
 
   private async put(type: AggregateType, id: string, data: string | null, isDeleted: boolean) {

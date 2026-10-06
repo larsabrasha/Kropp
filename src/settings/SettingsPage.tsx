@@ -14,6 +14,7 @@ import { BackLink } from '../ui/Layout'
 import { Group } from '../ui/List'
 import { Stepper } from '../ui/Stepper'
 import { SyncRow } from '../ui/SyncRow'
+import { BackupRows } from './BackupRows'
 
 /** The settings, from the repository's memory, or the defaults and a message when they could not be read. */
 function read(repository: LocalRepository): { settings: UserSettings; error: string | null } {
@@ -92,6 +93,8 @@ export function SettingsPage() {
         <Group className="mt-section" header={t('Settings.Sync')}>
           <SyncRow />
         </Group>
+
+        <BackupRows />
       </>
     </>
   )

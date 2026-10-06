@@ -15,3 +15,11 @@ export function nextStamp(now: string, stored: string | undefined): string {
   const previous = stampTime(stored)
   return stampTime(now) > previous ? now : new Date(previous + 1).toISOString()
 }
+
+/**
+ * A stamp read back from a backup, in whole milliseconds as now() stamps, and never later than
+ * now: a stamp in the future would otherwise win over every change made until then.
+ */
+export function restoredStamp(stamp: string): string {
+  return new Date(Math.min(stampTime(stamp), stampTime(now()))).toISOString()
+}

@@ -7,7 +7,8 @@ conventions as ~/Developer/bygg. See `adr/` before changing sync or the data mod
 Before 2026-10-05 it was .NET and Blazor (ADR 0003). Installed phones and the database still hold
 what that version wrote: never change the IndexedDB schema (`src/sync/indexedDbStore.ts`), the
 service worker's name (`service-worker.js`), the sync contract (`src/sync/protocol.ts`), the JSON
-of the aggregates (`src/training/model.ts`) or the table, without a way for existing data to follow.
+of the aggregates (`src/training/model.ts`), the export file (`src/sync/backup.ts`, ADR 0004) or the
+table, without a way for existing data to follow.
 `src/contract.test.ts` and `server/contract.test.ts` pin all of these. When one fails, change the
 code back, not the test.
 

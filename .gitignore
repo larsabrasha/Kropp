@@ -21,6 +21,8 @@ dist-server
 *.db-*
 *.sqlite
 exports/
+# What the app exports (src/sync/backup.ts).
+kropp-*.json
 imports/
 
 # Secrets

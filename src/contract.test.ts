@@ -1,9 +1,12 @@
 import 'fake-indexeddb/auto'
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
+import { BACKUP_FORMAT, BACKUP_VERSION, parseBackup } from './sync/backup'
 import { IndexedDbStore } from './sync/indexedDbStore'
+import { LocalRepository } from './sync/localRepo'
 import type { LocalRecord } from './sync/localStore'
-import { AggregateTypes, type SyncChange } from './sync/protocol'
+import { MemoryStore } from './sync/memoryStore'
+import { ALL_AGGREGATE_TYPES, AggregateTypes, type SyncChange } from './sync/protocol'
 import {
   BODY_AREAS,
   EMPTY_ID,
@@ -195,6 +198,51 @@ describe('an older document', () => {
       measuresTimeOnly: false,
     })
     expect(readSettings({})).toEqual({ id: SETTINGS_ID, sessionsPerWeek: 3 })
+  })
+})
+
+// Exported files that users keep. Every version ever written is here, as it was written, and must
+// import for as long as the app lives: a new version adds its file and the step from the one before
+// (MIGRATIONS in src/sync/backup.ts); it never changes one that is here.
+const BACKUP_FILES: Record<number, string> = {
+  1:
+    `{"format":"kropp","version":1,"exportedAt":"2026-10-06T12:00:00.000Z","records":[` +
+    `{"type":"workout","id":"${WORKOUT_ID}","modifiedAt":"2026-09-22T18:30:00.123Z","data":${WORKOUT_JSON}},` +
+    `{"type":"exercise","id":"${EXERCISE_ID}","modifiedAt":"2026-09-20T08:00:00.000Z","data":${EXERCISE_JSON}},` +
+    `{"type":"template","id":"${TEMPLATE_ID}","modifiedAt":"2026-09-20T08:00:00.000Z","data":${TEMPLATE_JSON}},` +
+    `{"type":"settings","id":"${SETTINGS_ID}","modifiedAt":"2026-09-20T08:00:00.000Z","data":${SETTINGS_JSON}}]}`,
+}
+
+// The aggregate types each version can hold. An app refuses a file of a later version rather than
+// part of it, so a new aggregate type is a new version: an older app then asks to be updated
+// instead of refusing the file's records as unknown.
+const BACKUP_TYPES: Record<number, string[]> = {
+  1: ['workout', 'exercise', 'template', 'settings', 'trashedWorkout'],
+}
+
+describe('the backup file', () => {
+  it('has a file and the types for every version', () => {
+    const versions = Array.from({ length: BACKUP_VERSION }, (_, i) => String(i + 1))
+    expect(Object.keys(BACKUP_FILES)).toEqual(versions)
+    expect(Object.keys(BACKUP_TYPES)).toEqual(versions)
+    expect(BACKUP_FORMAT).toBe('kropp')
+  })
+
+  it('holds the aggregate types of its version', () => {
+    expect([...ALL_AGGREGATE_TYPES]).toEqual(BACKUP_TYPES[BACKUP_VERSION])
+  })
+
+  it.each(Object.entries(BACKUP_FILES))('of version %s imports as it did', async (version, text) => {
+    const parsed = parseBackup(text)
+    expect(parsed.version).toBe(Number(version))
+
+    const repository = new LocalRepository(new MemoryStore())
+    await repository.restore(parsed.changes.map((change) => ({ change, overwrite: false })))
+    expect(repository.peek('workout', WORKOUT_ID)).toEqual(workout)
+    expect(repository.peek('exercise', EXERCISE_ID)).toEqual(exercise)
+    expect(repository.peek('template', TEMPLATE_ID)).toEqual(template)
+    expect(repository.peek('settings', SETTINGS_ID)).toEqual(settings)
+    expect((await repository.store.get(`workout:${WORKOUT_ID}`))?.modifiedAt).toBe('2026-09-22T18:30:00.123Z')
   })
 })
 
