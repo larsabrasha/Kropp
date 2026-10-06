@@ -67,9 +67,9 @@ const scrollTo = (top: number) => window.scrollTo({ top, left: 0, behavior: 'ins
  * back, the page below is scrolled to where it was once it has rendered. A sheet scrolls on its
  * own and leaves the page below it where it was, so no change of page in or out of one scrolls.
  */
-function show(from: string, to: string, toTop: () => void, restore = false) {
+function show(from: string, to: string, toTop: () => void, restore = false, still = false) {
   shown = to
-  const transition = transitionFor(from, to)
+  const transition = still ? undefined : transitionFor(from, to)
   // Back to the page below: the row that led away is lit as it is uncovered.
   if (transition === 'pop' || transition === 'sheet-pop') highlight(from)
   const back = transition === 'pop' ? scrolls.get(to) : restore ? (scrolls.get(to) ?? 0) : undefined
@@ -142,9 +142,10 @@ export function useLocation(): Location {
 /**
  * Goes to a page of the app. replace swaps the current history entry, for a change that should
  * not be a step of its own on the way back (a filter, a month in the calendar). restoreScroll
- * puts the page where it was last left, as a tab of iOS shows its page as it was.
+ * puts the page where it was last left, as a tab of iOS shows its page as it was. still changes
+ * page without a transition, for a sheet a pull has already taken off the screen.
  */
-export function navigate(to: string, options: { replace?: boolean; restoreScroll?: boolean } = {}) {
+export function navigate(to: string, options: { replace?: boolean; restoreScroll?: boolean; still?: boolean } = {}) {
   const from = here()
   scrolls.set(from, window.scrollY)
   // The page already there is no new step back: a second tap while a transition starts.
@@ -158,6 +159,7 @@ export function navigate(to: string, options: { replace?: boolean; restoreScroll
       if (!options.replace) scrollTo(0)
     },
     options.restoreScroll,
+    options.still,
   )
 }
 

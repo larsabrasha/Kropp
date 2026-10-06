@@ -164,3 +164,63 @@ it('keeps where the list was scrolled when coming back to it', async () => {
   expect(scrolled.at(-1)).toBe(640)
   expect(scrolled).toContain(0)
 })
+
+/** A sheet as tall as a phone's, as happy-dom lays nothing out. */
+function phoneHeight() {
+  const height = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetHeight')
+  Object.defineProperty(HTMLElement.prototype, 'offsetHeight', { configurable: true, get: () => 780 })
+  return () => {
+    if (height) Object.defineProperty(HTMLElement.prototype, 'offsetHeight', height)
+  }
+}
+
+const pull = (on: Element, ys: number[]) => {
+  fireEvent.pointerDown(on, { pointerType: 'mouse', button: 0, clientX: 100, clientY: ys[0] })
+  for (const y of ys.slice(1)) fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 100, clientY: y })
+}
+
+it('closes a sheet thrown down without a second animation, the page below brightening with it', async () => {
+  const restore = phoneHeight()
+  try {
+    app.renderAt('/')
+    fireEvent.click($('[data-testid=settings-link]'))
+    const sheet = screen.getByRole('dialog')
+
+    pull(sheet.querySelector('header')!, [100, 110, 300])
+    // Halfway pulled, the page below is halfway to its full brightness.
+    expect(Number(document.documentElement.style.getPropertyValue('--sheet-pull'))).toBeCloseTo(200 / 780)
+    fireEvent.pointerUp(window, { pointerType: 'mouse', clientX: 100, clientY: 300 })
+
+    await vi.waitFor(() => expect(window.location.pathname).toBe('/'))
+    // Opened as a sheet; closed by the pull itself, never by the view transition's close.
+    expect(started).toEqual(['sheet-open'])
+    expect(screen.queryByRole('dialog')).toBeNull()
+  } finally {
+    restore()
+  }
+})
+
+it('springs a sheet back when let go slowly, short of halfway', async () => {
+  const restore = phoneHeight()
+  try {
+    app.renderAt('/settings')
+    const sheet = screen.getByRole('dialog')
+    const header = sheet.querySelector('header')!
+
+    pull(header, [100, 110, 150])
+    // Slowly at the end: the speed at letting go is what counts, not the quick start.
+    expect(sheet.style.transform).toBe('translateY(50px)')
+    await new Promise((r) => setTimeout(r, 120))
+    fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 100, clientY: 152 })
+    await new Promise((r) => setTimeout(r, 120))
+    fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 100, clientY: 154 })
+    fireEvent.pointerUp(window, { pointerType: 'mouse', clientX: 100, clientY: 154 })
+    await new Promise((r) => setTimeout(r, 400))
+
+    expect(window.location.pathname).toBe('/settings')
+    expect(sheet.style.transform).toBe('')
+    expect(document.documentElement.style.getPropertyValue('--sheet-pull')).toBe('0')
+  } finally {
+    restore()
+  }
+})

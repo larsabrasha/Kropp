@@ -120,7 +120,23 @@ export function ModalSheet({
     setTimeout(onClose, CLOSE_MS)
   }, [onClose, dismissed])
 
-  useSheetDrag(sheet, bar, page, close, canDrag)
+  // Pulled off the screen already, it is gone: no sinking a second time.
+  const dragClose = useCallback(
+    (dragged: boolean) => {
+      if (dragged && !dismissed) onClose()
+      else close()
+    },
+    [close, onClose, dismissed],
+  )
+  // The dimming behind it lifts as it is pulled down, as iOS's does.
+  const backdrop = useRef<HTMLDivElement>(null)
+  const pullBackdrop = useCallback((progress: number, ms = 0) => {
+    const el = backdrop.current
+    if (!el) return
+    el.style.transition = `opacity ${ms}ms ease-out`
+    el.style.opacity = String(1 - progress)
+  }, [])
+  useSheetDrag(sheet, bar, page, dragClose, canDrag, pullBackdrop)
 
   // Done from inside: sinks away as when closed; close above ignores a tap meanwhile.
   const reduced = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -153,6 +169,7 @@ export function ModalSheet({
   const content = (
     <div ref={root} className="fixed inset-0 z-50">
       <div
+        ref={backdrop}
         className={
           place
             ? 'absolute inset-0'

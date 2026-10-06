@@ -259,6 +259,16 @@ export function Layout({
 }
 
 /**
+ * How far a sheet is pulled, for the page below to brighten with it from its dimmed rest
+ * (.sheet-under), as iOS's page under a sheet does; over ms when the sheet is let go.
+ */
+function pullUnder(progress: number, ms = 0) {
+  const root = document.documentElement.style
+  root.setProperty('--sheet-pull', String(progress))
+  root.setProperty('--sheet-pull-ms', `${ms}ms`)
+}
+
+/**
  * A page as an iOS sheet, risen over the page below: rounded at the top, with a grabber, a bar of
  * its own and its own scroll. Pulled down, it closes (useSheetDrag). pageKey is the page shown;
  * each page starts at the top.
@@ -272,8 +282,15 @@ export function Sheet({ children, pageKey }: { children: ReactNode; pageKey: str
   const bar = useRef<HTMLElement>(null)
   const page = useRef<HTMLDivElement>(null)
   const title = useInlineTitle(page, page, bar)
-  const close = useCallback(() => navigate(closeHref), [closeHref])
-  useSheetDrag(sheet, bar, page, close)
+  // Pulled off the screen already, it closes without a second animation of its own.
+  const close = useCallback(
+    (dragged: boolean) => {
+      navigate(closeHref, { still: dragged })
+      pullUnder(0)
+    },
+    [closeHref],
+  )
+  useSheetDrag(sheet, bar, page, close, undefined, pullUnder)
 
   return (
     <div
