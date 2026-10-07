@@ -2,6 +2,7 @@
 import { act, fireEvent, screen, within } from '@testing-library/react'
 import { beforeEach, expect, it, vi } from 'vitest'
 import { newId } from './training/model'
+import { navigate } from './route'
 import { $, app, BENCH, entry, seed, workout } from './test/workoutPage'
 import { TODAY } from './test/render'
 
@@ -146,6 +147,28 @@ it('opens a workout without moving for anyone who asked for less motion', async 
   expect(window.location.pathname).toBe(`/workouts/${w.id}`)
   expect($('[data-testid=details]')).toBeTruthy()
   expect(started).toEqual([])
+})
+
+it('opens a workout at once with a mouse, while a sheet still rises and lowers', async () => {
+  vi.stubGlobal('matchMedia', (query: string) => ({ matches: query.includes('pointer: fine'), media: query }))
+
+  const w = await openFromHome()
+  expect(window.location.pathname).toBe(`/workouts/${w.id}`)
+  fireEvent.click($('[data-testid=back]'))
+  fireEvent.click($('[data-testid=settings-link]'))
+  fireEvent.click(within(screen.getByRole('dialog')).getByTitle('Stäng'))
+
+  expect(started).toEqual(['sheet-open', 'sheet-close'])
+})
+
+it('still slides a page inside a sheet with a mouse', async () => {
+  vi.stubGlobal('matchMedia', (query: string) => ({ matches: query.includes('pointer: fine'), media: query }))
+  app.renderAt('/settings')
+
+  act(() => navigate(`/exercises/${BENCH.id}`))
+  act(() => navigate('/settings'))
+
+  expect(started).toEqual(['sheet-push', 'sheet-pop'])
 })
 
 it('opens a workout once when its row is tapped twice before the transition starts', async () => {

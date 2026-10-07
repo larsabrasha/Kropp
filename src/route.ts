@@ -60,6 +60,11 @@ if (typeof window !== 'undefined') window.history.scrollRestoration = 'manual'
 
 const scrollTo = (top: number) => window.scrollTo({ top, left: 0, behavior: 'instant' })
 
+// Pointing with a mouse or a trackpad, as on a computer, where pages change at once as in a Mac's
+// own apps: the slide belongs to a finger that can swipe the page back. Sheets still move. An iPad
+// reports a coarse pointer even with a trackpad, so it keeps the slide.
+const MOUSE = '(hover: hover) and (pointer: fine)'
+
 /**
  * Shows the page at to, whose URL is already in place. React renders it at once, inside a view
  * transition when the rule asks for one and the browser and the user allow it. Going forward,
@@ -81,7 +86,12 @@ function show(from: string, to: string, toTop: () => void, restore = false, stil
     else notify()
     if (back !== undefined) scrollTo(back)
   }
-  if (!transition || !document.startViewTransition || matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  if (
+    !transition ||
+    !document.startViewTransition ||
+    matchMedia('(prefers-reduced-motion: reduce)').matches ||
+    ((transition === 'push' || transition === 'pop') && matchMedia(MOUSE).matches)
+  ) {
     render(back !== undefined)
     return
   }
