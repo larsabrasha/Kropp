@@ -37,6 +37,19 @@
     font-size: max(16px, 1em);
   }
 
+  /* With a mouse, as on a computer, the whole app is drawn smaller, as a Mac draws an iPad's app:
+     sizes are in rem, so they follow. A Mac does not zoom into fields. */
+  @media (hover: hover) and (pointer: fine) {
+    html {
+      font-size: 87.5%;
+    }
+    input,
+    select,
+    textarea {
+      font-size: 1em;
+    }
+  }
+
   /* Tailwind 4 leaves buttons with the default cursor; everything that can be tapped shows the hand.
      A disabled button, also one inside a locked workout's disabled fieldset, keeps the arrow. */
   button:not(:disabled),
@@ -618,6 +631,30 @@ html:has(.sheet-under) :is(.tab-bar, .sidebar) {
 @keyframes sheet-down {
   to {
     transform: translateY(100%);
+  }
+}
+/* With a mouse, as on a Mac, a sheet never rises from the bottom of the screen: it fades in as it
+   drops a little into place, and fades out going back up, quicker than on iOS. iPadOS keeps the
+   rise. The same keyframes serve every sheet: the routes', ModalSheet's and ActionSheet's. */
+@media (hover: hover) and (pointer: fine) {
+  :root {
+    --sheet-duration: 250ms;
+  }
+  .modal-sheet,
+  .action-sheet {
+    animation-duration: 250ms;
+  }
+  @keyframes sheet-up {
+    from {
+      opacity: 0;
+      transform: translateY(-1rem);
+    }
+  }
+  @keyframes sheet-down {
+    to {
+      opacity: 0;
+      transform: translateY(-1rem);
+    }
   }
 }
 
