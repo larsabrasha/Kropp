@@ -3,20 +3,33 @@
   "configurations": [
     {
       "name": "kropp",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
-      "port": 5173
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "npx vite --port ${PORT:-5173} --strictPort"
+      ],
+      "port": 5173,
+      "autoPort": true
     },
     {
       "name": "kropp-lan",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev:lan"],
+      "runtimeArgs": [
+        "run",
+        "dev:lan"
+      ],
       "port": 5173
     },
     {
       "name": "kropp-preview",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["vite", "preview", "--port", "5288", "--strictPort"],
+      "runtimeArgs": [
+        "vite",
+        "preview",
+        "--port",
+        "5288",
+        "--strictPort"
+      ],
       "port": 5288
     }
   ]
