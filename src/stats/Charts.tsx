@@ -33,45 +33,89 @@ function ReadoutView({ label, value, unit, sub, hue }: Readout & { hue?: Hue }) 
   )
 }
 
+// How far a finger moves before it is a drag, and how long it rests before it picks, as iOS's
+// charts wait on a touch: a finger that moves up or down is scrolling the page and picks nothing.
+const SLOP_PX = 8
+const HOLD_MS = 300
+
 /**
  * The bar or point picked by touch, pointer or arrow keys; a tap on the one picked lets it go.
+ * A mouse picks at once and scrubs while held. A finger picks on a tap, a drag across or a moment
+ * held still, never on a drag up or down, which scrolls the page (touch-pan-y) and cancels it.
  * indexAt turns a place across the plot (0 to 1) into the index there.
  */
 function usePick(count: number, indexAt: (fraction: number) => number) {
   const [picked, setPicked] = useState<number>()
   // Set when the press began on the one already picked: let go without moving, it is unpicked.
   const release = useRef(false)
-  const down = useRef(false)
+  // A finger down that has not yet picked, where it came down; scrubbing once it has picked.
+  const waiting = useRef<{ x: number; y: number; index: number; timer: ReturnType<typeof setTimeout> }>(undefined)
+  const scrubbing = useRef(false)
   const at = (e: PointerEvent<HTMLElement>) => {
     const box = e.currentTarget.getBoundingClientRect()
     return indexAt(Math.min(1, Math.max(0, (e.clientX - box.left) / Math.max(box.width, 1))))
   }
   const current = picked !== undefined && picked < count ? picked : undefined
+  const stopWaiting = () => {
+    if (waiting.current) clearTimeout(waiting.current.timer)
+    waiting.current = undefined
+  }
+  const scrub = (e: PointerEvent<HTMLElement>, index: number) => {
+    stopWaiting()
+    scrubbing.current = true
+    setPicked(index)
+    e.currentTarget.setPointerCapture?.(e.pointerId)
+  }
   return {
     picked: current,
     clear: () => setPicked(undefined),
     handlers: {
       onPointerDown: (e: PointerEvent<HTMLElement>) => {
         if (count === 0) return
-        down.current = true
         const index = at(e)
         release.current = index === current
-        setPicked(index)
-        e.currentTarget.setPointerCapture?.(e.pointerId)
+        if (e.pointerType === 'mouse') return scrub(e, index)
+        stopWaiting()
+        waiting.current = {
+          x: e.clientX,
+          y: e.clientY,
+          index,
+          timer: setTimeout(() => {
+            waiting.current = undefined
+            scrubbing.current = true
+            release.current = false
+            setPicked(index)
+          }, HOLD_MS),
+        }
       },
       onPointerMove: (e: PointerEvent<HTMLElement>) => {
-        if (!down.current) return
+        const wait = waiting.current
+        if (wait) {
+          const dx = Math.abs(e.clientX - wait.x)
+          const dy = Math.abs(e.clientY - wait.y)
+          if (dx > SLOP_PX && dx > dy) {
+            release.current = false
+            scrub(e, at(e))
+          } else if (dy > SLOP_PX) stopWaiting()
+          return
+        }
+        if (!scrubbing.current) return
         const index = at(e)
         if (index !== current) release.current = false
         setPicked(index)
       },
       onPointerUp: () => {
-        down.current = false
-        if (release.current) setPicked(undefined)
+        // A tap: picks what it came down on, or lets go of it when it was already picked.
+        const tap = waiting.current
+        stopWaiting()
+        if (tap) setPicked(release.current ? undefined : tap.index)
+        else if (scrubbing.current && release.current) setPicked(undefined)
+        scrubbing.current = false
         release.current = false
       },
       onPointerCancel: () => {
-        down.current = false
+        stopWaiting()
+        scrubbing.current = false
         release.current = false
       },
       onKeyDown: (e: KeyboardEvent<HTMLElement>) => {

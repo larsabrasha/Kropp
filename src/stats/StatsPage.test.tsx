@@ -119,6 +119,36 @@ it('reads out the bar picked with the arrow keys', async () => {
   expect(within(chart).getByTestId('readout').textContent).toContain('Snitt')
 })
 
+it('picks nothing when a finger scrolls over a chart, and picks on a tap', async () => {
+  const app = createTestApp()
+  await seed(app)
+  app.renderAt('/stats')
+  const chart = screen.getByTestId('workouts-chart')
+  const plot = within(chart).getByTestId('plot')
+  const touch = { pointerId: 1, pointerType: 'touch' }
+
+  fireEvent.pointerDown(plot, { ...touch, clientX: 0, clientY: 100 })
+  fireEvent.pointerMove(plot, { ...touch, clientX: 2, clientY: 60 })
+  fireEvent.pointerCancel(plot, touch)
+  expect(within(chart).getByTestId('readout').textContent).toContain('Snitt')
+
+  fireEvent.pointerDown(plot, { ...touch, clientX: 0, clientY: 100 })
+  fireEvent.pointerUp(plot, touch)
+  expect(within(chart).getByTestId('readout-sub').textContent).toContain('v.')
+  expect(within(chart).getByTestId('readout').textContent).not.toContain('Snitt')
+})
+
+it('picks at once under a mouse', async () => {
+  const app = createTestApp()
+  await seed(app)
+  app.renderAt('/stats')
+  const chart = screen.getByTestId('workouts-chart')
+
+  fireEvent.pointerDown(within(chart).getByTestId('plot'), { pointerId: 1, pointerType: 'mouse', clientX: 0 })
+
+  expect(within(chart).getByTestId('readout').textContent).not.toContain('Snitt')
+})
+
 it('counts sets for every area an exercise trains', async () => {
   const app = createTestApp()
   await seed(app)
