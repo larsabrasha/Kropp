@@ -47,6 +47,7 @@ export function ExerciseEntryCard({
   editing,
   onChange,
   onRemove,
+  onSwap,
 }: {
   entry: WorkoutExercise
   exercise: Exercise | undefined
@@ -70,6 +71,8 @@ export function ExerciseEntryCard({
   editing: boolean
   onChange: (entry: WorkoutExercise) => void
   onRemove: () => void
+  /** Opens the picker to change this exercise for another; the card's sheet closes first. */
+  onSwap: () => void
 }) {
   const [openPanel, setOpenPanel] = useState<Panel>('None')
   const [setIndex, setSetIndex] = useState(0)
@@ -315,7 +318,12 @@ export function ExerciseEntryCard({
             onChange={change}
             onChangeCardioPlan={changeCardioPlan}
             onRemove={onRemove}
+            onSwap={() => {
+              close()
+              onSwap()
+            }}
             onOpenExercise={exercise ? () => setShowingExercise(true) : undefined}
+            exerciseName={exercise?.name}
             picture={
               slug !== undefined ? (
                 <Picture slug={slug} size="large" alt={nameOf(slug)} testId="illustration-large" />

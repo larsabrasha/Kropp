@@ -12,7 +12,7 @@ import { toInt } from './toInt'
 
 /**
  * One place for this exercise in this workout, opened by a tap anywhere on its row: its picture,
- * the plan, as it is what changes most, then the notes, the way to the exercise itself (name,
+ * the plan, as it is what changes most, then the notes, changing it for another, the way to the exercise itself (name,
  * picture, categories, which hold in every workout), skipping and removing. Drawn for a sheet (ModalSheet, which closes it): grouped
  * lists as an iOS form, the label at the left, the value and its − and + at the right.
  */
@@ -30,6 +30,8 @@ export function EntryEditor({
   onRemove,
   picture,
   onOpenExercise,
+  onSwap,
+  exerciseName,
 }: {
   entry: WorkoutExercise
   /** The entry with cardio's plan as it is shown and edited (see ExerciseEntryCard). */
@@ -48,6 +50,10 @@ export function EntryEditor({
   picture?: ReactNode
   /** Pushes the exercise itself, what holds in every workout; none for an exercise not found. */
   onOpenExercise?: () => void
+  /** Changes this place for another exercise, the walk for the bike (ExerciseList's picker). */
+  onSwap?: () => void
+  /** The exercise's name, for the row that leads to it. */
+  exerciseName?: string
 }) {
   const [confirmingRemove, setConfirmingRemove] = useState(false)
   return (
@@ -151,20 +157,42 @@ export function EntryEditor({
           />
         )}
       </ul>
-      {onOpenExercise !== undefined && (
+      {/* This place in this workout, then the exercise itself, which holds in every workout: apart,
+          so the one is not taken for the other. */}
+      {onSwap !== undefined && (
         <ul className={GROUP}>
           <li>
             <button
               type="button"
-              onClick={onOpenExercise}
+              onClick={onSwap}
               className={`${ROW} w-full text-left text-[1.0625rem]`}
-              data-testid="edit-exercise"
+              data-testid="swap-exercise"
             >
-              <span className="min-w-0 flex-1">{t('Entry.EditExercise')}</span>
+              <span className="min-w-0 flex-1">{t('Entry.SwapFor')}</span>
               <Chevron />
             </button>
           </li>
         </ul>
+      )}
+      {onOpenExercise !== undefined && (
+        <section>
+          <ul className={GROUP}>
+            <li>
+              <button
+                type="button"
+                onClick={onOpenExercise}
+                className={`${ROW} w-full text-left text-[1.0625rem]`}
+                data-testid="edit-exercise"
+              >
+                <span className="min-w-0 flex-1 truncate">
+                  {exerciseName ? t('Entry.EditNamed', exerciseName) : t('Entry.EditExercise')}
+                </span>
+                <Chevron />
+              </button>
+            </li>
+          </ul>
+          <p className="px-4 pt-1.5 text-[0.8125rem] text-label-2">{t('Entry.EditExerciseFooter')}</p>
+        </section>
       )}
       <ul className={GROUP}>
         {skipLabel !== undefined && (

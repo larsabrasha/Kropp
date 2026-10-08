@@ -84,14 +84,14 @@ export function nextSessionNumber(workouts: readonly Workout[]): number {
 }
 
 /**
- * Adds an exercise at the end. Targets come from the last time it was done, so a plan starts
- * where the previous session left off; the user raises the weight when it is time.
+ * A new place for an exercise, planned from the last time it was done, so a plan starts where the
+ * previous session left off; the user raises the weight when it is time.
  */
-export function addExercise(workout: Workout, exercise: Exercise, lastTime: WorkoutExercise | undefined): Workout {
+function planned(exercise: Exercise, lastTime: WorkoutExercise | undefined, order: number): WorkoutExercise {
   const kind = exercise.kind
-  const entry: WorkoutExercise = {
+  return {
     exerciseId: exercise.id,
-    order: workout.exercises.length,
+    order,
     settings: lastTime?.settings,
     targetSets:
       lastTime?.targetSets ?? (lastTime && lastTime.sets.length > 0 ? lastTime.sets.length : defaultSets(kind)),
@@ -103,7 +103,29 @@ export function addExercise(workout: Workout, exercise: Exercise, lastTime: Work
     sets: [],
     isSkipped: false,
   }
-  return { ...workout, exercises: [...workout.exercises, entry] }
+}
+
+/** Adds an exercise at the end, planned from the last time it was done. */
+export function addExercise(workout: Workout, exercise: Exercise, lastTime: WorkoutExercise | undefined): Workout {
+  return { ...workout, exercises: [...workout.exercises, planned(exercise, lastTime, workout.exercises.length)] }
+}
+
+/**
+ * Whether entry, of an exercise of kind from, may become exercise: always while nothing is
+ * recorded, and then only to the same kind, as what was done carries over and minutes or kilos
+ * mean nothing to another kind.
+ */
+export const canSwap = (entry: WorkoutExercise, from: ExerciseKind, exercise: Exercise) =>
+  !hasResult(entry) || exercise.kind === from
+
+/**
+ * The exercise in this place changed for another, the walk that warms up for the bike. Nothing
+ * done yet, it is planned as when added, from the last time the new one was done, keeping only
+ * the comment. Something done, it stays, with the plan, only now of the other exercise.
+ */
+export function swapExercise(entry: WorkoutExercise, exercise: Exercise, lastTime: WorkoutExercise | undefined) {
+  if (hasResult(entry)) return { ...entry, exerciseId: exercise.id }
+  return { ...planned(exercise, lastTime, entry.order), comment: entry.comment }
 }
 
 export function replaceEntry<T extends { exercises: WorkoutExercise[] }>(

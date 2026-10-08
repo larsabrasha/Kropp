@@ -1,4 +1,4 @@
-import { useRef, useState, type CSSProperties } from 'react'
+import { useRef, useState } from 'react'
 import { compareText, lower, t } from '../i18n/i18n'
 import { slugFor } from '../illustrations/illustrations'
 import { Limits } from '../training/limits'
@@ -29,6 +29,8 @@ export function ExercisePicker({
   onQuery,
   onPick,
   onNew,
+  suggestions = [],
+  allows = () => true,
 }: {
   exercises: readonly Exercise[]
   query: string
@@ -36,16 +38,32 @@ export function ExercisePicker({
   onPick: (exercise: Exercise) => void
   /** Opens the form for a new exercise, named as searched for unless that name exists. */
   onNew: (name: string) => void
+  /** The likeliest picks, over the whole list while nothing is searched for (swaps.ts). */
+  suggestions?: readonly Exercise[]
+  /** Which exercises may be picked: in a swap, not the one already there. */
+  allows?: (exercise: Exercise) => boolean
 }) {
   const searchInput = useRef<HTMLInputElement>(null)
-  useFocusOnOpen(searchInput)
+  // Ready to type, unless there are suggestions, which the keyboard would cover.
+  useFocusOnOpen(searchInput, !suggestions.some(allows))
 
   const wanted = lower(query.trim())
   const matches = exercises
-    .filter((e) => !e.isArchived && lower(e.name).includes(wanted))
+    .filter((e) => !e.isArchived && allows(e) && lower(e.name).includes(wanted))
     .sort((a, b) => compareText(a.name, b.name))
   const exactMatch = exercises.some((e) => lower(e.name.trim()) === wanted)
   const newName = wanted === '' || exactMatch ? '' : query.trim()
+  const suggested = wanted === '' ? suggestions.filter(allows) : []
+
+  const row = (exercise: Exercise) => (
+    <li key={exercise.id}>
+      <button type="button" onClick={() => onPick(exercise)} className={`${PICTURE_ROW} w-full text-left`}>
+        <Picture slug={slugFor(exercise)} size="list" lazy imageTestId="picker-thumbnail" />
+        <span className="min-w-0 flex-1 truncate text-[1.0625rem]">{exercise.name}</span>
+        <span className="text-[0.9375rem] text-label-2">{t(`Exercise.Kind.${exercise.kind}`)}</span>
+      </button>
+    </li>
+  )
 
   return (
     <div data-testid="exercise-picker">
@@ -57,29 +75,29 @@ export function ExercisePicker({
         placeholder={t('Picker.SearchPlaceholder')}
       />
 
+      {suggested.length > 0 && (
+        <Group header={t('Picker.Suggestions')} separatorInset="3.75rem" testId="swap-suggestions" className="mt-4">
+          {suggested.map(row)}
+        </Group>
+      )}
+
       {matches.length > 0 && (
-        <ul
-          className="ios-list mt-4 overflow-hidden rounded-[1.625rem] bg-cell"
-          style={{ '--separator-inset': '3.75rem' } as CSSProperties}
+        <Group
+          header={suggested.length > 0 ? t('Picker.All') : undefined}
+          separatorInset="3.75rem"
+          className={suggested.length > 0 ? 'mt-section' : 'mt-4'}
         >
-          {matches.map((exercise) => {
-            const slug = slugFor(exercise)
-            return (
-              <li key={exercise.id}>
-                <button type="button" onClick={() => onPick(exercise)} className={`${PICTURE_ROW} w-full text-left`}>
-                  <Picture slug={slug} size="list" lazy imageTestId="picker-thumbnail" />
-                  <span className="min-w-0 flex-1 truncate text-[1.0625rem]">{exercise.name}</span>
-                  <span className="text-[0.9375rem] text-label-2">{t(`Exercise.Kind.${exercise.kind}`)}</span>
-                </button>
-              </li>
-            )
-          })}
-        </ul>
+          {matches.map(row)}
+        </Group>
       )}
 
       {matches.length === 0 && (
         <p className="px-4 pt-6 pb-2 text-center text-[0.9375rem] text-label-2" data-testid="picker-empty">
-          {wanted === '' ? t('Picker.NoExercises') : t('Exercises.NoMatches')}
+          {wanted !== ''
+            ? t('Exercises.NoMatches')
+            : exercises.some((e) => !e.isArchived)
+              ? t('Picker.NoOthers')
+              : t('Picker.NoExercises')}
         </p>
       )}
 

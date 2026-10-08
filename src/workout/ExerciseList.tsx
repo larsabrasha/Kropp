@@ -12,7 +12,10 @@ import {
   moveEntry,
   removeEntry,
   replaceEntry,
+  swapExercise,
+  canSwap,
 } from '../training/editing'
+import { swapSuggestions } from '../training/swaps'
 import { newId, type Exercise, type Workout } from '../training/model'
 import { ExerciseEntryCard } from './ExerciseEntryCard'
 import { ExercisePicker, NewExerciseForm, type NewExercise } from './ExercisePicker'
@@ -52,13 +55,14 @@ export function ExerciseList({
   onExerciseChange: (exercise: Exercise) => void | Promise<void>
 }) {
   const [activeEntry, setActiveEntry] = useState<number>()
-  const [picking, setPicking] = useState(false)
+  // The picker open: to add an exercise at the end, or to change the one at this index for another.
+  const [picking, setPicking] = useState<'add' | number>()
   // The picker's search, kept while a new exercise's form is pushed over it.
   const [query, setQuery] = useState('')
   // The name a new exercise's form starts from, while the form is pushed inside the sheet.
   const [newName, setNewName] = useState<string>()
   const stopPicking = useCallback(() => {
-    setPicking(false)
+    setPicking(undefined)
     setQuery('')
     setNewName(undefined)
   }, [])
@@ -121,9 +125,19 @@ export function ExerciseList({
     return onChange(removeEntry(owner, index))
   }
 
+  const swapping = typeof picking === 'number' ? owner.exercises[picking] : undefined
+  const swappingKind = exercises.get(swapping?.exerciseId ?? '')?.kind ?? 'Strength'
+
+  /**
+   * The exercise picked: added at the end, or put in the place being changed. A new exercise of
+   * another kind than one already done cannot take its place, so it is added at the end instead.
+   */
   const add = (exercise: Exercise) => {
     stopPicking()
-    return onChange(addExercise(owner, exercise, lastTime(history, owner, exercise.id)))
+    const last = lastTime(history, owner, exercise.id)
+    if (typeof picking === 'number' && swapping && canSwap(swapping, swappingKind, exercise))
+      return onChange(replaceEntry(owner, picking, swapExercise(swapping, exercise, last)))
+    return onChange(addExercise(owner, exercise, last))
   }
 
   const create = async (request: NewExercise) => {
@@ -141,7 +155,7 @@ export function ExerciseList({
 
   return (
     <section className="flex flex-col gap-5">
-      {owner.exercises.length === 0 && !picking && (
+      {owner.exercises.length === 0 && picking === undefined && (
         <div
           className="flex flex-col items-center gap-3 px-6 py-14 text-center text-[1.0625rem] text-label-2"
           data-testid="no-exercises"
@@ -180,6 +194,10 @@ export function ExerciseList({
               onActivate={() => setActiveEntry(index)}
               onChange={(next) => void onChange(replaceEntry(owner, index, next))}
               onRemove={() => void remove(index)}
+              onSwap={() => {
+                setActiveEntry(undefined)
+                setPicking(index)
+              }}
             />
           )
         })}
@@ -187,23 +205,29 @@ export function ExerciseList({
 
       <button
         type="button"
-        onClick={() => setPicking(true)}
+        onClick={() => setPicking('add')}
         data-testid="add-exercise"
         className={button('tinted', 'large')}
       >
         + {t('Workout.AddExercise')}
       </button>
       {/* Choosing the exercise is a task of its own, in a sheet over the workout. */}
-      {picking && (
+      {picking !== undefined && (
         <ModalSheet
-          title={t('Workout.AddExercise')}
+          title={swapping ? t('Entry.Swap') : t('Workout.AddExercise')}
           onClose={stopPicking}
           testId="exercise-sheet"
           pushed={
             newName !== undefined
               ? {
                   title: t('Picker.New'),
-                  content: <NewExerciseForm initialName={newName} onCreate={(request) => void create(request)} />,
+                  content: (
+                    <NewExerciseForm
+                      initialName={newName}
+                      onCreate={(request) => void create(request)}
+                      action={swapping ? t('Picker.CreateAndSwap') : undefined}
+                    />
+                  ),
                   onBack: () => setNewName(undefined),
                 }
               : undefined
@@ -215,6 +239,8 @@ export function ExerciseList({
             onQuery={setQuery}
             onPick={(exercise) => void add(exercise)}
             onNew={setNewName}
+            suggestions={typeof picking === 'number' ? swapSuggestions(owner, picking, history, exercises) : []}
+            allows={(e) => !swapping || (e.id !== swapping.exerciseId && canSwap(swapping, swappingKind, e))}
           />
         </ModalSheet>
       )}

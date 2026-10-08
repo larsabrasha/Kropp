@@ -65,7 +65,7 @@ it('changes only the occasion on the card and links to the exercise for the rest
 
   click(await waitForElement('[data-testid=edit]'))
   expect($$('[data-testid=editor] [data-testid=category-chips]')).toEqual([])
-  expect(text($('[data-testid=editor] [data-testid=edit-exercise]'))).toBe('Ändra övningen')
+  expect(text($('[data-testid=editor] [data-testid=edit-exercise]'))).toBe('Redigera Bröst maskin')
 
   click($('[data-testid=edit]'))
   expect($$('[data-testid=weight-step]')).toEqual([])
