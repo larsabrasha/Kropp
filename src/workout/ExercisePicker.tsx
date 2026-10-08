@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties } from 'react'
+import { useRef, useState, type CSSProperties } from 'react'
 import { compareText, lower, t } from '../i18n/i18n'
 import { slugFor } from '../illustrations/illustrations'
 import { Limits } from '../training/limits'
@@ -9,6 +9,7 @@ import { Group } from '../ui/List'
 import { SearchField } from '../ui/SearchField'
 import { button, PICTURE_ROW } from '../ui/styles'
 import { Picture } from '../ui/Picture'
+import { useFocusOnOpen } from '../ui/useFocusOnOpen'
 
 export interface NewExercise {
   name: string
@@ -37,7 +38,7 @@ export function ExercisePicker({
   onNew: (name: string) => void
 }) {
   const searchInput = useRef<HTMLInputElement>(null)
-  useEffect(() => searchInput.current?.focus(), [])
+  useFocusOnOpen(searchInput)
 
   const wanted = lower(query.trim())
   const matches = exercises
@@ -132,9 +133,7 @@ export function NewExerciseForm({
   const [kind, setKind] = useState<ExerciseKind>('Strength')
   const [categories, setCategories] = useState<BodyArea[]>([])
   const nameInput = useRef<HTMLInputElement>(null)
-  useEffect(() => {
-    if (initialName === '') nameInput.current?.focus()
-  }, [initialName])
+  useFocusOnOpen(nameInput, initialName === '')
 
   const ready = name.trim() !== '' && categories.length > 0
   const create = () => {
